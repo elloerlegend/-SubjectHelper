@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>SubjectHelper - Чат</title>
-  <link rel="stylesheet" href="back.css">
+  <link rel="stylesheet" href="/static/back.css">
 </head>
 <body>
   <header>
@@ -14,19 +14,22 @@
 
   <main>
 
+  <div class="text-center">
     <h1>AI-Репетитор</h1>
     <div class="info-bar">
       <p id="selected-info"></p>
     </div>
     <div class="mode-info" id="mode-info"></div>
-
+  </div>
     <section class="main">
 
       <div class="chat" id="chat"></div>
       <div class="input-container">
-        <textarea id="question" placeholder="Введите ваш вопрос..."></textarea>
-          <button onclick="askTutor()">Задать вопрос</button>
-          <button onclick=#> + </button>
+          <textarea id="question" placeholder="Введите ваш вопрос..."></textarea>
+          <div class="button_type">
+            <button onclick="askTutor()">Задать вопрос</button>
+            <button onclick=#> + </button>
+          </div>
       </div>
     </section>
   </main>

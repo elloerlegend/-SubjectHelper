@@ -1,1 +1,285 @@
-ф
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+h1 {
+  font-family: 'Rubik Mono One', sans-serif;
+  letter-spacing: 1px;
+}
+.logo{
+    height: 135px;
+    width: auto;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  padding: 0 40px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.text-center{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.header-inner {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+p{
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+    color: white;
+    opacity: 0.9;
+}
+
+
+body {
+  margin: 0;
+  padding: 150px;
+  font-family: Arial, sans-serif;
+  background-color: hsla(0,100%,50%,1);
+  background-image:
+    radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189,100%,56%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, hsla(340,100%,76%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(343,100%,76%,1) 0px, transparent 50%);
+}
+
+
+h1 {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 48px;
+  color: white;
+  margin-bottom: 30px;
+}
+
+
+
+button {
+  margin-top: 10px;
+  padding: 10px 20px;
+
+  border-radius: 15px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color:hsla(0,0%,100%,1);
+background-image:
+radial-gradient(at 86% 97%, hsla(18,2%,87%,1) 0px, transparent 50%),
+radial-gradient(at 79% 0%, hsla(187,64%,87%,1) 0px, transparent 50%),
+radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+radial-gradient(at 96% 34%, hsla(340,83%,80%,1) 0px, transparent 50%),
+radial-gradient(at 0% 100%, hsla(10,0%,81%,1) 0px, transparent 50%),
+radial-gradient(at 80% 100%, hsla(240,14%,91%,1) 0px, transparent 50%),
+radial-gradient(at 0% 0%, hsla(342,0%,81%,1) 0px, transparent 50%);
+}
+
+
+
+
+.answer {
+
+  margin-top: 20px;
+  max-width: 500px;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+
+  font-size: 16px;
+
+    background-color:hsla(0,27%,85%,1);
+    background-image:
+    radial-gradient(at 81% 3%, hsla(0,3%,94%,1) 0px, transparent 50%),
+    radial-gradient(at 72% 3%, hsla(186,53%,73%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,21%,77%,1) 0px, transparent 50%),
+    radial-gradient(at 40% 56%, hsla(340,37%,88%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(8,83%,92%,1) 0px, transparent 50%),
+    radial-gradient(at 73% 97%, hsla(0,41%,87%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(341,87%,80%,1) 0px, transparent 50%);
+
+    border-radius: 20px;
+    padding: 30px;
+
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  max-width: 700px;
+  margin-bottom: 200px;
+
+}
+
+
+.message {
+  padding: 10px 15px;
+  border-radius: 16px;
+  max-width: 75%;
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+
+.message.user {
+  align-self: flex-end;
+  background-color: #007bff;
+  color: white;
+  border-bottom-right-radius: 0;
+}
+
+.message.ai {
+  background: linear-gradient(135deg, #d1e9ff, #f3f8ff);
+  padding: 15px 20px;
+  border-radius: 17px;
+  margin: 10px 0;
+  max-width: 70%;
+  align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  color: #1a1a1a;
+  font-size: 16px;
+  white-space: pre-wrap;
+}
+
+
+.input-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  max-width: 700px;
+  width: 100%;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+
+textarea {
+  flex: 1;
+  resize: none;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 18px;
+  min-height: 50px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.welcome {
+  text-align: center;
+  margin-top: 80px;
+  margin-bottom: 60px;
+  color: white;
+}
+
+.subtitle {
+  font-size: 20px;
+  margin-bottom: 40px;
+  opacity: 0.8;
+}
+
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 50px;
+}
+.subject-card{
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 200px;
+  padding: 20px;
+  max-width: 280px;
+  backdrop-filter: blur(83px);
+  color: white;
+  transition: transform 0.5s ease;
+}
+.subject-card:hover{
+  transform: translateY(8px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mode-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 280px;
+  backdrop-filter: blur(83px);
+  color: white;
+  transition: transform 0.5s ease;
+}
+
+.mode-card:hover {
+  transform: translateY(8px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.start-button {
+  display: inline-block;
+  padding: 12px 30px;
+
+  color: #333;
+  border-radius: 25px;
+  text-shadow: 1px 2px 8px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 16px 12px rgba(0,0,0,0.2);
+  background-image:
+    radial-gradient(at 86% 97%, hsla(18,2%,87%,1) 0px, transparent 50%),
+    radial-gradient(at 79% 0%, hsla(187,64%,87%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+    radial-gradient(at 96% 34%, hsla(340,83%,80%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(10,0%,81%,1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(240,14%,91%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(342,0%,81%,1) 0px, transparent 50%);
+
+}
+
+.start-button:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-3px);
+
+}
+
+.selected {
+  border: 2px solid gray;
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}

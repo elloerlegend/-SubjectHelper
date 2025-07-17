@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>SubjectHelper — Главная</title>
-  <link rel="stylesheet" href="back.css">
+  <link rel="stylesheet" href="/static/back.css">
 
 </head>
 <body>
   <header>
     <img class="logo" src="img/logo.png" alt="Логотип">
     <div class="header_registration">
-      <button class="registration">Регистрация</button>
-      <button class="login">Вход</button>
+
+      <a href="register.html" class="start-button">Регистрация</a>
+      <a href="login.html" class="start-button">Вход</a>
     </div>
   </header>
 
@@ -34,9 +35,9 @@
     <h2 class="section-title">Выбери режим:</h2>
     <div class="modes">
      <div class="mode-card" data-mode="explain">
-  <h2>🧠 Объяснение темы</h2>
-  <p>Простой и понятный разбор любой темы.</p>
-</div>
+      <h2>🧠 Объяснение темы</h2>
+        <p>Простой и понятный разбор любой темы.</p>
+     </div>
 
 <div class="mode-card" data-mode="step">
   <h2>📚 Решение по шагам</h2>
@@ -52,10 +53,11 @@
   <h2>💯 Подготовка к экзамену</h2>
   <p>Составь план и методы подготовки.</p>
 </div>
-
     </div>
 
-    <a href="code.html" class="start-button">Начать обучение</a>
+    <a href="chat.html" class="start-button">Начать обучение</a>
+
+
     <script>
     let selectedSubject = null;
     let selectedMode = null;
