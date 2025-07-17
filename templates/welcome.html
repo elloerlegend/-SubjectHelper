@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Главная</title>
+  <link rel="stylesheet" href="back.css">
+
+</head>
+<body>
+  <header>
+    <img class="logo" src="img/logo.png" alt="Логотип">
+    <div class="header_registration">
+      <button class="registration">Регистрация</button>
+      <button class="login">Вход</button>
+    </div>
+  </header>
+
+  <section class="welcome">
+    <h1>Добро пожаловать в SubjectHelper</h1>
+    <p class="subtitle">Выбери предмет и режим и начни учиться с твоим личным репетитором</p>
+    <h2 class="section-title">Выбери предмет:</h2>
+    <div class="modes" id="subjects">
+      <div class="subject-card" data-subject="Математика">📐 Математика</div>
+      <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
+      <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
+      <div class="subject-card" data-subject="Физика">🔬 Физика</div>
+      <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
+      <div class="subject-card" data-subject="Биология">🧬 Биология</div>
+      <div class="subject-card" data-subject="История">📜 История</div>
+      <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
+      <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
+    </div>
+
+    <h2 class="section-title">Выбери режим:</h2>
+    <div class="modes">
+     <div class="mode-card" data-mode="explain">
+  <h2>🧠 Объяснение темы</h2>
+  <p>Простой и понятный разбор любой темы.</p>
+</div>
+
+<div class="mode-card" data-mode="step">
+  <h2>📚 Решение по шагам</h2>
+  <p>AI решает задачи пошагово, как настоящий учитель.</p>
+</div>
+
+<div class="mode-card" data-mode="quiz">
+  <h2>🎯 Проверка знаний</h2>
+  <p>Вопросы для самопроверки и тестирования знаний.</p>
+</div>
+
+<div class="mode-card" data-mode="exam">
+  <h2>💯 Подготовка к экзамену</h2>
+  <p>Составь план и методы подготовки.</p>
+</div>
+
+    </div>
+
+    <a href="code.html" class="start-button">Начать обучение</a>
+    <script>
+    let selectedSubject = null;
+    let selectedMode = null;
+
+    const subjectCards = document.querySelectorAll('.subject-card');
+    const modeCards = document.querySelectorAll('.mode-card');
+    const startBtn = document.querySelector('.start-button'); //
+
+    subjectCards.forEach(card => {
+      card.addEventListener('click', () => {
+        subjectCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedSubject = card.dataset.subject;
+        checkReady();
+      });
+    });
+
+    modeCards.forEach(card => {
+      card.addEventListener('click', () => {
+        modeCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedMode = card.dataset.mode;
+        checkReady();
+      });
+    });
+
+    function checkReady() {
+      if (selectedSubject && selectedMode) {
+        startBtn.classList.remove('hidden');
+        localStorage.setItem('subject', selectedSubject);
+        localStorage.setItem('mode', selectedMode);
+      }
+    }
+
+  </script>
+
+  </section>
+</body>
+</html>

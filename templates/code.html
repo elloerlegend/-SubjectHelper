@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper - Чат</title>
+  <link rel="stylesheet" href="back.css">
+</head>
+<body>
+  <header>
+   <a href="welcome.html">
+      <img class="logo" src="img/logo.png" alt="Логотип">
+    </a>
+  </header>
+
+  <main>
+
+    <h1>AI-Репетитор</h1>
+    <div class="info-bar">
+      <p id="selected-info"></p>
+    </div>
+    <div class="mode-info" id="mode-info"></div>
+
+    <section class="main">
+
+      <div class="chat" id="chat"></div>
+      <div class="input-container">
+        <textarea id="question" placeholder="Введите ваш вопрос..."></textarea>
+          <button onclick="askTutor()">Задать вопрос</button>
+          <button onclick=#> + </button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+
+    const menu = document.getElementById("menu");
+
+     const chat = document.getElementById("chat");
+     const textarea = document.getElementById("question");
+
+     const subject = localStorage.getItem("subject") || "Математика";
+     const mode = localStorage.getItem("mode") || "explain";
+
+
+
+
+const modeText = {
+  explain: "🧠 Объяснение темы",
+  step: "📚 Решение по шагам",
+  quiz: "🎯 Проверка знаний",
+  exam: "💯 Подготовка к экзамену"
+};
+
+// Отображение для пользователя:
+document.getElementById("selected-info").innerText =
+  `Предмет: ${subject} | Режим: ${modeText[mode] || mode}`;
+
+
+
+
+    window.addEventListener("load", () => {
+      const aiMessage = document.createElement("div");
+      aiMessage.className = "message ai";
+      aiMessage.innerText = "Привет! Я твой личный репетитор. Задай мне вопрос, и я помогу тебе разобраться.";
+      chat.appendChild(aiMessage);
+      textarea.focus();
+    });
+    async function askTutor() {
+    const question = document.getElementById("question").value.trim();
+    if (!question) return;
+
+    const chat = document.getElementById("chat");
+
+    const userMessage = document.createElement("div");
+    userMessage.className = "message user";
+    userMessage.innerText = question;
+    chat.appendChild(userMessage);
+
+    document.getElementById("question").value = "";
+
+
+
+
+
+     const res = await fetch("http://localhost:5000/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question,
+        subject,
+        mode
+      })
+    });
+
+    const data = await res.json();
+
+    const aiMessage = document.createElement("div");
+    aiMessage.className = "message ai";
+    aiMessage.innerText = data.answer;
+    chat.appendChild(aiMessage);
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+
+</script>
+
+</body>
+</html>
