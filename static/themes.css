@@ -1,0 +1,20 @@
+.light-theme {
+  --bg: #f8f9fa;
+  --text: #333;
+  --card: rgba(255, 255, 255, 0.9);
+  --border: rgba(0,0,0,0.1);
+}
+
+.dark-theme {
+  --bg: #121212;
+  --text: #e0e0e0;
+  --card: rgba(255, 255, 255, 0.15);
+  --border: rgba(255, 255, 255, 0.2);
+}
+
+body { background: var(--bg); color: var(--text); }
+.profile-container, .history-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+}

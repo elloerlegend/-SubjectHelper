@@ -1,0 +1,95 @@
+/* === chat.css — СТИЛИ ЧАТА === */
+.text-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 700px;
+  margin-bottom: 200px;
+  padding: 0 20px;
+}
+
+.message {
+  padding: 10px 15px;
+  border-radius: 16px;
+  max-width: 75%;
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  margin: 8px 0;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: #007bff;
+  color: white;
+  border-bottom-right-radius: 0;
+}
+
+.message.ai {
+  align-self: flex-start;
+  background: linear-gradient(135deg, #d1e9ff, #f3f8ff);
+  color: #1a1a1a;
+  padding: 15px 20px;
+  border-radius: 17px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  white-space: pre-wrap;
+}
+
+.input-container {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  max-width: 700px;
+  width: 100%;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 18px;
+  min-height: 50px;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-right: 10px;
+}
+
+.rating-stars {
+  margin-top: 12px;
+  text-align: center;
+}
+.rating-stars span {
+  color: #ccc;
+  font-size: 1.3rem;
+  cursor: pointer;
+  margin: 0 6px;
+  transition: color 0.2s;
+}
+.rating-stars span.rated { color: #ffd700; }
+
+.message.user img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 12px;
+  margin-top: 8px;
+  display: block;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}

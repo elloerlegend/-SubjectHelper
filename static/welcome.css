@@ -1,0 +1,64 @@
+/* === welcome.css — ВЫБОР КЛАССА И ПРЕДМЕТА === */
+.class-grid, .modes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.class-card, .subject-card, .mode-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 200px;
+  padding: 20px;
+  max-width: 280px;
+  backdrop-filter: blur(83px);
+  color: white;
+  transition: transform 0.5s ease;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.class-card:hover, .subject-card:hover, .mode-card:hover {
+  transform: translateY(8px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mode-card {
+  border-radius: 20px;
+  padding: 30px;
+}
+
+.start-button {
+  display: inline-block;
+  padding: 12px 30px;
+  color: #333;
+  border-radius: 25px;
+  text-shadow: 1px 2px 8px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 16px 12px rgba(0,0,0,0.2);
+  background-image:
+    radial-gradient(at 86% 97%, hsla(18,2%,87%,1) 0px, transparent 50%),
+    radial-gradient(at 79% 0%, hsla(187,64%,87%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%),
+    radial-gradient(at 96% 34%, hsla(340,83%,80%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(10,0%,81%,1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(240,14%,91%,1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(342,0%,81%,1) 0px, transparent 50%);
+}
+
+.start-button:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-3px);
+}
+
+.selected {
+  border: 2px solid gray;
+  background-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}

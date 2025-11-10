@@ -8,7 +8,7 @@ h1 {
   letter-spacing: 1px;
 }
 .logo{
-    height: 135px;
+    height: 100px;
     width: auto;
 }
 
@@ -49,10 +49,14 @@ p{
     opacity: 0.9;
 }
 
+.rating-stars {
+    margin-top: 12px;
+    text-align: center;
+}
 
 body {
   margin: 0;
-  padding: 150px;
+  padding-top: 150px;
   font-family: Arial, sans-serif;
   background-color: hsla(0,100%,50%,1);
   background-image:
@@ -63,6 +67,13 @@ body {
     radial-gradient(at 0% 100%, hsla(22,100%,77%,1) 0px, transparent 50%),
     radial-gradient(at 80% 100%, hsla(242,100%,70%,1) 0px, transparent 50%),
     radial-gradient(at 0% 0%, hsla(343,100%,76%,1) 0px, transparent 50%);
+  height: 100vh;
+  min-height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 
@@ -120,6 +131,37 @@ radial-gradient(at 0% 0%, hsla(342,0%,81%,1) 0px, transparent 50%);
     padding: 30px;
 
 }
+
+/* === КЛАССЫ — ТОТ ЖЕ СТИЛЬ, ЧТО И ПРЕДМЕТЫ === */
+.class-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.class-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 200px;           /* ← КРУГЛЫЕ, КАК У ПРЕДМЕТОВ */
+  padding: 20px;
+  max-width: 280px;
+  backdrop-filter: blur(83px);
+  color: white;
+  transition: transform 0.5s ease;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.class-card:hover {
+  transform: translateY(8px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+
 
 .chat {
   display: flex;
@@ -283,3 +325,63 @@ textarea {
   margin: 0 auto;
   padding: 0 20px;
 }
+
+.user-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.user-circle {
+  width: 40px;
+  height: 40px;
+  background-color: #4cafef;
+  color: white;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 50px;
+  background-color: white;
+  border: 1px solid #ccc;
+  min-width: 150px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.dropdown-menu a {
+  padding: 12px 13px;
+  font-size: 15px;
+  text-decoration: none;
+  color: #333;
+  transition: background 0.2s, transform 0.15s ease;
+  display: block;
+  border-radius: 7px;
+}
+.user-circle:hover {
+  transform: scale(1.05);
+}
+.dropdown-menu a:hover {
+  background-color: #f0f0f0;
+}
+.dropdown-menu.show {
+  display: flex;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.dropdown-menu a:hover {
+  background: #f0f0f0;
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-5px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+

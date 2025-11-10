@@ -4,20 +4,44 @@
   <meta charset="UTF-8">
   <title>SubjectHelper — Главная</title>
   <link rel="stylesheet" href="/static/back.css">
+  <link rel="stylesheet" href="/static/welcome.css">
 
 </head>
 <body>
-  <header>
-    <img class="logo" src="img/logo.png" alt="Логотип">
-    <div class="header_registration">
+<header>
+  <img class="logo" src="/static/img/logo.png" alt="Логотип">
 
-      <a href="register.html" class="start-button">Регистрация</a>
-      <a href="login.html" class="start-button">Вход</a>
+  {% if session.get('nickname') %}
+  <div class="user-menu">
+    <div class="user-circle" id="userCircle">
+      {{ session['nickname'][0]|upper }}
     </div>
-  </header>
+    <div class="dropdown-menu" id="dropdownMenu">
+      <a href="{{ url_for('profile') }}">Профиль</a>
+      <a href="{{ url_for('history_page') }}">История</a>
+      <a href="{{ url_for('logout') }}">Выйти</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="header_registration">
+    <a href="/register" class="start-button">Регистрация</a>
+    <a href="/login" class="start-button">Вход</a>
+  </div>
+  {% endif %}
+</header>
+
+
+
 
   <section class="welcome">
     <h1>Добро пожаловать в SubjectHelper</h1>
+    <h2 class="section-title">Выбери свой класс:</h2>
+    <div class="class-grid">
+      <div class="class-card" data-class="1-4">1–4 класс</div>
+      <div class="class-card" data-class="5-7">5–7 класс</div>
+      <div class="class-card" data-class="8-9">8–9 класс</div>
+      <div class="class-card" data-class="10-11">10–11 класс</div>
+    </div>
     <p class="subtitle">Выбери предмет и режим и начни учиться с твоим личным репетитором</p>
     <h2 class="section-title">Выбери предмет:</h2>
     <div class="modes" id="subjects">
@@ -55,45 +79,101 @@
 </div>
     </div>
 
-    <a href="chat.html" class="start-button">Начать обучение</a>
+    <a href="/chat" class="start-button">Начать обучение</a>
 
 
     <script>
-    let selectedSubject = null;
-    let selectedMode = null;
+  let selectedSubject = localStorage.getItem('subject') || null;
+  let selectedMode = localStorage.getItem('mode') || null;
+  let selectedClass = localStorage.getItem('user_class') || null;
 
-    const subjectCards = document.querySelectorAll('.subject-card');
-    const modeCards = document.querySelectorAll('.mode-card');
-    const startBtn = document.querySelector('.start-button'); //
+  const subjectCards = document.querySelectorAll('.subject-card');
+  const modeCards = document.querySelectorAll('.mode-card');
+  const classCards = document.querySelectorAll('.class-card');
+  const startBtn = document.querySelector('.start-button');
 
-    subjectCards.forEach(card => {
-      card.addEventListener('click', () => {
-        subjectCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedSubject = card.dataset.subject;
-        checkReady();
-      });
+  // === Клик по классу ===
+  classCards.forEach(card => {
+    card.addEventListener('click', () => {
+      classCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedClass = card.dataset.class;
+      localStorage.setItem('user_class', selectedClass);
+      checkReady();
     });
+  });
 
-    modeCards.forEach(card => {
-      card.addEventListener('click', () => {
-        modeCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedMode = card.dataset.mode;
-        checkReady();
-      });
+  // === Клик по предмету ===
+  subjectCards.forEach(card => {
+    card.addEventListener('click', () => {
+      subjectCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedSubject = card.dataset.subject;
+      localStorage.setItem('subject', selectedSubject);  // ← СОХРАНЯЕМ
+      checkReady();
     });
+  });
 
-    function checkReady() {
-      if (selectedSubject && selectedMode) {
-        startBtn.classList.remove('hidden');
-        localStorage.setItem('subject', selectedSubject);
-        localStorage.setItem('mode', selectedMode);
-      }
+  // === Клик по режиму ===
+  modeCards.forEach(card => {
+    card.addEventListener('click', () => {
+      modeCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedMode = card.dataset.mode;
+      localStorage.setItem('mode', selectedMode);  // ← СОХРАНЯЕМ
+      checkReady();
+    });
+  });
+
+  // === Восстановление при загрузке ===
+  if (selectedClass) {
+    document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
+  }
+  if (selectedSubject) {
+    document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
+  }
+  if (selectedMode) {
+    document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
+  }
+
+  // === Проверка готовности ===
+  function checkReady() {
+    if (selectedClass && selectedSubject && selectedMode) {
+      startBtn.href = '/chat';
+      startBtn.style.pointerEvents = 'auto';
+      startBtn.style.opacity = '1';
+    } else {
+      startBtn.href = '#';
+      startBtn.style.pointerEvents = 'none';
+      startBtn.style.opacity = '0.5';
     }
+  }
 
-  </script>
+  // Запускаем при загрузке
+  checkReady();
+</script>
 
   </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const circle = document.getElementById("userCircle");
+    const menu = document.getElementById("dropdownMenu");
+
+    if (circle) {
+        circle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        });
+    }
+
+    document.addEventListener("click", function () {
+        if (menu) menu.style.display = "none";
+    });
+});
+</script>
+
 </body>
 </html>
+
+

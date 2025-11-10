@@ -1,0 +1,161 @@
+/* === history.css === */
+
+.history-main {
+  padding: 100px 20px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.history-container {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  padding: 25px;
+  border-radius: 20px;
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+#searchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+  font-size: 15px;
+}
+
+#subjectFilter {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+
+.export-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.export-btn:hover {
+  background: #45a049;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.history-item {
+  background: rgba(255,255,255,0.08);
+  padding: 16px;
+  border-radius: 16px;
+  border-left: 4px solid #4CAF50;
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.subject-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.mode {
+  color: #aaa;
+}
+
+.timestamp {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.item-question,
+.item-answer {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.item-rating {
+  margin-top: 8px;
+  font-size: 1.2rem;
+  color: #ffd700;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pagination button.active,
+.pagination button:hover {
+  background: #4CAF50;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #aaa;
+}
+
+.empty-state .material-icons {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.btn-primary {
+  display: inline-block;
+  background: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  margin-top: 16px;
+}
+
+.btn-primary:hover {
+  background: #45a049;
+}

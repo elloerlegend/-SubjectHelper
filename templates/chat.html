@@ -3,110 +3,216 @@
 <head>
   <meta charset="UTF-8">
   <title>SubjectHelper - Чат</title>
-  <link rel="stylesheet" href="/static/back.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .input-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); max-width: 700px; width: 100%; padding: 15px; background: rgba(255,255,255,0.12); backdrop-filter: blur(16px); border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.1); z-index: 1000; display: flex; gap: 12px; align-items: flex-end; }
+    .input-wrapper { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 8px; gap: 8px; border: 1px solid rgba(255,255,255,0.3); }
+    #question { flex: 1; resize: none; background: transparent; border: none; outline: none; color: white; font-size: 16px; padding: 12px 16px; min-height: 44px; max-height: 120px; overflow-y: auto; }
+    #question::placeholder { color: rgba(255,255,255,0.7); }
+    .attach-btn, .voice-btn { background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.3s; }
+    .attach-btn:hover, .voice-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
+    .voice-btn.recording { background: #f44336; animation: pulse 1.5s infinite; }
+    .send-btn { background: linear-gradient(135deg, #4CAF50, #45a049); border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; box-shadow: 0 4px 12px rgba(76,175,80,0.4); transition: all 0.3s; }
+    .send-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 16px rgba(76,175,80,0.5); }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(244,67,54,0.7); } 70% { box-shadow: 0 0 0 10px rgba(244,67,54,0); } 100% { box-shadow: 0 0 0 0 rgba(244,67,54,0); } }
+
+    .file-preview { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: white; }
+    .file-preview img { max-width: 60px; max-height: 60px; border-radius: 8px; object-fit: cover; }
+    .file-preview .remove-file { margin-left: auto; color: #ff6b6b; cursor: pointer; font-size: 1.2rem; }
+    .file-preview .remove-file:hover { color: #ff4444; }
+
+    .rating-stars { margin-top: 12px; text-align: center; }
+    .rating-stars span { color: #ccc; font-size: 1.3rem; cursor: pointer; margin: 0 6px; transition: color 0.2s; }
+    .rating-stars span.rated { color: #ffd700; }
+
+    .main { padding-bottom: 100px; }
+  </style>
 </head>
 <body>
   <header>
-   <a href="welcome.html">
-      <img class="logo" src="img/logo.png" alt="Логотип">
-    </a>
+    <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+    {{ menu | safe }}
   </header>
 
   <main>
-
-  <div class="text-center">
-    <h1>AI-Репетитор</h1>
-    <div class="info-bar">
-      <p id="selected-info"></p>
+    <div class="text-center">
+      <h1>AI-Репетитор</h1>
+      <div class="info-bar"><p id="selected-info"></p></div>
     </div>
-    <div class="mode-info" id="mode-info"></div>
-  </div>
-    <section class="main">
 
+    <section class="main">
       <div class="chat" id="chat"></div>
+
       <div class="input-container">
+        <div class="input-wrapper">
           <textarea id="question" placeholder="Введите ваш вопрос..."></textarea>
-          <div class="button_type">
-            <button onclick="askTutor()">Задать вопрос</button>
-            <button onclick=#> + </button>
-          </div>
+          <label for="file-upload" class="attach-btn" title="Прикрепить файл">
+            <span class="material-icons">attach_file</span>
+            <input type="file" id="file-upload" accept="image/*,.pdf,.txt" style="display: none;">
+          </label>
+          <button id="voice-btn" class="voice-btn" title="Голосовой ввод">
+            <span class="material-icons">mic</span>
+          </button>
+        </div>
+        <button onclick="askTutor()" class="send-btn">
+          <span class="material-icons">send</span>
+        </button>
       </div>
     </section>
   </main>
 
+  {{ menu_js | safe }}
+
   <script>
+    const chat = document.getElementById("chat");
+    const textarea = document.getElementById("question");
+    const fileInput = document.getElementById("file-upload");
+    const voiceBtn = document.getElementById("voice-btn");
+    let attachedFile = null;
+    let recognition;
 
-    const menu = document.getElementById("menu");
+    function updateSelectedInfo() {
+      const subject = localStorage.getItem("subject") || "Математика";
+      const mode = localStorage.getItem("mode") || "explain";
+      const userClass = localStorage.getItem("user_class") || "не выбран";
+      const modeText = { explain: "Объяснение", step: "Решение", quiz: "Проверка", exam: "Экзамен" };
+      document.getElementById("selected-info").innerText = `Класс: ${userClass} | Предмет: ${subject} | Режим: ${modeText[mode] || mode}`;
+    }
 
-     const chat = document.getElementById("chat");
-     const textarea = document.getElementById("question");
-
-     const subject = localStorage.getItem("subject") || "Математика";
-     const mode = localStorage.getItem("mode") || "explain";
-
-
-
-
-const modeText = {
-  explain: "🧠 Объяснение темы",
-  step: "📚 Решение по шагам",
-  quiz: "🎯 Проверка знаний",
-  exam: "💯 Подготовка к экзамену"
-};
-
-// Отображение для пользователя:
-document.getElementById("selected-info").innerText =
-  `Предмет: ${subject} | Режим: ${modeText[mode] || mode}`;
-
-
-
+    const welcome = {
+      explain: "Привет! Какую тему тебе объяснить?",
+      step: "Привет! Готов решать задачи?",
+      quiz: "Привет! Хочешь проверить знания?",
+      exam: "Привет! Готовимся к экзамену?"
+    };
 
     window.addEventListener("load", () => {
-      const aiMessage = document.createElement("div");
-      aiMessage.className = "message ai";
-      aiMessage.innerText = "Привет! Я твой личный репетитор. Задай мне вопрос, и я помогу тебе разобраться.";
-      chat.appendChild(aiMessage);
+      updateSelectedInfo();
+      const msg = document.createElement("div"); msg.className = "message ai";
+      msg.innerText = welcome[localStorage.getItem("mode") || "explain"];
+      chat.appendChild(msg);
       textarea.focus();
     });
-    async function askTutor() {
-    const question = document.getElementById("question").value.trim();
-    if (!question) return;
 
-    const chat = document.getElementById("chat");
+    // ГОЛОС
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ru-RU';
+      recognition.interimResults = false;
+      voiceBtn.addEventListener('click', () => {
+        if (voiceBtn.classList.contains('recording')) { recognition.stop(); return; }
+        voiceBtn.classList.add('recording');
+        recognition.start();
+      });
+      recognition.onresult = e => { textarea.value += e.results[0][0].transcript + ' '; voiceBtn.classList.remove('recording'); textarea.focus(); };
+      recognition.onerror = () => { voiceBtn.classList.remove('recording'); alert('Ошибка голоса'); };
+      recognition.onend = () => voiceBtn.classList.remove('recording');
+    } else {
+      voiceBtn.style.display = 'none';
+    }
 
-    const userMessage = document.createElement("div");
-    userMessage.className = "message user";
-    userMessage.innerText = question;
-    chat.appendChild(userMessage);
-
-    document.getElementById("question").value = "";
-
-
-
-
-
-     const res = await fetch("http://localhost:5000/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        subject,
-        mode
-      })
+    // ФАЙЛЫ
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      attachedFile = file;
+      const preview = document.createElement('div'); preview.className = 'file-preview'; preview.id = 'file-preview';
+      if (file.type.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = URL.createObjectURL(file); preview.appendChild(img);
+      } else {
+        preview.innerHTML += `<span class="material-icons">description</span> ${file.name}`;
+      }
+      const remove = document.createElement('span'); remove.className = 'material-icons remove-file'; remove.textContent = 'close';
+      remove.onclick = () => { preview.remove(); attachedFile = null; fileInput.value = ''; };
+      preview.appendChild(remove);
+      document.querySelector('.input-wrapper').appendChild(preview);
     });
 
-    const data = await res.json();
+    function scrollToBottom() { chat.scrollTop = chat.scrollHeight; }
 
-    const aiMessage = document.createElement("div");
-    aiMessage.className = "message ai";
-    aiMessage.innerText = data.answer;
-    chat.appendChild(aiMessage);
+    async function askTutor() {
+      const q = textarea.value.trim();
+      if (!q && !attachedFile) return;
 
-    chat.scrollTop = chat.scrollHeight;
-  }
+      const userId = {{ session.get('user_id') | default('null') | tojson | safe }};
+      if (!userId) { alert("Войдите в аккаунт!"); location.href = "/login"; return; }
 
+      const userMsg = document.createElement("div"); userMsg.className = "message user";
+      if (q) userMsg.innerHTML += `<div>${q.replace(/\n/g, '<br>')}</div>`;
+      if (attachedFile && attachedFile.type.startsWith('image/')) {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(attachedFile);
+        img.style = "max-width:200px; max-height:200px; border-radius:12px; margin-top:8px; display:block;";
+        userMsg.appendChild(img);
+      }
+      chat.appendChild(userMsg);
+      textarea.value = "";
+      document.getElementById('file-preview')?.remove();
+      const fileToSend = attachedFile; attachedFile = null; fileInput.value = '';
 
-</script>
+      const typing = document.createElement("div"); typing.className = "message ai"; typing.innerHTML = "Печатает..."; typing.id = "typing"; chat.appendChild(typing); scrollToBottom();
 
+      const fd = new FormData();
+      fd.append('question', q);
+      fd.append('subject', localStorage.getItem("subject") || "Математика");
+      fd.append('mode', localStorage.getItem("mode") || "explain");
+      if (fileToSend) fd.append('file', fileToSend);
+
+      try {
+        const res = await fetch("/ask", { method: "POST", credentials: "include", body: fd });
+        const data = await res.json();
+        document.getElementById("typing")?.remove();
+
+        const aiMsg = document.createElement("div"); aiMsg.className = "message ai";
+        aiMsg.innerHTML = `<div>${data.answer.replace(/\n/g, '<br>')}</div>`;
+
+        if (data.question_id) {
+          aiMsg.innerHTML += `<small style="color:#aaa; font-size:0.8em; display:block; margin-top:8px;">ID: ${data.question_id} | ${data.timestamp}</small>`;
+        }
+
+        // ГРОМКОГОВОРИТЕЛЬ
+        if ('speechSynthesis' in window && data.answer) {
+          const utter = new SpeechSynthesisUtterance(data.answer); utter.lang = 'ru-RU'; utter.rate = 0.9;
+          const speakBtn = document.createElement('button');
+          speakBtn.innerHTML = '🔊'; speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
+          speakBtn.onmouseover = () => { speakBtn.style.background = 'rgba(76,175,80,0.4)'; speakBtn.style.transform = 'translateY(-1px)'; };
+          speakBtn.onmouseout = () => { speakBtn.style.background = 'rgba(76,175,80,0.25)'; speakBtn.style.transform = 'translateY(0)'; };
+          speakBtn.onclick = () => {
+            if (speechSynthesis.speaking) { speechSynthesis.cancel(); speakBtn.innerHTML = '🔊'; }
+            else { speechSynthesis.speak(utter); speakBtn.innerHTML = 'Стоп'; }
+          };
+          aiMsg.appendChild(speakBtn);
+        }
+
+        // ЗВЁЗДОЧКИ
+        if (data.question_id) {
+          const stars = document.createElement("div"); stars.className = "rating-stars";
+          for (let i = 1; i <= 5; i++) {
+            const s = document.createElement("span"); s.textContent = "★";
+            s.onclick = () => { rateAnswer(data.question_id, i); stars.querySelectorAll("span").forEach((el, idx) => el.classList.toggle("rated", idx < i)); stars.style.pointerEvents = "none"; };
+            stars.appendChild(s);
+          }
+          aiMsg.appendChild(stars);
+        }
+
+        chat.appendChild(aiMsg);
+        scrollToBottom();
+
+      } catch (err) {
+        document.getElementById("typing")?.remove();
+        const errMsg = document.createElement("div"); errMsg.className = "message ai"; errMsg.style.color = "#ff6b6b"; errMsg.innerText = "Ошибка: " + err.message;
+        chat.appendChild(errMsg);
+        scrollToBottom();
+      }
+    }
+
+    async function rateAnswer(history_id, rating) {
+      try {
+        await fetch("/rate", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history_id, rating }) });
+      } catch (err) { console.error("Оценка:", err); }
+    }
+  </script>
 </body>
 </html>

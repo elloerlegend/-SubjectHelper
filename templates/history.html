@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>История — SubjectHelper</title>
+  <link rel="stylesheet" href="/static/back.css">
+  <link rel="stylesheet" href="/static/history.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body class="{% if session.get('theme') == 'dark' %}dark-theme{% else %}light-theme{% endif %}">
+  <header>
+    <a href="/"><img class="logo" src="/static/img/logo.png" alt="Логотип"></a>
+    <div class="user-menu">
+      <div class="user-circle" id="userCircle">{{ current_user.name[0]|upper if current_user.name else 'U' }}</div>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="{{ url_for('profile') }}">Профиль</a>
+        <a href="{{ url_for('history_page') }}">История</a>
+        <a href="{{ url_for('logout') }}">Выйти</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="history-main">
+    <div class="history-container">
+
+      <h1>История запросов</h1>
+
+      <!-- === ФИЛЬТРЫ === -->
+      <div class="filters">
+        <input type="text" id="searchInput" placeholder="Поиск по вопросу..." onkeyup="filterHistory()">
+        <select id="subjectFilter" onchange="filterHistory()">
+          <option value="">Все предметы</option>
+          <option value="Математика">📐 Математика</option>
+          <option value="Физика">🔬 Физика</option>
+          <option value="Русский язык">📝 Русский язык</option>
+          <option value="Информатика">💻 Информатика</option>
+          <option value="Химия">⚗️ Химия</option>
+          <option value="Биология">🧬 Биология</option>
+          <option value="История">📜 История</option>
+          <option value="Обществознание">⚖️ Обществознание</option>
+          <option value="Английский язык">🌍 Английский</option>
+          <d class="subject-card" data-subject="Математика">📐 Математика</d>
+          <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
+          <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
+          <div class="subject-card" data-subject="Физика">🔬 Физика</div>
+          <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
+          <div class="subject-card" data-subject="Биология">🧬 Биология</div>
+          <div class="subject-card" data-subject="История">📜 История</div>
+          <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
+          <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
+
+        </select>
+        <button onclick="exportToPDF()" class="export-btn">
+          <span class="material-icons">download</span> PDF
+        </button>
+      </div>
+
+      <!-- === СПИСОК ИСТОРИИ === -->
+      <div id="historyList" class="history-list">
+        <!-- Заполняется JS -->
+      </div>
+
+      <!-- === ПАГИНАЦИЯ === -->
+      <div class="pagination" id="pagination">
+        <!-- Заполняется JS -->
+      </div>
+
+      <!-- === ПУСТО === -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <span class="material-icons">history</span>
+        <p>Пока нет запросов. Задайте первый вопрос!</p>
+        <a href="/chat" class="btn-primary">Перейти в чат</a>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let historyData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    // === ЗАГРУЗКА ИСТОРИИ ===
+    async function loadHistory() {
+      try {
+        const res = await fetch("/api/history", {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+        if (res.ok) {
+          historyData = data;
+          renderHistory();
+        } else {
+          alert("Ошибка загрузки истории");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // === РЕНДЕР ИСТОРИИ ===
+    function renderHistory() {
+      const list = document.getElementById("historyList");
+      const empty = document.getElementById("emptyState");
+      const filtered = filterData();
+
+      if (filtered.length === 0) {
+        list.innerHTML = "";
+        empty.style.display = "block";
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+
+      empty.style.display = "none";
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = filtered.slice(start, end);
+
+      list.innerHTML = pageItems.map(item => `
+        <div class="history-item">
+          <div class="item-header">
+            <span class="subject-badge">${item.subject}</span>
+            <span class="mode">${getModeText(item.mode)}</span>
+            <span class="timestamp">${formatDate(item.timestamp)}</span>
+          </div>
+          <div class="item-question">
+            <strong>Вопрос:</strong> ${escapeHtml(item.question)}
+          </div>
+          <div class="item-answer">
+            <strong>Ответ:</strong> ${escapeHtml(item.answer)}
+          </div>
+          <div class="item-rating">
+            ${item.rating ? `${'★'.repeat(item.rating)}${'☆'.repeat(5 - item.rating)}` : 'Нет оценки'}
+          </div>
+        </div>
+      `).join('');
+
+      renderPagination(filtered.length);
+    }
+
+    // === ФИЛЬТРАЦИЯ ===
+    function filterData() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const subject = document.getElementById("subjectFilter").value;
+
+      return historyData.filter(item => {
+        const matchesSearch = item.question.toLowerCase().includes(search) || item.answer.toLowerCase().includes(search);
+        const matchesSubject = !subject || item.subject === subject;
+        return matchesSearch && matchesSubject;
+      });
+    }
+
+    function filterHistory() {
+      currentPage = 1;
+      renderHistory();
+    }
+
+    // === ПАГИНАЦИЯ ===
+    function renderPagination(totalItems) {
+      const pages = Math.ceil(totalItems / itemsPerPage);
+      const pagination = document.getElementById("pagination");
+      if (pages <= 1) {
+        pagination.innerHTML = "";
+        return;
+      }
+
+      let html = "";
+      for (let i = 1; i <= pages; i++) {
+        html += `<button onclick="goToPage(${i})" ${i === currentPage ? 'class="active"' : ''}>${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      renderHistory();
+    }
+
+    // === УТИЛИТЫ ===
+    function getModeText(mode) {
+      const map = { explain: "Объяснение", step: "Решение", quiz: "Проверка", exam: "Экзамен" };
+      return map[mode] || mode;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // === ЭКСПОРТ В PDF ===
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 20;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("История запросов — SubjectHelper", 105, y, { align: "center" });
+      y += 15;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+
+      const filtered = filterData();
+      filtered.forEach((item, idx) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.text(`${idx + 1}. ${item.subject} | ${getModeText(item.mode)} | ${formatDate(item.timestamp)}`, 10, y);
+        y += 8;
+        doc.setFont("helvetica", "normal");
+        doc.text(`Q: ${item.question.substring(0, 200)}${item.question.length > 200 ? '...' : ''}`, 15, y);
+        y += 8;
+        doc.text(`A: ${item.answer.substring(0, 300)}${item.answer.length > 300 ? '...' : ''}`, 15, y);
+        y += 12;
+      });
+
+      doc.save("subjecthelper_history.pdf");
+    }
+
+    // === МЕНЮ ===
+    document.addEventListener("DOMContentLoaded", () => {
+      loadHistory();
+      const circle = document.getElementById("userCircle");
+      const menu = document.getElementById("dropdownMenu");
+      if (circle) {
+        circle.addEventListener("click", e => {
+          e.stopPropagation();
+          menu.style.display = menu.style.display === "block" ? "none" : "block";
+        });
+      }
+      document.addEventListener("click", () => { if (menu) menu.style.display = "none"; });
+    });
+  </script>
+
+  <!-- jsPDF для экспорта -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</body>
+</html>
