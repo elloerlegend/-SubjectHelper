@@ -1,16 +1,43 @@
-# Игнорировать системные папки
-.idea/
-.vscode/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Виртуальное окружение
-.venv/
+# Virtual environments
+venv/
+env/
+ENV/
 
-# База данных (если локальная)
+# Database
+users.db
 *.db
 
-# Конфиденциальные данные (если появятся)
-.env
-*.key
-*.pem
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Static files
+static/uploads/*
+static/avatars/*
