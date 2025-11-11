@@ -16,12 +16,16 @@
     .flash.warning { background: #fff3cd; color: #643c00; }
   </style>
 </head>
+
 <body>
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+</header>
+
 
 <div class="form">
   <h2>Регистрация</h2>
 
-  <!-- FLASH СООБЩЕНИЯ -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}

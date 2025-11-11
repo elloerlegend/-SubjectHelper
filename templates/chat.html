@@ -87,13 +87,66 @@
       exam: "Привет! Готовимся к экзамену?"
     };
 
-    window.addEventListener("load", () => {
-      updateSelectedInfo();
-      const msg = document.createElement("div"); msg.className = "message ai";
-      msg.innerText = welcome[localStorage.getItem("mode") || "explain"];
-      chat.appendChild(msg);
-      textarea.focus();
-    });
+    window.addEventListener("load", async () => {
+  updateSelectedInfo();
+
+  // Приветствие
+  const welcomeMsg = document.createElement("div"); welcomeMsg.className = "message ai";
+  welcomeMsg.innerText = welcome[localStorage.getItem("mode") || "explain"];
+  chat.appendChild(welcomeMsg);
+
+  // ЗАГРУЖАЕМ ИСТОРИЮ
+  try {
+    const res = await fetch("/api/history", { method: "POST", credentials: "include" });
+    const history = await res.json();
+
+    // Сортируем по ID (по возрастанию — как в чате)
+    history.sort((a, b) => a.id - b.id);
+
+    for (const h of history) {
+      // Пользователь
+      const userMsg = document.createElement("div"); userMsg.className = "message user";
+      userMsg.innerHTML = `<div>${h.question.replace(/\n/g, '<br>')}</div>`;
+      chat.appendChild(userMsg);
+
+      // ИИ
+      const aiMsg = document.createElement("div"); aiMsg.className = "message ai";
+      aiMsg.innerHTML = `<div>${h.answer.replace(/\n/g, '<br>')}</div>`;
+
+      // ГРОМКОГОВОРИТЕЛЬ
+      if ('speechSynthesis' in window && h.answer) {
+        const utter = new SpeechSynthesisUtterance(h.answer); utter.lang = 'ru-RU'; utter.rate = 0.9;
+        const speakBtn = document.createElement('button');
+        speakBtn.innerHTML = '🔊';
+        speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
+        speakBtn.onmouseover = () => { speakBtn.style.background = 'rgba(76,175,80,0.4)'; speakBtn.style.transform = 'translateY(-1px)'; };
+        speakBtn.onmouseout = () => { speakBtn.style.background = 'rgba(76,175,80,0.25)'; speakBtn.style.transform = 'translateY(0)'; };
+        speakBtn.onclick = () => {
+          if (speechSynthesis.speaking) { speechSynthesis.cancel(); speakBtn.innerHTML = '🔊'; }
+          else { speechSynthesis.speak(utter); speakBtn.innerHTML = 'Стоп'; }
+        };
+        aiMsg.appendChild(speakBtn);
+      }
+
+      // ЗВЁЗДОЧКИ
+      const stars = document.createElement("div"); stars.className = "rating-stars";
+      for (let i = 1; i <= 5; i++) {
+        const s = document.createElement("span"); s.textContent = "★";
+        if (i <= (h.rating || 0)) s.classList.add("rated");
+        s.onclick = () => { rateAnswer(h.id, i); stars.querySelectorAll("span").forEach((el, idx) => el.classList.toggle("rated", idx < i)); stars.style.pointerEvents = "none"; };
+        stars.appendChild(s);
+      }
+      aiMsg.appendChild(stars);
+
+      chat.appendChild(aiMsg);
+    }
+    scrollToBottom();
+  } catch (err) {
+    console.error("Ошибка загрузки истории:", err);
+  }
+
+  textarea.focus();
+});
 
     // ГОЛОС
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -132,7 +185,7 @@
 
     function scrollToBottom() { chat.scrollTop = chat.scrollHeight; }
 
-    async function askTutor() {
+        async function askTutor() {
       const q = textarea.value.trim();
       if (!q && !attachedFile) return;
 
@@ -155,7 +208,7 @@
       const typing = document.createElement("div"); typing.className = "message ai"; typing.innerHTML = "Печатает..."; typing.id = "typing"; chat.appendChild(typing); scrollToBottom();
 
       const fd = new FormData();
-      fd.append('question', q);
+      fd.append('question', q || "[только файл]");  // ← ИСПРАВЛЕНО
       fd.append('subject', localStorage.getItem("subject") || "Математика");
       fd.append('mode', localStorage.getItem("mode") || "explain");
       if (fileToSend) fd.append('file', fileToSend);
@@ -166,17 +219,17 @@
         document.getElementById("typing")?.remove();
 
         const aiMsg = document.createElement("div"); aiMsg.className = "message ai";
-        aiMsg.innerHTML = `<div>${data.answer.replace(/\n/g, '<br>')}</div>`;
+        const answerText = data.answer ? data.answer.replace(/\n/g, '<br>') : "Файл обработан!";  // ← ИСПРАВЛЕНО
+        aiMsg.innerHTML = `<div>${answerText}</div>`;
 
-        if (data.question_id) {
-          aiMsg.innerHTML += `<small style="color:#aaa; font-size:0.8em; display:block; margin-top:8px;">ID: ${data.question_id} | ${data.timestamp}</small>`;
-        }
+
 
         // ГРОМКОГОВОРИТЕЛЬ
         if ('speechSynthesis' in window && data.answer) {
           const utter = new SpeechSynthesisUtterance(data.answer); utter.lang = 'ru-RU'; utter.rate = 0.9;
           const speakBtn = document.createElement('button');
-          speakBtn.innerHTML = '🔊'; speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
+          speakBtn.innerHTML = '🔊';
+          speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
           speakBtn.onmouseover = () => { speakBtn.style.background = 'rgba(76,175,80,0.4)'; speakBtn.style.transform = 'translateY(-1px)'; };
           speakBtn.onmouseout = () => { speakBtn.style.background = 'rgba(76,175,80,0.25)'; speakBtn.style.transform = 'translateY(0)'; };
           speakBtn.onclick = () => {

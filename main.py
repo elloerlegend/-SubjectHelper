@@ -1,6 +1,7 @@
 # main.py
 from flask import Flask, request, jsonify, redirect, render_template, flash, session, url_for
 from flask_cors import CORS
+from flask_login import current_user
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from werkzeug.utils import secure_filename
@@ -61,10 +62,16 @@ def inject_menu():
               <a href="/login" class="start-button">Вход</a>
             </div>
             ''', menu_js='')
-        name = (user.name or "U")[0].upper()
+        if user.avatar:
+            avatar_html = f'<img src="{user.avatar}" class="menu-avatar" id="userCircle">'
+        else:
+            name = (user.name or "U")[0].upper()
+            avatar_html = f'<div class="user-circle" id="userCircle">{name}</div>'
+
         menu = f'''
         <div class="user-menu">
-          <div class="user-circle" id="userCircle">{name}</div>
+          {avatar_html}
+
           <div class="dropdown-menu" id="dropdownMenu">
             <a href="{url_for('profile')}">Профиль</a>
             <a href="{url_for('history_page')}">История</a>
@@ -104,22 +111,31 @@ def welcome():
 def chat():
     return render_template("chat.html")
 
-# === ПРОФИЛЬ — ЗАЩИТА ОТ NoneType.id ===
+# === ПРОФИЛЬ===
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     user = User.query.get(session['user_id'])
-    if not user:
-        flash("Пользователь не найден", "danger")
-        return redirect(url_for('logout'))
-
     if request.method == 'POST':
         nickname = request.form.get('nickname', '').strip()
+        file = request.files.get('avatar')
+
+        # === обновление ника ===
         if nickname and len(nickname) <= 20:
             user.name = nickname
             session['nickname'] = nickname
-            db.session.commit()
             flash('Ник обновлён!', 'success')
+
+        if file and file.filename:
+            filename = secure_filename(f"avatar_{user.id}.png")
+            path = os.path.join("static/avatars", filename)
+            os.makedirs("static/avatars", exist_ok=True)
+            file.save(path)
+            user.avatar = f"/static/avatars/{filename}"
+            session['avatar'] = user.avatar  # 🔥 добавь вот это
+            flash("Аватар обновлён!", "success")
+
+        db.session.commit()
 
     history = get_history(user.id)
     total = len(history)
@@ -180,6 +196,9 @@ def logout():
 @login_required
 def ask():
     question = request.form.get("question", "").strip()
+    question = request.form.get('question', '').strip()
+    if not question or question == "[только файл]":
+        question = "Анализ прикреплённого файла"
     subject = request.form.get("subject", "Общее")
     mode = request.form.get("mode", "explain")
     user_id = session['user_id']
@@ -284,6 +303,57 @@ def rate():
         logger.info(f"RATE: QID {hid} → {r} stars")
         return jsonify({"ok": True})
     return jsonify({"error": "Не найдено"}), 404
+@app.route('/update_avatar', methods=['POST'])
+@login_required
+def update_avatar():
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('Ошибка: пользователь не найден.', 'danger')
+        return redirect(url_for('logout'))
+
+    file = request.files.get('avatar')
+    if not file or not file.filename:
+        flash('Файл не выбран.', 'warning')
+        return redirect(url_for('profile'))
+
+    # сохраняем аватар в папку static/avatars
+    os.makedirs('static/avatars', exist_ok=True)
+    filename = secure_filename(f"avatar_{user.id}.png")
+    path = os.path.join('static/avatars', filename)
+    file.save(path)
+
+    # обновляем пользователя
+    user.avatar = f"/static/avatars/{filename}"
+    db.session.commit()
+    session['avatar'] = user.avatar
+    flash('✅ Аватар обновлён!', 'success')
+
+    return redirect(url_for('profile'))
+
+
+@app.route('/update_nickname', methods=['POST'])
+@login_required
+def update_nickname():
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('Ошибка: пользователь не найден.', 'danger')
+        return redirect(url_for('logout'))
+
+    nickname = request.form.get('nickname', '').strip()
+    if not nickname:
+        flash('Введите никнейм.', 'warning')
+        return redirect(url_for('profile'))
+
+    if len(nickname) > 20:
+        flash('Никнейм слишком длинный (до 20 символов).', 'warning')
+        return redirect(url_for('profile'))
+
+    user.name = nickname
+    db.session.commit()
+    session['nickname'] = nickname
+    flash('✅ Ник успешно изменён!', 'success')
+
+    return redirect(url_for('profile'))
 
 # === ЗАПУСК ===
 if __name__ == "__main__":
