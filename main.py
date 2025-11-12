@@ -48,7 +48,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# === МЕНЮ + JS — БЕЗ ДУБЛЕЙ ===
+# === МЕНЮ ===
 @app.context_processor
 def inject_menu():
     if 'user_id' in session:
@@ -56,12 +56,8 @@ def inject_menu():
         if not user:
             session.clear()
             flash('Сессия истекла. Войдите заново.', 'danger')
-            return dict(menu='''
-            <div class="header_registration">
-              <a href="/register" class="start-button">Регистрация</a>
-              <a href="/login" class="start-button">Вход</a>
-            </div>
-            ''', menu_js='')
+            return dict(menu='', menu_js='')
+
         if user.avatar:
             avatar_html = f'<img src="{user.avatar}" class="menu-avatar" id="userCircle">'
         else:
@@ -71,7 +67,6 @@ def inject_menu():
         menu = f'''
         <div class="user-menu">
           {avatar_html}
-
           <div class="dropdown-menu" id="dropdownMenu">
             <a href="{url_for('profile')}">Профиль</a>
             <a href="{url_for('history_page')}">История</a>
@@ -92,15 +87,19 @@ def inject_menu():
         </script>
         '''
     else:
+
         menu = '''
-        <div class="header_registration">
-          <a href="/register" class="start-button">Регистрация</a>
-          <a href="/login" class="start-button">Вход</a>
+        <div class="auth-menu">
+            <a href="/login" class="auth-btn login-btn">
+                <span class="material-icons">login</span> Войти
+            </a>
+            <a href="/register" class="auth-btn register-btn">
+                <span class="material-icons">person_add</span> Регистрация
+            </a>
         </div>
         '''
         js = ''
     return dict(menu=menu, menu_js=js)
-
 # === СТРАНИЦЫ ===
 @app.route("/")
 def welcome():
