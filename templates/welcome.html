@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>SubjectHelper — Главная</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
   <link rel="stylesheet" href="/static/back.css">
   <link rel="stylesheet" href="/static/welcome.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -62,82 +63,92 @@
 </div>
 
 <div class="mode-card" data-mode="exam">
-  <h2>💯 Подготовка к экзамену</h2>
+  <h2>💯 Подготовка к ЕГЭ и ОГЭ</h2>
   <p>Составь план и методы подготовки.</p>
 </div>
     </div>
 
-    <a href="/chat" class="start-button">Начать обучение</a>
+    <form method="POST" action="/new_chat" id="new-chat-form" style="display:inline;">
+    <input type="hidden" name="subject" id="form-subject" value="">
+    <input type="hidden" name="class_number" id="form-class" value="">
+    <input type="hidden" name="mode" id="form-mode" value="">
+    <button type="submit" class="start-button" id="start-button">Начать обучение</button>
+</form>
 
-    <script>
-        let selectedSubject = localStorage.getItem('subject') || null;
-        let selectedMode = localStorage.getItem('mode') || null;
-        let selectedClass = localStorage.getItem('user_class') || null;
+<script>
+    let selectedSubject = localStorage.getItem('subject') || null;
+    let selectedMode = localStorage.getItem('mode') || null;
+    let selectedClass = localStorage.getItem('user_class') || null;
 
-        const subjectCards = document.querySelectorAll('.subject-card');
-        const modeCards = document.querySelectorAll('.mode-card');
-        const classCards = document.querySelectorAll('.class-card');
-        const startBtn = document.querySelector('.start-button');
+    const subjectCards = document.querySelectorAll('.subject-card');
+    const modeCards = document.querySelectorAll('.mode-card');
+    const classCards = document.querySelectorAll('.class-card');
+    const startBtn = document.getElementById('start-button');
 
-        // === Клик по классу ===
-        classCards.forEach(card => {
-          card.addEventListener('click', () => {
+    function checkReady() {
+        if (selectedClass && selectedSubject && selectedMode) {
+            startBtn.disabled = false;
+            startBtn.style.opacity = '1';
+        } else {
+            startBtn.disabled = true;
+            startBtn.style.opacity = '0.5';
+        }
+    }
+
+    classCards.forEach(card => {
+        card.addEventListener('click', () => {
             classCards.forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             selectedClass = card.dataset.class;
             localStorage.setItem('user_class', selectedClass);
             checkReady();
-          });
         });
+    });
 
-        // === Клик по предмету ===
-        subjectCards.forEach(card => {
-          card.addEventListener('click', () => {
+    subjectCards.forEach(card => {
+        card.addEventListener('click', () => {
             subjectCards.forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             selectedSubject = card.dataset.subject;
-            localStorage.setItem('subject', selectedSubject);  // ← СОХРАНЯЕМ
+            localStorage.setItem('subject', selectedSubject);
             checkReady();
-          });
         });
+    });
 
-        // === Клик по режиму ===
-        modeCards.forEach(card => {
-          card.addEventListener('click', () => {
+    modeCards.forEach(card => {
+        card.addEventListener('click', () => {
             modeCards.forEach(c => c.classList.remove('selected'));
             card.classList.add('selected');
             selectedMode = card.dataset.mode;
-            localStorage.setItem('mode', selectedMode);  // ← СОХРАНЯЕМ
+            localStorage.setItem('mode', selectedMode);
             checkReady();
-          });
         });
+    });
 
-        // === Восстановление при загрузке ===
-        if (selectedClass) {
-          document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
-        }
-        if (selectedSubject) {
-          document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
-        }
-        if (selectedMode) {
-          document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
-        }
+    // Восстановление при загрузке
+    if (selectedClass) {
+        document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
+    }
+    if (selectedSubject) {
+        document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
+    }
+    if (selectedMode) {
+        document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
+    }
 
-        // === Проверка готовности ===
-        function checkReady() {
-          if (selectedClass && selectedSubject && selectedMode) {
-            startBtn.href = '/chat';
-            startBtn.style.pointerEvents = 'auto';
-            startBtn.style.opacity = '1';
-          } else {
-            startBtn.href = '#';
-            startBtn.style.pointerEvents = 'none';
-            startBtn.style.opacity = '0.5';
-          }
+    document.getElementById('new-chat-form').addEventListener('submit', function(e) {
+        if (!selectedClass || !selectedSubject || !selectedMode) {
+            e.preventDefault();
+            alert('Пожалуйста, выберите класс, предмет и режим');
+            return;
         }
+        let classNumber = parseInt(selectedClass.split('-')[0]);
+        document.getElementById('form-subject').value = selectedSubject;
+        document.getElementById('form-class').value = classNumber;
+        document.getElementById('form-mode').value = selectedMode;
+    });
 
-        // Запускаем при загрузке
-        checkReady();
+    checkReady();
 </script>
 
   </section>
@@ -146,5 +157,3 @@
 
 </body>
 </html>
-
-

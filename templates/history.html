@@ -6,18 +6,12 @@
   <link rel="stylesheet" href="/static/back.css">
   <link rel="stylesheet" href="/static/history.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
 </head>
 <body class="{% if session.get('theme') == 'dark' %}dark-theme{% else %}light-theme{% endif %}">
   <header>
     <a href="/"><img class="logo" src="/static/img/logo.png" alt="Логотип"></a>
-    <div class="user-menu">
-      <div class="user-circle" id="userCircle">{{ current_user.name[0]|upper if current_user.name else 'U' }}</div>
-      <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{{ url_for('profile') }}">Профиль</a>
-        <a href="{{ url_for('history_page') }}">История</a>
-        <a href="{{ url_for('logout') }}">Выйти</a>
-      </div>
-    </div>
+      {{ menu | safe }}
   </header>
 
   <main class="history-main">
@@ -39,16 +33,6 @@
           <option value="История">📜 История</option>
           <option value="Обществознание">⚖️ Обществознание</option>
           <option value="Английский язык">🌍 Английский</option>
-          <d class="subject-card" data-subject="Математика">📐 Математика</d>
-          <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
-          <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
-          <div class="subject-card" data-subject="Физика">🔬 Физика</div>
-          <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
-          <div class="subject-card" data-subject="Биология">🧬 Биология</div>
-          <div class="subject-card" data-subject="История">📜 История</div>
-          <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
-          <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
-
         </select>
         <button onclick="exportToPDF()" class="export-btn">
           <span class="material-icons">download</span> PDF

@@ -4,30 +4,10 @@
   <meta charset="UTF-8">
   <title>SubjectHelper - Чат</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <style>
-    .input-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); max-width: 700px; width: 100%; padding: 15px; background: rgba(255,255,255,0.12); backdrop-filter: blur(16px); border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.1); z-index: 1000; display: flex; gap: 12px; align-items: flex-end; }
-    .input-wrapper { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 8px; gap: 8px; border: 1px solid rgba(255,255,255,0.3); }
-    #question { flex: 1; resize: none; background: transparent; border: none; outline: none; color: white; font-size: 16px; padding: 12px 16px; min-height: 44px; max-height: 120px; overflow-y: auto; }
-    #question::placeholder { color: rgba(255,255,255,0.7); }
-    .attach-btn, .voice-btn { background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.3s; }
-    .attach-btn:hover, .voice-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
-    .voice-btn.recording { background: #f44336; animation: pulse 1.5s infinite; }
-    .send-btn { background: linear-gradient(135deg, #4CAF50, #45a049); border: none; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; box-shadow: 0 4px 12px rgba(76,175,80,0.4); transition: all 0.3s; }
-    .send-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 16px rgba(76,175,80,0.5); }
-    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(244,67,54,0.7); } 70% { box-shadow: 0 0 0 10px rgba(244,67,54,0); } 100% { box-shadow: 0 0 0 0 rgba(244,67,54,0); } }
 
-    .file-preview { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: white; }
-    .file-preview img { max-width: 60px; max-height: 60px; border-radius: 8px; object-fit: cover; }
-    .file-preview .remove-file { margin-left: auto; color: #ff6b6b; cursor: pointer; font-size: 1.2rem; }
-    .file-preview .remove-file:hover { color: #ff4444; }
-
-    .rating-stars { margin-top: 12px; text-align: center; }
-    .rating-stars span { color: #ccc; font-size: 1.3rem; cursor: pointer; margin: 0 6px; transition: color 0.2s; }
-    .rating-stars span.rated { color: #ffd700; }
-
-    .main { padding-bottom: 100px; }
-  </style>
 </head>
 <body>
   <header>

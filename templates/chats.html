@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мои чаты — SubjectHelper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='chats.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
+</head>
+<body>
+    <header>
+        <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+        {{ menu | safe }}
+    </header>
+
+    <main>
+        <div class="chats-container">
+            <div class="chats-header">
+                <h1>
+                    <span class="material-icons">chat</span> Мои чаты
+                </h1>
+                <a href="/" class="new-chat-btn">
+                    <span class="material-icons">add</span> Новый чат
+                </a>
+            </div>
+
+            {% if chats %}
+                <div class="chats-list">
+                    {% for chat in chats %}
+                    <div class="chat-item">
+                        <div class="chat-info">
+                            <h3>{{ chat.title }}</h3>
+                            <div class="chat-meta">
+                                <span>
+                                    <span class="material-icons">subject</span> {{ chat.subject }}
+                                </span>
+                                <span>
+                                    <span class="material-icons">school</span> {{ chat.class_number }} класс
+                                </span>
+                                <span>
+                                    <span class="material-icons">update</span> {{ chat.updated_at.strftime('%d.%m.%Y %H:%M') }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="chat-actions">
+                            <a href="{{ url_for('open_chat', chat_id=chat.id) }}">
+                                <span class="material-icons">forum</span> Открыть
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <span class="material-icons">question_answer</span>
+                    <p>У вас пока нет ни одного чата.<br>Начните обучение прямо сейчас!</p>
+                    <a href="/">Создать первый чат</a>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    {{ menu_js | safe }}
+</body>
+</html>

@@ -1,10 +1,6 @@
-body {
-  color: white;
-  font-family: "Inter", sans-serif;
-}
-
+/* ==================== PROFILE.CSS — стили профиля и плана ==================== */
 .profile-container {
-  max-width: 600px;
+  max-width: 680px;
   margin: 60px auto;
   padding: 40px;
   background: rgba(255,255,255,0.08);
@@ -13,8 +9,10 @@ body {
   border: 1px solid rgba(255,255,255,0.15);
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
   text-align: center;
+  color: white;
 }
 
+/* Аватар */
 .avatar-wrapper {
   position: relative;
   display: inline-block;
@@ -30,7 +28,6 @@ body {
   box-shadow: 0 0 12px rgba(0,0,0,0.3);
 }
 
-/* кнопка изменения аватара */
 .avatar-edit-btn {
   position: absolute;
   bottom: 5px;
@@ -52,17 +49,18 @@ body {
 
 .avatar-edit-btn:hover {
   background: #45a049;
-  background: #45a049;
   transform: scale(1.05);
 }
 
-
+/* Заголовки */
 h2 {
-  font-size: 1.6rem;
-  margin-bottom: 25px;
+  font-size: 1.65rem;
+  margin: 35px 0 20px;
+  font-weight: 600;
 }
 
-form {
+/* Форма смены ника */
+.nickname-form {
   margin-bottom: 35px;
 }
 
@@ -76,7 +74,6 @@ form {
   color: white;
   font-size: 1rem;
   outline: none;
-  transition: background 0.2s;
 }
 
 .nickname-input:focus {
@@ -100,12 +97,264 @@ form {
   box-shadow: 0 4px 12px rgba(76,175,80,0.4);
 }
 
+/* Геймификация */
+.gamification {
+  background: rgba(255,255,255,0.08);
+  padding: 20px;
+  border-radius: 18px;
+  margin-bottom: 30px;
+}
+
+.gamification p {
+  font-size: 1.1rem;
+  margin: 8px 0;
+}
+
+.badges {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.badge {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #222;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(255,215,0,0.3);
+}
+
+/* Прогресс по предметам */
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.progress-item {
+  background: rgba(255,255,255,0.08);
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.progress-label {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #4CAF50;
+}
+
+.progress-count {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.8);
+  text-align: right;
+}
+
+/* Качество знаний */
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 40px;
+}
+
+.quality-item {
+  background: rgba(255,255,255,0.08);
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.quality-label {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.quality-score {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+/* Рекомендации и план */
+.recommendation {
+  background: rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+  margin: 35px 0;
+  border: 1px solid rgba(255,255,255,0.15);
+  text-align: left;
+}
+
+.ethics-note {
+  color: #aaa;
+  font-size: 0.95rem;
+  font-style: italic;
+  margin: 12px 0 22px 0;
+}
+
+.plan-btn {
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 30px;
+  font-size: 1.12rem;
+  cursor: pointer;
+  margin: 18px 0 25px 0;
+  box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+  transition: all 0.3s;
+}
+
+.plan-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(76,175,80,0.5);
+}
+
+/* Прогресс выполнения плана */
+.plan-progress {
+  margin: 20px 0 10px;
+  text-align: center;
+}
+
+.plan-progress-bar {
+  height: 10px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.plan-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width 0.8s ease;
+}
+
+/* Сетка карточек дней */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 22px;
+  margin-top: 25px;
+}
+
+.day-card {
+  background: rgba(255,255,255,0.1);
+  border-radius: 24px;
+  padding: 26px;
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: all 0.4s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 28px rgba(76,175,80,0.3);
+}
+
+.day-card h3 {
+  color: #4CAF50;
+  margin: 0 0 18px 0;
+  font-size: 1.45rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.day-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+  flex-grow: 1;
+}
+
+.day-card li {
+  padding: 11px 0 11px 32px;
+  position: relative;
+  font-size: 1.03rem;
+  line-height: 1.5;
+}
+
+.day-card li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: #4CAF50;
+  font-size: 1.4rem;
+}
+
+.complete-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.05rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  margin-top: auto;
+}
+
+.complete-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(76,175,80,0.5);
+}
+
+.day-card.completed {
+  border-color: #4CAF50;
+  background: rgba(76,175,80,0.18);
+  box-shadow: 0 0 0 4px rgba(76,175,80,0.25);
+}
+
+.day-card.completed h3::after {
+  content: " ✅";
+  font-size: 1.6rem;
+  margin-left: auto;
+}
+
+.day-card.completed .complete-btn {
+  background: #2E7D32;
+  cursor: default;
+  opacity: 0.8;
+  box-shadow: none;
+  transform: none;
+}
+
+.finish-plan-btn {
+  width: 100%;
+  padding: 18px;
+  margin-top: 30px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #222;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.finish-plan-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(255,215,0,0.5);
+}
+
+/* Статистика */
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 25px;
   margin-top: 40px;
-  text-align: center;
 }
 
 .stat-box {
@@ -117,8 +366,8 @@ form {
 }
 
 .stat-value {
-  font-size: 1.8rem;
-  font-weight: bold;
+  font-size: 1.85rem;
+  font-weight: 700;
   margin-bottom: 6px;
   color: #4CAF50;
 }
@@ -139,4 +388,23 @@ form {
 
 .back-link:hover {
   color: #81C784;
+}
+
+/* Адаптивность */
+@media (max-width: 600px) {
+  .profile-container {
+    margin: 20px 12px;
+    padding: 25px;
+  }
+  .plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .nickname-input {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .nickname-btn {
+    width: 100%;
+    margin-left: 0;
+  }
 }

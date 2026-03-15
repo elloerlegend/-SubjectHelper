@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>SubjectHelper - Профиль</title>
-
   <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -17,13 +19,9 @@
 
   <main class="profile-container">
     <div class="avatar-wrapper">
-      <img
-        id="avatar-preview"
-        src="{{ current_user.avatar or url_for('static', filename='img/default_avatar.png') }}"
-        alt="Аватар"
-        class="avatar-large">
-
-      <!-- форма для аватарки -->
+      <img id="avatar-preview"
+           src="{{ current_user.avatar or url_for('static', filename='img/default_avatar.png') }}"
+           alt="Аватар" class="avatar-large">
       <form method="POST" enctype="multipart/form-data" action="/update_avatar">
         <input type="file" name="avatar" accept="image/*" id="avatarInput" style="display:none;">
         <label for="avatarInput" class="avatar-edit-btn material-icons" title="Изменить аватар">photo_camera</label>
@@ -32,11 +30,62 @@
 
     <h2>Привет, {{ current_user.name or "Пользователь" }}!</h2>
 
-    <!-- форма для ника -->
     <form method="POST" action="/update_nickname" class="nickname-form">
       <input type="text" name="nickname" class="nickname-input" placeholder="Новый ник (до 20 символов)" maxlength="20">
       <button type="submit" class="nickname-btn">Сохранить</button>
     </form>
+
+    <h2>🏆 Твои достижения</h2>
+    <div class="gamification">
+      <p>⭐ XP: <strong>{{ current_user.xp or 0 }}</strong> (Уровень {{ current_user.level or 1 }})</p>
+      <p>🔥 Стрик: <strong>{{ current_user.streak or 0 }}</strong> дней</p>
+      <div class="badges">
+        {% for badge in (current_user.badges or '').split(',') if badge %}
+          <span class="badge">🏅 {{ badge }}</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <h2>📊 Твой прогресс</h2>
+    <div class="progress-grid">
+      {% for subject, count in subject_stats.items() %}
+      <div class="progress-item">
+        <div class="progress-label">{{ subject }}</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ (count / max_queries * 100) if max_queries else 0 }}%"></div>
+        </div>
+        <div class="progress-count">{{ count }} запросов</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2>📈 Качество знаний</h2>
+    <div class="quality-grid">
+      {% for subject, avg in quality.items() %}
+      <div class="quality-item">
+        <div class="quality-label">{{ subject }}</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ avg * 20 }}%; background-color: {% if avg > 3 %}#4CAF50{% else %}#f44336{% endif %}"></div>
+        </div>
+        <div class="quality-score">{{ avg }}/5</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- РЕКОМЕНДАЦИИ — КРАСИВЫЙ ГРИД ПЛАНА -->
+<div class="recommendation">
+    <p>📌 Создай персональный план практики на 7 дней</p>
+    <p class="ethics-note">Прогресс — ориентир, но проверяй знания с учителем.</p>
+
+    <button onclick="generatePlan('{{ weak_subject if weak_subject != '—' else 'Математика' }}')" class="plan-btn">
+        Создать план практики на 7 дней
+    </button>
+
+    <div id="planContainer" class="plan-grid"></div>
+</div>
+
+    <h2>📅 Активность за неделю</h2>
+    <canvas id="activityChart" width="400" height="200"></canvas>
 
     <div class="stats">
       <div class="stat-box">
@@ -58,22 +107,143 @@
 
   {{ menu_js | safe }}
 
-  <!-- Предпросмотр аватарки -->
   <script>
-  const avatarInput = document.getElementById('avatarInput');
-  const avatarPreview = document.getElementById('avatar-preview');
-
-  avatarInput.addEventListener('change', function() {
-      const file = this.files[0];
-      if (file) {
+    // Предпросмотр аватарки
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarPreview = document.getElementById('avatar-preview');
+    if (avatarInput) {
+      avatarInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
           const reader = new FileReader();
           reader.onload = function(e) {
-              avatarPreview.src = e.target.result;
+            avatarPreview.src = e.target.result;
           }
           reader.readAsDataURL(file);
-          this.form.submit(); // сразу отправляем форму после выбора
-      }
-  });
+          this.form.submit();
+        }
+      });
+    }
   </script>
+
+  <script>
+    // График активности
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ dates.keys()|list|tojson }},
+        datasets: [{
+          label: 'Запросы',
+          data: {{ dates.values()|list|tojson }},
+          borderColor: '#4CAF50',
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  </script>
+
+  <script>
+let completedDays = JSON.parse(localStorage.getItem('planCompleted') || '[]');
+
+async function generatePlan(subject) {
+    const btn = document.querySelector('.plan-btn');
+    const container = document.getElementById('planContainer');
+
+    btn.textContent = 'Генерирую план...';
+    btn.disabled = true;
+    container.innerHTML = '<p style="text-align:center;color:#aaa;padding:60px;">Создаю красивый план на 7 дней...</p>';
+
+    try {
+        const res = await fetch("/plan", {
+            method: "POST",
+            body: JSON.stringify({subject}),
+            headers: {"Content-Type": "application/json"}
+        });
+        const data = await res.json();
+
+        const lines = data.plan.split('\n');
+        let days = [];
+        let currentDay = null;
+
+        for (let line of lines) {
+            line = line.trim();
+            if (!line || line.length < 5) continue;
+
+            // Жёсткая очистка мусора
+            if (line.includes("в пользовательской области") ||
+                line.includes("сложный стрик") ||
+                line.includes("Выведите") ||
+                line.includes("ОТВЕЧАЙ")) continue;
+
+            if (line.match(/^ДЕНЬ\s*\d+/i) || line.toUpperCase().startsWith('ДЕНЬ')) {
+                if (currentDay) days.push(currentDay);
+                currentDay = { title: line, tasks: [] };
+            } else if (currentDay) {
+                currentDay.tasks.push(line);
+            }
+        }
+        if (currentDay) days.push(currentDay);
+
+        // Если парсер не сработал — создаём 7 карточек вручную
+        if (days.length < 2) {
+            days = [];
+            for (let i = 1; i <= 7; i++) {
+                days.push({ title: `ДЕНЬ ${i}: Практика по ${subject}`, tasks: ["• Задание 1", "• Задание 2", "• Задание 3", "Самопроверка: ..."] });
+            }
+        }
+
+        let html = '';
+        days.forEach((day, index) => {
+            const isCompleted = completedDays.includes(index);
+            html += `
+                <div class="day-card ${isCompleted ? 'completed' : ''}" id="day-${index}">
+                    <h3>📅 ${day.title}</h3>
+                    <ul class="task-list">
+                        ${day.tasks.map(t => `<li>${t.replace(/^[•\\-∗]\s*/, '')}</li>`).join('')}
+                    </ul>
+                    <button onclick="markDayComplete(${index})" class="complete-btn">
+                        ${isCompleted ? '✅ Выполнено' : 'Отметить как выполненный'}
+                    </button>
+                </div>`;
+        });
+
+        html += `<button onclick="finishWeek()" class="finish-plan-btn">🎉 Завершить весь план недели</button>`;
+
+        container.innerHTML = html;
+
+    } catch (e) {
+        container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">Не удалось создать план. Попробуй ещё раз.</p>';
+    }
+
+    btn.textContent = 'Создать план практики на 7 дней';
+    btn.disabled = false;
+}
+
+function markDayComplete(index) {
+    if (!completedDays.includes(index)) {
+        completedDays.push(index);
+        localStorage.setItem('planCompleted', JSON.stringify(completedDays));
+    }
+    const card = document.getElementById(`day-${index}`);
+    if (card) {
+        card.classList.add('completed');
+        const btn = card.querySelector('.complete-btn');
+        if (btn) btn.innerHTML = '✅ Выполнено';
+    }
+}
+
+function finishWeek() {
+    alert('🎉 Поздравляем! Ты прошёл полный 7-дневный план практики!\n\nТвой стрик и XP уже обновлены.');
+}
+</script>
+
+
+
+
 </body>
 </html>

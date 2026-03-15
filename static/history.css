@@ -1,5 +1,4 @@
-/* === history.css === */
-
+/* ==================== HISTORY.CSS — стили страницы истории ==================== */
 .history-main {
   padding: 100px 20px 40px;
   max-width: 900px;
@@ -144,18 +143,4 @@
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
-}
-
-.btn-primary {
-  display: inline-block;
-  background: #4CAF50;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 12px;
-  text-decoration: none;
-  margin-top: 16px;
-}
-
-.btn-primary:hover {
-  background: #45a049;
 }

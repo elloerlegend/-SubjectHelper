@@ -62,3 +62,38 @@
   transform: scale(1.1);
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
+
+.welcome {
+  text-align: center;
+  margin-top: 80px;
+  margin-bottom: 60px;
+  color: white;
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.class-grid, .modes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 50px;
+  width: 100%;
+}
+
+/* Остальные стили для карточек остаются без изменений */
+.class-card, .subject-card, .mode-card {
+  /* ваши текущие стили */
+}
+
+.start-button {
+  /* ваши текущие стили */
+}
+
+.selected {
+  /* ваши текущие стили */
+}
