@@ -25,6 +25,7 @@ MANIFEST
 venv/
 env/
 ENV/
+.env
 
 # Database
 users.db

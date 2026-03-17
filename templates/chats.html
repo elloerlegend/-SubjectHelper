@@ -8,14 +8,14 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
-
 </head>
 <body>
     <header>
         <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
         {{ menu | safe }}
     </header>
-
+    <canvas id="formula-canvas"></canvas>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
     <main>
         <div class="chats-container">
             <div class="chats-header">
@@ -64,5 +64,6 @@
     </main>
 
     {{ menu_js | safe }}
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>

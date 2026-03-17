@@ -2,12 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SubjectHelper - Чат</title>
+  <title>SubjectHelper — Чат</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
 </head>
 <body>
   <header>
@@ -16,26 +15,80 @@
   </header>
 
   <main>
-    <div class="text-center">
-      <h1>AI-Репетитор</h1>
+    <div class="mode-banner" id="modeBanner"></div>
+    <div class="text-center" style="padding-top:10px;">
       <div class="info-bar"><p id="selected-info"></p></div>
     </div>
 
+    <div id="xp-toast" class="xp-toast" style="display:none;"></div>
+
     <section class="main">
+
+      <!-- QUIZ скорборд -->
+      <div id="quiz-scoreboard" class="quiz-scoreboard" style="display:none;">
+        <div class="qs-item"><span class="qs-icon">✅</span><span class="qs-val" id="qs-correct">0</span><span class="qs-lbl">правильно</span></div>
+        <div class="qs-divider"></div>
+        <div class="qs-item"><span class="qs-icon">❌</span><span class="qs-val" id="qs-wrong">0</span><span class="qs-lbl">ошибок</span></div>
+        <div class="qs-divider"></div>
+        <div class="qs-item"><span class="qs-icon">📝</span><span class="qs-val" id="qs-num">1</span><span class="qs-lbl">вопрос</span></div>
+        <div class="qs-progress-wrap"><div class="qs-progress-fill" id="qs-progress" style="width:0%"></div></div>
+      </div>
+
+      <!-- STEP прогресс -->
+      <div id="step-progress-bar" class="step-progress-bar" style="display:none;">
+        <span class="spb-label">Шаг <b id="spb-num">1</b></span>
+        <div class="spb-dots" id="spb-dots"></div>
+        <span class="spb-task" id="spb-task"></span>
+      </div>
+
+      <!-- EXAM суб-режимы -->
+      <div id="exam-header" style="display:none;">
+        <div id="exam-mode-selector" class="exam-mode-selector">
+          <button class="exam-mode-btn active" id="btn-explain"  onclick="setExamSubmode('explain')">📖 Объяснение формата</button>
+          <button class="exam-mode-btn"        id="btn-practice" onclick="setExamSubmode('practice')">🎯 Тренировка заданий</button>
+          <button class="exam-mode-btn"        id="btn-full"     onclick="setExamSubmode('full')">⏱ Полный экзамен</button>
+        </div>
+        <div id="exam-progress-bar" class="exam-progress-bar" style="display:none;">
+          <span class="epb-label">Задание <b id="epb-num">1</b> из <b id="epb-total">27</b></span>
+          <div class="epb-dots" id="epb-dots"></div>
+          <div id="exam-timer" class="exam-timer" style="display:none;">
+            <span class="material-icons" style="font-size:14px">timer</span>
+            <span id="timer-val">3:55:00</span>
+          </div>
+        </div>
+      </div>
+
       <div class="chat" id="chat"></div>
 
-      <div class="input-container">
+      <!-- Превью прикреплённого файла -->
+      <div id="file-preview-bar" class="file-preview-bar" style="display:none;">
+        <div class="fpb-inner">
+          <span class="fpb-icon material-icons" id="fpb-icon">description</span>
+          <span class="fpb-name" id="fpb-name"></span>
+          <img id="fpb-img" class="fpb-img" src="" alt="" style="display:none;">
+          <button class="fpb-remove" onclick="clearAttach()" title="Убрать файл">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Поле ввода -->
+      <div class="input-container" id="inputContainer">
         <div class="input-wrapper">
-          <textarea id="question" placeholder="Введите ваш вопрос..."></textarea>
-          <label for="file-upload" class="attach-btn" title="Прикрепить файл">
+          <!-- Кнопка прикрепить файл -->
+          <label class="attach-btn" for="file-input" title="Прикрепить файл">
             <span class="material-icons">attach_file</span>
-            <input type="file" id="file-upload" accept="image/*,.pdf,.txt" style="display: none;">
+            <input type="file" id="file-input" accept="image/*,.pdf,.txt,.docx"
+                   style="display:none;" onchange="handleFileSelect(event)">
           </label>
+
+          <textarea id="question" rows="1"></textarea>
+
           <button id="voice-btn" class="voice-btn" title="Голосовой ввод">
             <span class="material-icons">mic</span>
           </button>
         </div>
-        <button onclick="askTutor()" class="send-btn">
+        <button class="send-btn" id="send-btn" onclick="askTutor()">
           <span class="material-icons">send</span>
         </button>
       </div>
@@ -43,209 +96,723 @@
   </main>
 
   {{ menu_js | safe }}
+  <script src="{{ url_for('static', filename='bg.js') }}"></script>
 
   <script>
-    const chat = document.getElementById("chat");
-    const textarea = document.getElementById("question");
-    const fileInput = document.getElementById("file-upload");
-    const voiceBtn = document.getElementById("voice-btn");
-    let attachedFile = null;
-    let recognition;
+  // ══════════════════════════════════════════════
+  //  КОНСТАНТЫ
+  // ══════════════════════════════════════════════
+  const MODE    = localStorage.getItem("mode")       || "explain";
+  const SUBJECT = localStorage.getItem("subject")    || "Математика";
+  const CLASS   = localStorage.getItem("user_class") || "8";
+  const USER_ID = {{ session.get('user_id') | default('null') | tojson | safe }};
 
-    function updateSelectedInfo() {
-      const subject = localStorage.getItem("subject") || "Математика";
-      const mode = localStorage.getItem("mode") || "explain";
-      const userClass = localStorage.getItem("user_class") || "не выбран";
-      const modeText = { explain: "Объяснение", step: "Решение", quiz: "Проверка", exam: "Экзамен" };
-      document.getElementById("selected-info").innerText = `Класс: ${userClass} | Предмет: ${subject} | Режим: ${modeText[mode] || mode}`;
-    }
+  const chatEl   = document.getElementById("chat");
+  const textarea = document.getElementById("question");
+  const sendBtn  = document.getElementById("send-btn");
 
-    const welcome = {
-      explain: "Привет! Какую тему тебе объяснить?",
-      step: "Привет! Готов решать задачи?",
-      quiz: "Привет! Хочешь проверить знания?",
-      exam: "Привет! Готовимся к экзамену?"
-    };
+  let lastQ       = "";
+  let attachedFile = null;   // текущий прикреплённый файл
 
-    window.addEventListener("load", async () => {
-  updateSelectedInfo();
+  // STEP
+  let stepState = { num:0, task:"", maxSteps:8, done:false };
+  // QUIZ
+  let quizState = { correct:0, wrong:0, num:1, topic:"", total:5 };
+  // EXAM
+  let examSubmode = "explain";
+  let examState   = { taskNum:1, maxTasks:27, topic:"", timerInterval:null, seconds:3*3600+55*60 };
 
-  // Приветствие
-  const welcomeMsg = document.createElement("div"); welcomeMsg.className = "message ai";
-  welcomeMsg.innerText = welcome[localStorage.getItem("mode") || "explain"];
-  chat.appendChild(welcomeMsg);
+  const MODES = {
+    explain:{ color:"var(--accent)",  label:"🧠 Объяснение",       placeholder:"Напиши тему, которую хочешь понять..." },
+    step:   { color:"var(--blue)",    label:"📐 Решение по шагам", placeholder:"Напиши задачу для пошагового решения..." },
+    quiz:   { color:"var(--purple)",  label:"🎯 Проверка знаний",  placeholder:"Напиши тему для проверки знаний..." },
+    exam:   { color:"var(--warning)", label:"📋 ЕГЭ/ОГЭ",         placeholder:"Напиши тему или номер задания..." },
+  };
+  const M = MODES[MODE] || MODES.explain;
 
-  // ЗАГРУЖАЕМ ИСТОРИЮ
-  try {
-    const res = await fetch("/api/history", { method: "POST", credentials: "include" });
-    const history = await res.json();
+  const WELCOME = {
+    explain:`👋 Привет! Напиши любую тему по <b>${SUBJECT}</b> — объясню просто и понятно для ${CLASS} класса.<br>Можно прикрепить <b>фото задания</b> 📎`,
+    step:   `📐 Привет! Напиши задачу по <b>${SUBJECT}</b> — будем решать по одному шагу.<br>Можно прикрепить <b>фото</b> с условием 📎`,
+    quiz:   `🎯 Привет! Напиши тему по <b>${SUBJECT}</b> — задам тебе 5 вопросов с вариантами ответа.`,
+    exam:   `📋 Привет! Выбери режим подготовки к ЕГЭ/ОГЭ по <b>${SUBJECT}</b>:<br><b>📖 Объяснение</b> — разбор формата<br><b>🎯 Тренировка</b> — задания вперемешку<br><b>⏱ Полный экзамен</b> — симуляция с таймером`,
+  };
 
-    // Сортируем по ID (по возрастанию — как в чате)
-    history.sort((a, b) => a.id - b.id);
-
-    for (const h of history) {
-      // Пользователь
-      const userMsg = document.createElement("div"); userMsg.className = "message user";
-      userMsg.innerHTML = `<div>${h.question.replace(/\n/g, '<br>')}</div>`;
-      chat.appendChild(userMsg);
-
-      // ИИ
-      const aiMsg = document.createElement("div"); aiMsg.className = "message ai";
-      aiMsg.innerHTML = `<div>${h.answer.replace(/\n/g, '<br>')}</div>`;
-
-      // ГРОМКОГОВОРИТЕЛЬ
-      if ('speechSynthesis' in window && h.answer) {
-        const utter = new SpeechSynthesisUtterance(h.answer); utter.lang = 'ru-RU'; utter.rate = 0.9;
-        const speakBtn = document.createElement('button');
-        speakBtn.innerHTML = '🔊';
-        speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
-        speakBtn.onmouseover = () => { speakBtn.style.background = 'rgba(76,175,80,0.4)'; speakBtn.style.transform = 'translateY(-1px)'; };
-        speakBtn.onmouseout = () => { speakBtn.style.background = 'rgba(76,175,80,0.25)'; speakBtn.style.transform = 'translateY(0)'; };
-        speakBtn.onclick = () => {
-          if (speechSynthesis.speaking) { speechSynthesis.cancel(); speakBtn.innerHTML = '🔊'; }
-          else { speechSynthesis.speak(utter); speakBtn.innerHTML = 'Стоп'; }
-        };
-        aiMsg.appendChild(speakBtn);
-      }
-
-      // ЗВЁЗДОЧКИ
-      const stars = document.createElement("div"); stars.className = "rating-stars";
-      for (let i = 1; i <= 5; i++) {
-        const s = document.createElement("span"); s.textContent = "★";
-        if (i <= (h.rating || 0)) s.classList.add("rated");
-        s.onclick = () => { rateAnswer(h.id, i); stars.querySelectorAll("span").forEach((el, idx) => el.classList.toggle("rated", idx < i)); stars.style.pointerEvents = "none"; };
-        stars.appendChild(s);
-      }
-      aiMsg.appendChild(stars);
-
-      chat.appendChild(aiMsg);
-    }
-    scrollToBottom();
-  } catch (err) {
-    console.error("Ошибка загрузки истории:", err);
+  // ══════════════════════════════════════════════
+  //  ФОРМАТИРОВАНИЕ MARKDOWN → HTML
+  // ══════════════════════════════════════════════
+  function mdToHtml(text) {
+    return text
+      // Заголовки
+      .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+      .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
+      .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
+      // Жирный + курсив
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<b><em>$1</em></b>')
+      .replace(/\*\*(.+?)\*\*/g,     '<b>$1</b>')
+      .replace(/\*(.+?)\*/g,         '<em>$1</em>')
+      // Код
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Ненумерованные списки
+      .replace(/^[\*\-] (.+)$/gm, '<li>$1</li>')
+      // Нумерованные списки
+      .replace(/^\d+\. (.+)$/gm,  '<li>$1</li>')
+      // Оборачиваем блоки li в ul
+      .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, (m) => `<ul>${m}</ul>`)
+      // Горизонтальная черта
+      .replace(/^---$/gm, '<hr>')
+      // Переносы строк
+      .replace(/\n/g, '<br>');
   }
 
-  textarea.focus();
-});
-
-    // ГОЛОС
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'ru-RU';
-      recognition.interimResults = false;
-      voiceBtn.addEventListener('click', () => {
-        if (voiceBtn.classList.contains('recording')) { recognition.stop(); return; }
-        voiceBtn.classList.add('recording');
-        recognition.start();
-      });
-      recognition.onresult = e => { textarea.value += e.results[0][0].transcript + ' '; voiceBtn.classList.remove('recording'); textarea.focus(); };
-      recognition.onerror = () => { voiceBtn.classList.remove('recording'); alert('Ошибка голоса'); };
-      recognition.onend = () => voiceBtn.classList.remove('recording');
-    } else {
-      voiceBtn.style.display = 'none';
-    }
-
-    // ФАЙЛЫ
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-      attachedFile = file;
-      const preview = document.createElement('div'); preview.className = 'file-preview'; preview.id = 'file-preview';
-      if (file.type.startsWith('image/')) {
-        const img = document.createElement('img'); img.src = URL.createObjectURL(file); preview.appendChild(img);
+  // ══════════════════════════════════════════════
+  //  АНИМАЦИЯ ОТВЕТА (побуквенная / пословная)
+  // ══════════════════════════════════════════════
+  function animateText(el, html, onDone) {
+    // Разбиваем HTML на токены (теги + текстовые слова)
+    const tokens = [];
+    const re = /(<[^>]+>)|([^<]+)/g;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      if (m[1]) {
+        tokens.push({ type:"tag", val:m[1] });
       } else {
-        preview.innerHTML += `<span class="material-icons">description</span> ${file.name}`;
+        // Разбиваем текст на слова с сохранением пробелов
+        const words = m[2].split(/(\s+)/);
+        words.forEach(w => { if(w) tokens.push({ type:"word", val:w }); });
       }
-      const remove = document.createElement('span'); remove.className = 'material-icons remove-file'; remove.textContent = 'close';
-      remove.onclick = () => { preview.remove(); attachedFile = null; fileInput.value = ''; };
-      preview.appendChild(remove);
-      document.querySelector('.input-wrapper').appendChild(preview);
+    }
+
+    let i = 0;
+    let built = "";
+    const speed = 18; // мс на токен
+
+    function step() {
+      if (i >= tokens.length) {
+        if (onDone) onDone();
+        return;
+      }
+      const t = tokens[i++];
+      built += t.val;
+      // Для тегов не прокручиваем каждый раз (только каждые 5 шагов)
+      el.innerHTML = built + '<span class="cursor-blink">▌</span>';
+      if (i % 4 === 0) chatEl.scrollTop = chatEl.scrollHeight;
+      setTimeout(step, t.type === "tag" ? 0 : speed);
+    }
+
+    step();
+  }
+
+  // ══════════════════════════════════════════════
+  //  ФАЙЛЫ: прикрепление
+  // ══════════════════════════════════════════════
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    attachedFile = file;
+
+    const bar   = document.getElementById("file-preview-bar");
+    const name  = document.getElementById("fpb-name");
+    const icon  = document.getElementById("fpb-icon");
+    const img   = document.getElementById("fpb-img");
+
+    name.textContent = file.name.length > 28 ? file.name.substring(0,25)+"…" : file.name;
+
+    if (file.type.startsWith("image/")) {
+      icon.style.display = "none";
+      img.style.display  = "block";
+      img.src = URL.createObjectURL(file);
+    } else {
+      icon.style.display = "inline";
+      img.style.display  = "none";
+      icon.textContent   = file.type === "application/pdf" ? "picture_as_pdf" : "description";
+    }
+
+    bar.style.display = "block";
+    textarea.focus();
+  }
+
+  function clearAttach() {
+    attachedFile = null;
+    document.getElementById("file-input").value = "";
+    document.getElementById("file-preview-bar").style.display = "none";
+  }
+
+  // ══════════════════════════════════════════════
+  //  INIT
+  // ══════════════════════════════════════════════
+  window.addEventListener("load", async () => {
+    const banner = document.getElementById("modeBanner");
+    banner.textContent = `${M.label}  ·  ${SUBJECT}  ·  ${CLASS} класс`;
+    banner.style.color = M.color;
+    document.getElementById("selected-info").innerText =
+      `${CLASS} класс · ${SUBJECT} · ${M.label.replace(/^\S+\s/,"")}`;
+    textarea.placeholder = M.placeholder;
+    document.getElementById("inputContainer").style.borderColor = M.color + "44";
+
+    if (MODE === "quiz") document.getElementById("quiz-scoreboard").style.display = "flex";
+    if (MODE === "step") document.getElementById("step-progress-bar").style.display = "flex";
+    if (MODE === "exam") document.getElementById("exam-header").style.display = "block";
+
+    addAiMsg(WELCOME[MODE] || WELCOME.explain, null, false, false);
+
+    try {
+      const res  = await fetch("/api/history", { method:"POST", credentials:"include" });
+      const hist = await res.json();
+      hist.sort((a,b)=>a.id-b.id);
+      for (const h of hist) {
+        addUserMsg(h.question);
+        addAiMsg(h.answer, h.id, true, false, h.rating||0);
+      }
+      scrollDown();
+    } catch(e){}
+
+    textarea.focus();
+  });
+
+  // ══════════════════════════════════════════════
+  //  УТИЛИТЫ
+  // ══════════════════════════════════════════════
+  function scrollDown() { chatEl.scrollTop = chatEl.scrollHeight; }
+  function esc(t) { const d=document.createElement("div"); d.textContent=t; return d.innerHTML; }
+
+  function addUserMsg(text, imgSrc) {
+    const d = document.createElement("div"); d.className="message user";
+    if (text) d.innerHTML = `<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
+    if (imgSrc) {
+      const img = document.createElement("img");
+      img.src = imgSrc; img.className = "msg-img";
+      d.appendChild(img);
+    }
+    chatEl.appendChild(d); scrollDown(); return d;
+  }
+
+  // animate=true → пословная анимация; false → сразу показать
+  function addAiMsg(rawText, historyId, withRating, animate=true, rating=0) {
+    const d = document.createElement("div"); d.className=`message ai mode-${MODE}`;
+    const textDiv = document.createElement("div"); textDiv.className="ai-text";
+    d.appendChild(textDiv);
+    chatEl.appendChild(d); scrollDown();
+
+    const html = mdToHtml(rawText);
+
+    if (animate) {
+      animateText(textDiv, html, () => {
+        // Убираем курсор после анимации
+        textDiv.innerHTML = html;
+        if (withRating && historyId) d.appendChild(makeStars(historyId, rating));
+        scrollDown();
+      });
+    } else {
+      textDiv.innerHTML = html;
+      if (withRating && historyId) d.appendChild(makeStars(historyId, rating));
+    }
+    return d;
+  }
+
+  function addTyping() {
+    const d=document.createElement("div"); d.className=`message ai mode-${MODE}`; d.id="typing";
+    d.innerHTML=`<div class="typing-dots"><span></span><span></span><span></span></div>`;
+    chatEl.appendChild(d); scrollDown();
+  }
+  function removeTyping() { document.getElementById("typing")?.remove(); }
+
+  function showXP() {
+    const t = document.getElementById("xp-toast");
+    t.textContent="+10 XP ⭐"; t.style.display="block";
+    t.style.background=`linear-gradient(135deg,${M.color},var(--accent3))`;
+    setTimeout(()=>t.style.display="none", 2200);
+  }
+
+  textarea.addEventListener("keydown", e => {
+    if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); askTutor(); }
+  });
+
+  // Авто-resize textarea
+  textarea.addEventListener("input", () => {
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+  });
+
+  // ══════════════════════════════════════════════
+  //  ГЛАВНАЯ ФУНКЦИЯ ОТПРАВКИ
+  // ══════════════════════════════════════════════
+  async function askTutor(overrideText, submode) {
+    const q   = overrideText || textarea.value.trim();
+    const hasFile = !!attachedFile;
+    if (!q && !hasFile) return;
+    if (!USER_ID) { location.href="/login"; return; }
+
+    lastQ = q || "";
+
+    if (!overrideText) {
+      // Показываем превью файла в сообщении пользователя
+      const imgSrc = (hasFile && attachedFile.type.startsWith("image/"))
+        ? URL.createObjectURL(attachedFile) : null;
+      addUserMsg(q, imgSrc);
+      if (hasFile && !attachedFile.type.startsWith("image/")) {
+        // Для PDF/txt показываем чип
+        const chip = document.createElement("div"); chip.className="message user file-chip";
+        chip.innerHTML=`<span class="material-icons">description</span> ${esc(attachedFile.name)}`;
+        chatEl.appendChild(chip); scrollDown();
+      }
+      textarea.value=""; textarea.style.height="auto";
+    }
+
+    sendBtn.disabled=true; addTyping();
+
+    const fd = new FormData();
+    fd.append("question", q || "[файл без текста]");
+    fd.append("submode",  submode || (MODE==="exam" ? examSubmode : ""));
+    if (hasFile) fd.append("file", attachedFile);
+    clearAttach();
+
+    try {
+      const res  = await fetch("/ask", { method:"POST", credentials:"include", body:fd });
+      const data = await res.json();
+      removeTyping(); sendBtn.disabled=false;
+
+      if (data.error) { addAiMsg("⚠️ "+esc(data.error), null, false, false); return; }
+      showXP();
+      if (data.answer && lastQ) pushHistory(lastQ, data.answer);
+
+      if      (MODE==="explain") renderExplain(data);
+      else if (MODE==="step")    renderStep(data);
+      else if (MODE==="quiz")    renderQuiz(data, q);
+      else if (MODE==="exam")    renderExam(data, q);
+      else                       addAiMsg(data.answer, data.question_id, true, true);
+
+    } catch(err) {
+      removeTyping(); sendBtn.disabled=false;
+      addAiMsg("❌ Ошибка соединения. Попробуй ещё раз.", null, false, false);
+    }
+  }
+
+  // chatHistory хранит последние 6 пар Q/A для контекста
+  const chatHistory = [];
+  function pushHistory(q, a) {
+    chatHistory.push({q, a});
+    if (chatHistory.length > 6) chatHistory.shift();
+  }
+  function buildContext() {
+    if (!chatHistory.length) return "";
+    return chatHistory.map((h,i) =>
+      `[${i+1}] Ученик: ${h.q.substring(0,200)}\nАссистент: ${h.a.substring(0,300)}`
+    ).join("\n---\n");
+  }
+
+  async function sendQ(text, submode="") {
+    const ctx = buildContext();
+    const fullQ = ctx ? `КОНТЕКСТ ПРЕДЫДУЩЕГО РАЗГОВОРА:\n${ctx}\n\nНОВЫЙ ВОПРОС: ${text}` : text;
+    const fd=new FormData();
+    fd.append("question", fullQ);
+    fd.append("submode", submode);
+    const res=await fetch("/ask",{method:"POST",credentials:"include",body:fd});
+    const data = await res.json();
+    if (data.answer) pushHistory(text, data.answer);
+    return data;
+  }
+
+  // ══════════════════════════════════════════════
+  //  РЕЖИМ: EXPLAIN
+  // ══════════════════════════════════════════════
+  function renderExplain(data) {
+    const wrap=document.createElement("div"); wrap.className="message ai mode-explain";
+    const textDiv=document.createElement("div"); textDiv.className="ai-text";
+    wrap.appendChild(textDiv);
+
+    const btns=document.createElement("div"); btns.className="action-row"; btns.style.opacity="0";
+    const actions=[
+      {icon:"🔄",label:"Проще",          q:`Объясни максимально просто, как для ребёнка: ${lastQ}`},
+      {icon:"🌍",label:"Пример",          q:`Приведи 2 конкретных примера из реальной жизни: ${lastQ}`},
+      {icon:"🧩",label:"Аналогия",        q:`Объясни через необычную аналогию: ${lastQ}`},
+      {icon:"❓",label:"Проверь меня",    q:`Задай 1 вопрос для проверки понимания: ${lastQ}`},
+      {icon:"🔗",label:"Связи с темами",  q:`Как тема связана с другими: ${lastQ}`},
+    ];
+    actions.forEach(a=>{
+      const b=document.createElement("button"); b.className="action-btn explain-btn";
+      b.innerHTML=`${a.icon} <span>${a.label}</span>`;
+      b.onclick=()=>{
+        btns.remove(); addUserMsg(a.icon+" "+a.label);
+        sendBtn.disabled=true; addTyping();
+        sendQ(a.q).then(d2=>{ removeTyping(); sendBtn.disabled=false; renderExplain(d2); });
+      };
+      btns.appendChild(b);
     });
+    // Озвучка
+    const sb=document.createElement("button"); sb.className="action-btn explain-btn";
+    sb.innerHTML=`🔊 <span>Озвучить</span>`;
+    sb.onclick=()=>{
+      if(!("speechSynthesis" in window)) return;
+      if(speechSynthesis.speaking){speechSynthesis.cancel();sb.innerHTML=`🔊 <span>Озвучить</span>`;return;}
+      const u=new SpeechSynthesisUtterance(data.answer); u.lang="ru-RU"; u.rate=0.88;
+      speechSynthesis.speak(u); sb.innerHTML=`⏹ <span>Стоп</span>`;
+      u.onend=()=>sb.innerHTML=`🔊 <span>Озвучить</span>`;
+    };
+    btns.appendChild(sb);
 
-    function scrollToBottom() { chat.scrollTop = chat.scrollHeight; }
+    wrap.appendChild(btns);
+    if (data.question_id) wrap.appendChild(makeStars(data.question_id));
+    chatEl.appendChild(wrap); scrollDown();
 
-        async function askTutor() {
-      const q = textarea.value.trim();
-      if (!q && !attachedFile) return;
+    animateText(textDiv, mdToHtml(data.answer), () => {
+      textDiv.innerHTML = mdToHtml(data.answer);
+      btns.style.opacity="1"; btns.style.transition="opacity .4s";
+      scrollDown();
+    });
+  }
 
-      const userId = {{ session.get('user_id') | default('null') | tojson | safe }};
-      if (!userId) { alert("Войдите в аккаунт!"); location.href = "/login"; return; }
+  // ══════════════════════════════════════════════
+  //  РЕЖИМ: STEP
+  // ══════════════════════════════════════════════
+  function updateStepProgress() {
+    document.getElementById("spb-num").textContent=stepState.num;
+    document.getElementById("spb-task").textContent=stepState.task.substring(0,30)+(stepState.task.length>30?"…":"");
+    const dots=document.getElementById("spb-dots"); dots.innerHTML="";
+    for(let i=1;i<=stepState.maxSteps;i++){
+      const d=document.createElement("div");
+      d.className="spb-dot"+(i<stepState.num?" done":i===stepState.num?" active":"");
+      dots.appendChild(d);
+    }
+  }
 
-      const userMsg = document.createElement("div"); userMsg.className = "message user";
-      if (q) userMsg.innerHTML += `<div>${q.replace(/\n/g, '<br>')}</div>`;
-      if (attachedFile && attachedFile.type.startsWith('image/')) {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(attachedFile);
-        img.style = "max-width:200px; max-height:200px; border-radius:12px; margin-top:8px; display:block;";
-        userMsg.appendChild(img);
-      }
-      chat.appendChild(userMsg);
-      textarea.value = "";
-      document.getElementById('file-preview')?.remove();
-      const fileToSend = attachedFile; attachedFile = null; fileInput.value = '';
+  function renderStep(data) {
+    const isFirst = stepState.num===0 || stepState.done;
+    if (isFirst) stepState={num:1,task:lastQ,maxSteps:8,done:false};
+    else stepState.num++;
+    updateStepProgress();
 
-      const typing = document.createElement("div"); typing.className = "message ai"; typing.innerHTML = "Печатает..."; typing.id = "typing"; chat.appendChild(typing); scrollToBottom();
+    const wrap=document.createElement("div"); wrap.className="message ai mode-step";
+    const isAnswer=/^\*?\*?ответ\s*[:：]/i.test(data.answer.trim())||data.answer.toLowerCase().includes("**ответ:**");
 
-      const fd = new FormData();
-      fd.append('question', q || "[только файл]");  // ← ИСПРАВЛЕНО
-      fd.append('subject', localStorage.getItem("subject") || "Математика");
-      fd.append('mode', localStorage.getItem("mode") || "explain");
-      if (fileToSend) fd.append('file', fileToSend);
+    const badge=document.createElement("div"); badge.className="step-badge";
+    if(isAnswer){
+      badge.textContent="✅ Решение";
+      badge.style.cssText="background:rgba(0,255,136,.15);color:var(--accent);border-color:rgba(0,255,136,.3)";
+      stepState.done=true;
+    } else {
+      badge.textContent=`Шаг ${stepState.num}`;
+    }
+    wrap.appendChild(badge);
 
-      try {
-        const res = await fetch("/ask", { method: "POST", credentials: "include", body: fd });
-        const data = await res.json();
-        document.getElementById("typing")?.remove();
+    const textDiv=document.createElement("div"); textDiv.className="ai-text"; wrap.appendChild(textDiv);
+    const btns=document.createElement("div"); btns.className="action-row"; btns.style.opacity="0";
 
-        const aiMsg = document.createElement("div"); aiMsg.className = "message ai";
-        const answerText = data.answer ? data.answer.replace(/\n/g, '<br>') : "Файл обработан!";  // ← ИСПРАВЛЕНО
-        aiMsg.innerHTML = `<div>${answerText}</div>`;
-
-
-
-        // ГРОМКОГОВОРИТЕЛЬ
-        if ('speechSynthesis' in window && data.answer) {
-          const utter = new SpeechSynthesisUtterance(data.answer); utter.lang = 'ru-RU'; utter.rate = 0.9;
-          const speakBtn = document.createElement('button');
-          speakBtn.innerHTML = '🔊';
-          speakBtn.style = 'margin-top:8px; padding:6px 12px; border-radius:20px; font-size:0.85rem; font-weight:500; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(76,175,80,0.25); color:#4CAF50; backdrop-filter:blur(4px); box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s;';
-          speakBtn.onmouseover = () => { speakBtn.style.background = 'rgba(76,175,80,0.4)'; speakBtn.style.transform = 'translateY(-1px)'; };
-          speakBtn.onmouseout = () => { speakBtn.style.background = 'rgba(76,175,80,0.25)'; speakBtn.style.transform = 'translateY(0)'; };
-          speakBtn.onclick = () => {
-            if (speechSynthesis.speaking) { speechSynthesis.cancel(); speakBtn.innerHTML = '🔊'; }
-            else { speechSynthesis.speak(utter); speakBtn.innerHTML = 'Стоп'; }
-          };
-          aiMsg.appendChild(speakBtn);
-        }
-
-        // ЗВЁЗДОЧКИ
-        if (data.question_id) {
-          const stars = document.createElement("div"); stars.className = "rating-stars";
-          for (let i = 1; i <= 5; i++) {
-            const s = document.createElement("span"); s.textContent = "★";
-            s.onclick = () => { rateAnswer(data.question_id, i); stars.querySelectorAll("span").forEach((el, idx) => el.classList.toggle("rated", idx < i)); stars.style.pointerEvents = "none"; };
-            stars.appendChild(s);
-          }
-          aiMsg.appendChild(stars);
-        }
-
-        chat.appendChild(aiMsg);
-        scrollToBottom();
-
-      } catch (err) {
-        document.getElementById("typing")?.remove();
-        const errMsg = document.createElement("div"); errMsg.className = "message ai"; errMsg.style.color = "#ff6b6b"; errMsg.innerText = "Ошибка: " + err.message;
-        chat.appendChild(errMsg);
-        scrollToBottom();
-      }
+    if(isAnswer||stepState.done){
+      const nb=document.createElement("button"); nb.className="action-btn step-btn step-done-btn";
+      nb.innerHTML="🏁 <span>Новая задача</span>";
+      nb.onclick=()=>{ stepState={num:0,task:"",maxSteps:8,done:false}; updateStepProgress(); addAiMsg("Отлично! 🎉 Напиши следующую задачу.",null,false,false); };
+      btns.appendChild(nb);
+      const sb=document.createElement("button"); sb.className="action-btn step-btn";
+      sb.innerHTML="📝 <span>Похожая задача</span>";
+      sb.onclick=()=>{
+        btns.remove(); const t=stepState.task||lastQ; stepState={num:0,task:"",maxSteps:8,done:false};
+        addUserMsg("📝 Похожая задача"); sendBtn.disabled=true; addTyping();
+        sendQ(`Придумай похожую задачу на: ${t}. Только задачу, без решения.`)
+          .then(d2=>{ removeTyping(); sendBtn.disabled=false; addAiMsg(d2.answer,d2.question_id,false,true); });
+      };
+      btns.appendChild(sb);
+    } else {
+      [
+        {icon:"✅",label:"Понял, следующий шаг", fn:()=>{
+          btns.remove(); addUserMsg("✅ Понял, следующий шаг"); sendBtn.disabled=true; addTyping();
+          sendQ(`Продолжай, давай следующий шаг: ${stepState.task}`).then(d2=>{ removeTyping(); sendBtn.disabled=false; renderStep(d2); });
+        }},
+        {icon:"🔍",label:"Объясни подробнее", fn:()=>{
+          btns.remove(); addUserMsg("🔍 Объясни подробнее"); sendBtn.disabled=true; addTyping();
+          sendQ(`Объясни шаг ${stepState.num} подробнее: ${data.answer.substring(0,150)}`).then(d2=>{
+            removeTyping(); sendBtn.disabled=false;
+            const ew=document.createElement("div"); ew.className="message ai mode-step";
+            const eb=document.createElement("div"); eb.className="step-badge";
+            eb.textContent=`Шаг ${stepState.num} — подробнее`; ew.appendChild(eb);
+            const etd=document.createElement("div"); etd.className="ai-text"; ew.appendChild(etd);
+            const cr=document.createElement("div"); cr.className="action-row"; cr.style.opacity="0";
+            const cb=document.createElement("button"); cb.className="action-btn step-btn";
+            cb.innerHTML="✅ <span>Понял, продолжаем</span>";
+            cb.onclick=()=>{ cr.remove(); addUserMsg("✅ Продолжаем"); sendBtn.disabled=true; addTyping();
+              sendQ(`Продолжай шаг за шагом: ${stepState.task}`).then(d3=>{ removeTyping(); sendBtn.disabled=false; renderStep(d3); }); };
+            cr.appendChild(cb); ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
+            animateText(etd, mdToHtml(d2.answer), ()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
+          });
+        }},
+        {icon:"💡",label:"Почему так?", fn:()=>{
+          btns.remove(); addUserMsg("💡 Почему так?"); sendBtn.disabled=true; addTyping();
+          sendQ(`Объясни смысл действия на шаге ${stepState.num}.`).then(d2=>{
+            removeTyping(); sendBtn.disabled=false;
+            const ew=document.createElement("div"); ew.className="message ai mode-step";
+            const etd=document.createElement("div"); etd.className="ai-text"; ew.appendChild(etd);
+            const cr=document.createElement("div"); cr.className="action-row"; cr.style.opacity="0";
+            const cb=document.createElement("button"); cb.className="action-btn step-btn";
+            cb.innerHTML="✅ <span>Понял, продолжаем</span>";
+            cb.onclick=()=>{ cr.remove(); addUserMsg("✅ Продолжаем"); sendBtn.disabled=true; addTyping();
+              sendQ(`Продолжай: ${stepState.task}`).then(d3=>{ removeTyping(); sendBtn.disabled=false; renderStep(d3); }); };
+            cr.appendChild(cb); ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
+            animateText(etd, mdToHtml(d2.answer), ()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
+          });
+        }},
+      ].forEach(a=>{
+        const b=document.createElement("button"); b.className="action-btn step-btn";
+        b.innerHTML=`${a.icon} <span>${a.label}</span>`; b.onclick=a.fn; btns.appendChild(b);
+      });
     }
 
-    async function rateAnswer(history_id, rating) {
-      try {
-        await fetch("/rate", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history_id, rating }) });
-      } catch (err) { console.error("Оценка:", err); }
+    wrap.appendChild(btns);
+    if(data.question_id) wrap.appendChild(makeStars(data.question_id));
+    chatEl.appendChild(wrap); scrollDown();
+    animateText(textDiv, mdToHtml(data.answer), ()=>{
+      textDiv.innerHTML=mdToHtml(data.answer);
+      btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown();
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  //  РЕЖИМ: QUIZ
+  // ══════════════════════════════════════════════
+  function updateQuizScore() {
+    document.getElementById("qs-correct").textContent=quizState.correct;
+    document.getElementById("qs-wrong").textContent=quizState.wrong;
+    document.getElementById("qs-num").textContent=quizState.num;
+    document.getElementById("qs-progress").style.width=(((quizState.num-1)/quizState.total)*100)+"%";
+  }
+
+  function renderQuiz(data, originalQ) {
+    if(originalQ&&!originalQ.startsWith("__NEXT__")) quizState.topic=originalQ;
+    let parsed=null;
+    try{ const m=data.answer.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch(e){}
+    if(!parsed||!parsed.question||!parsed.options){ addAiMsg(data.answer,data.question_id,false,true); return; }
+
+    const wrap=document.createElement("div"); wrap.className="message ai mode-quiz";
+    const card=document.createElement("div"); card.className="quiz-card";
+    card.innerHTML=`
+      <div class="quiz-q-header">
+        <span class="quiz-q-num">Вопрос ${quizState.num} из ${quizState.total}</span>
+        <span class="quiz-q-topic">${esc(quizState.topic)}</span>
+      </div>
+      <div class="quiz-question">${esc(parsed.question)}</div>`;
+
+    const opts=document.createElement("div"); opts.className="quiz-options";
+    parsed.options.forEach((opt,idx)=>{
+      const btn=document.createElement("button"); btn.className="quiz-opt-btn";
+      btn.innerHTML=`<span class="opt-letter">${["A","B","C","D"][idx]}</span><span class="opt-text">${esc(opt)}</span>`;
+      btn.onclick=()=>{
+        opts.querySelectorAll(".quiz-opt-btn").forEach(b=>b.disabled=true);
+        const isOk=(idx===parsed.correct_index);
+        btn.classList.add(isOk?"correct":"wrong");
+        opts.querySelectorAll(".quiz-opt-btn")[parsed.correct_index]?.classList.add("correct");
+        if(isOk) quizState.correct++; else quizState.wrong++;
+        updateQuizScore();
+
+        const expl=document.createElement("div"); expl.className=`quiz-expl ${isOk?"ok":"fail"}`;
+        expl.innerHTML=isOk
+          ?`<b>✅ Правильно!</b> ${esc(parsed.explanation||"")}`
+          :`<b>❌ Неверно.</b> Правильно: <b>${esc(parsed.options[parsed.correct_index])}</b>. ${esc(parsed.explanation||"")}`;
+        card.appendChild(expl);
+
+        const total=quizState.correct+quizState.wrong;
+        if(total>=quizState.total){
+          const fb=document.createElement("button"); fb.className="quiz-next-btn";
+          fb.textContent="🏆 Итог"; fb.onclick=()=>{fb.remove();showQuizResult();}; card.appendChild(fb);
+        } else {
+          quizState.num++;
+          const nb=document.createElement("button"); nb.className="quiz-next-btn";
+          nb.textContent="➡ Следующий вопрос";
+          nb.onclick=()=>{ nb.remove(); sendBtn.disabled=true; addTyping();
+            sendQ(`__NEXT__ Задай новый вопрос по теме "${quizState.topic}". Не повторяй. Только JSON.`)
+              .then(d2=>{ removeTyping(); sendBtn.disabled=false; renderQuiz(d2,null); }); };
+          card.appendChild(nb);
+        }
+      };
+      opts.appendChild(btn);
+    });
+    card.appendChild(opts); wrap.appendChild(card); chatEl.appendChild(wrap); scrollDown();
+  }
+
+  function showQuizResult() {
+    const total=quizState.correct+quizState.wrong;
+    const pct=Math.round(quizState.correct/total*100);
+    const g=pct>=80?{icon:"🏆",text:"Отлично!",color:"var(--accent)"}:pct>=60?{icon:"👍",text:"Хорошо!",color:"var(--blue)"}:{icon:"📚",text:"Нужно повторить",color:"var(--warning)"};
+    const wrap=document.createElement("div"); wrap.className="message ai mode-quiz";
+    wrap.innerHTML=`<div class="quiz-result">
+      <div class="qr-icon">${g.icon}</div>
+      <div class="qr-score" style="color:${g.color}">${quizState.correct}/${total}</div>
+      <div class="qr-pct">${pct}% · ${g.text}</div>
+      <div class="qr-bar-wrap"><div class="qr-bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
+      <div class="qr-detail">Правильных: ${quizState.correct} · Ошибок: ${quizState.wrong}</div>
+      <div class="action-row" style="justify-content:center;margin-top:16px;">
+        <button class="action-btn quiz-action-btn" onclick="restartQuiz()">🔄 Новая тема</button>
+        <button class="action-btn quiz-action-btn" onclick="retryQuiz()">🔁 Та же тема</button>
+      </div></div>`;
+    chatEl.appendChild(wrap); scrollDown();
+    document.getElementById("qs-progress").style.width="100%";
+  }
+  function restartQuiz(){ quizState={correct:0,wrong:0,num:1,topic:"",total:5}; updateQuizScore(); addAiMsg("Напиши новую тему 🎯",null,false,false); }
+  function retryQuiz(){ const t=quizState.topic; quizState={correct:0,wrong:0,num:1,topic:t,total:5}; updateQuizScore();
+    addUserMsg(`Повторить: ${t}`); sendBtn.disabled=true; addTyping();
+    sendQ(`Задай вопрос по теме "${t}". Только JSON.`).then(d=>{ removeTyping(); sendBtn.disabled=false; renderQuiz(d,t); }); }
+
+  // ══════════════════════════════════════════════
+  //  РЕЖИМ: EXAM
+  // ══════════════════════════════════════════════
+  function setExamSubmode(sub) {
+    examSubmode=sub;
+    ["explain","practice","full"].forEach(s=>document.getElementById(`btn-${s}`).classList.toggle("active",s===sub));
+    // Заменяем подсказку — не добавляем новое сообщение, а обновляем существующее
+    const msgs = {
+      explain:  `📖 Разбор формата ЕГЭ/ОГЭ по ${SUBJECT}. Напиши тему или задай вопрос.`,
+      practice: `🎯 Тренировка заданий в перемешку. Напиши тему или номер задания ЕГЭ.`,
+      full:     `⏱ Полный экзамен с таймером 3:55. Напиши <b>начать</b> когда готов.`,
+    };
+    // Всегда один элемент — обновляем текст, не добавляем новый
+    let hint = document.getElementById("exam-hint-msg");
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.id = "exam-hint-msg";
+      hint.className = "message ai mode-exam";
+      hint.innerHTML = `<div class="ai-text"></div>`;
+      chatEl.appendChild(hint);
     }
+    hint.querySelector(".ai-text").innerHTML = msgs[sub] || msgs.explain;
+    scrollDown();
+    const epb=document.getElementById("exam-progress-bar");
+    if(sub==="practice"||sub==="full"){
+      epb.style.display="flex"; examState.taskNum=1;
+      examState.maxTasks=sub==="full"?27:10;
+      document.getElementById("epb-total").textContent=examState.maxTasks; renderExamDots();
+      document.getElementById("exam-timer").style.display=sub==="full"?"flex":"none";
+    } else { epb.style.display="none"; }
+  }
+  function renderExamDots(){
+    const dots=document.getElementById("epb-dots"); dots.innerHTML="";
+    const show=Math.min(examState.maxTasks,10);
+    for(let i=1;i<=show;i++){
+      const d=document.createElement("div");
+      d.className="epb-dot"+(i<examState.taskNum?" done":i===examState.taskNum?" active":"");
+      dots.appendChild(d);
+    }
+    document.getElementById("epb-num").textContent=examState.taskNum;
+  }
+  function startExamTimer(){
+    const el=document.getElementById("timer-val"); examState.seconds=3*3600+55*60;
+    examState.timerInterval=setInterval(()=>{
+      examState.seconds--;
+      if(examState.seconds<=0){clearInterval(examState.timerInterval);finishFullExam();return;}
+      const h=Math.floor(examState.seconds/3600),mm=Math.floor((examState.seconds%3600)/60),ss=examState.seconds%60;
+      el.textContent=`${h}:${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+      if(examState.seconds<600) el.style.color="var(--danger)";
+    },1000);
+  }
+
+  function renderExam(data, originalQ) {
+    if(originalQ&&!originalQ.startsWith("__NEXT_TASK__")) examState.topic=originalQ;
+    if(examSubmode==="explain"){ renderExamExplain(data); return; }
+
+    const wrap=document.createElement("div"); wrap.className="message ai mode-exam";
+    const card=document.createElement("div"); card.className="exam-card";
+    const taskLabel=examSubmode==="full"?`Задание ${examState.taskNum} из ${examState.maxTasks}`:`Задание ${examState.taskNum}`;
+    card.innerHTML=`<div class="exam-header"><span class="exam-badge">📋 ${taskLabel}</span><span class="exam-subject">${esc(SUBJECT)}</span></div>`;
+
+    const taskDiv=document.createElement("div"); taskDiv.className="ai-text exam-task"; card.appendChild(taskDiv);
+
+    const ansBlock=document.createElement("div"); ansBlock.className="exam-ans-block";
+    const ans=document.createElement("textarea"); ans.className="exam-input"; ans.placeholder="Напиши свой ответ...";
+    const checkBtn=document.createElement("button"); checkBtn.className="exam-check-btn"; checkBtn.innerHTML="✅ Проверить";
+    checkBtn.onclick=()=>{
+      const val=ans.value.trim(); if(!val){ans.focus();return;}
+      checkBtn.disabled=true; ans.disabled=true; checkBtn.textContent="Проверяю...";
+      const checkPrompt=examSubmode==="full"
+        ?`Задание: ${data.answer}\nОтвет: ${val}\nПросто: правильно/неправильно.`
+        :`Задание: ${data.answer}\n\nОтвет ученика: ${val}\n\nОцени по критериям ЕГЭ/ОГЭ: баллы, ошибки, как исправить.`;
+      sendQ(checkPrompt,examSubmode).then(d2=>{
+        checkBtn.remove();
+        const txt=d2.answer.toLowerCase();
+        const good=txt.includes("правильно")||txt.includes("верно")||txt.includes("балл");
+        const res=document.createElement("div"); res.className=`exam-result ${good?"good":"bad"}`;
+        const rDiv=document.createElement("div"); rDiv.className="er-text"; res.innerHTML=`<div class="er-icon">${good?"✅":"❌"}</div>`;
+        res.appendChild(rDiv); ansBlock.appendChild(res);
+        animateText(rDiv, mdToHtml(d2.answer), ()=>{ rDiv.innerHTML=mdToHtml(d2.answer); scrollDown(); });
+
+        const btnRow=document.createElement("div"); btnRow.className="action-row";
+        if(examState.taskNum<examState.maxTasks){
+          const nb=document.createElement("button"); nb.className="action-btn exam-btn"; nb.innerHTML="➡ Следующее задание";
+          nb.onclick=()=>{ btnRow.remove(); examState.taskNum++; renderExamDots(); sendBtn.disabled=true; addTyping();
+            sendQ(`__NEXT_TASK__ Задание по ${SUBJECT} в формате ЕГЭ/ОГЭ по теме "${examState.topic}". Другой тип.`,examSubmode)
+              .then(d3=>{ removeTyping(); sendBtn.disabled=false; renderExam(d3,null); }); };
+          btnRow.appendChild(nb);
+        } else {
+          const db=document.createElement("button"); db.className="action-btn exam-btn exam-done-btn"; db.innerHTML="🏆 Итог сессии";
+          db.onclick=()=>{btnRow.remove();finishExamSession();}; btnRow.appendChild(db);
+        }
+        if(examSubmode==="practice"){
+          const hb=document.createElement("button"); hb.className="action-btn exam-btn-secondary"; hb.innerHTML="💡 Эталонный ответ";
+          hb.onclick=()=>{ hb.remove(); addTyping();
+            sendQ(`Эталонный ответ на: ${data.answer}`,"practice")
+              .then(d3=>{ removeTyping(); addAiMsg(d3.answer,d3.question_id,false,true); }); };
+          btnRow.appendChild(hb);
+        }
+        ansBlock.appendChild(btnRow);
+      });
+    };
+    ansBlock.appendChild(ans); ansBlock.appendChild(checkBtn);
+    card.appendChild(ansBlock); wrap.appendChild(card); chatEl.appendChild(wrap); scrollDown();
+    animateText(taskDiv, mdToHtml(data.answer), ()=>{ taskDiv.innerHTML=mdToHtml(data.answer); setTimeout(()=>ans.focus(),50); scrollDown(); });
+
+    if(examSubmode==="full"&&examState.taskNum===1&&!examState.timerInterval) startExamTimer();
+  }
+
+  function renderExamExplain(data){
+    const wrap=document.createElement("div"); wrap.className="message ai mode-exam";
+    const textDiv=document.createElement("div"); textDiv.className="ai-text"; wrap.appendChild(textDiv);
+    const btns=document.createElement("div"); btns.className="action-row"; btns.style.opacity="0";
+    [{icon:"📊",label:"Критерии оценки",q:`Критерии оценивания ЕГЭ/ОГЭ по ${SUBJECT}`},
+     {icon:"⚠️",label:"Типичные ошибки",q:`Типичные ошибки ЕГЭ/ОГЭ по ${SUBJECT}`},
+     {icon:"📅",label:"Стратегия сдачи",q:`Стратегия распределения времени на ЕГЭ/ОГЭ по ${SUBJECT}`},
+     {icon:"🎯",label:"Начать тренировку",q:null},
+    ].forEach(a=>{
+      const b=document.createElement("button"); b.className="action-btn exam-btn";
+      b.innerHTML=`${a.icon} <span>${a.label}</span>`;
+      b.onclick=()=>{ if(!a.q){setExamSubmode("practice");return;}
+        btns.remove(); addUserMsg(a.icon+" "+a.label); sendBtn.disabled=true; addTyping();
+        sendQ(a.q,"explain").then(d2=>{ removeTyping(); sendBtn.disabled=false; renderExamExplain(d2); }); };
+      btns.appendChild(b);
+    });
+    wrap.appendChild(btns); chatEl.appendChild(wrap); scrollDown();
+    animateText(textDiv, mdToHtml(data.answer), ()=>{ textDiv.innerHTML=mdToHtml(data.answer); btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown(); });
+  }
+
+  function finishExamSession(){
+    clearInterval(examState.timerInterval);
+    addTyping();
+    sendQ(examSubmode==="full"?`Итоги экзамена по ${SUBJECT}, примерный балл.`:`Итоги тренировки по ${SUBJECT}.`,examSubmode)
+      .then(d=>{ removeTyping(); addAiMsg(d.answer,d.question_id,false,true); });
+    examState.taskNum=1; renderExamDots();
+  }
+  function finishFullExam(){ addAiMsg("⏰ Время вышло!",null,false,false); finishExamSession(); }
+
+  // ── Звёзды ──
+  function makeStars(historyId, rating=0){
+    const stars=document.createElement("div"); stars.className="rating-stars";
+    for(let i=1;i<=5;i++){
+      const s=document.createElement("span"); s.textContent="★";
+      if(i<=(rating||0)) s.classList.add("rated");
+      s.onclick=()=>{ rateAnswer(historyId,i); stars.querySelectorAll("span").forEach((el,idx)=>el.classList.toggle("rated",idx<i)); stars.style.pointerEvents="none"; };
+      stars.appendChild(s);
+    }
+    return stars;
+  }
+  async function rateAnswer(hid,rating){
+    try{ await fetch("/rate",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({history_id:hid,rating})}); }catch(e){}
+  }
+
+  // ── Голос ──
+  const voiceBtn=document.getElementById("voice-btn");
+  if("webkitSpeechRecognition" in window||"SpeechRecognition" in window){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    const rec=new SR(); rec.lang="ru-RU"; rec.interimResults=false;
+    voiceBtn.addEventListener("click",()=>{ if(voiceBtn.classList.contains("recording")){rec.stop();return;} voiceBtn.classList.add("recording"); rec.start(); });
+    rec.onresult=e=>{ textarea.value+=e.results[0][0].transcript+" "; voiceBtn.classList.remove("recording"); textarea.focus(); };
+    rec.onerror=()=>voiceBtn.classList.remove("recording");
+    rec.onend=()=>voiceBtn.classList.remove("recording");
+  } else { voiceBtn.style.display="none"; }
   </script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>

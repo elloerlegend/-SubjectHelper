@@ -1,49 +1,100 @@
-  .form {
-    max-width: 400px;
-    margin: 50px auto;
-    padding: 30px;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    color: #333;  /* ← добавить эту строку */
-  }
-  input, button {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-size: 16px;
-  }
-  button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #45a049;
-  }
-  a {
-    display: block;
-    text-align: center;
-    margin-top: 15px;
-    color: #666;
-  }
-  .flash {
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 8px;
-  }
-  .flash.success {
-    background: #d4edda;
-    color: #155724;
-  }
-  .flash.danger {
-    background: #f8d7da;
-    color: #721c24;
-  }
-  .flash.warning {
-    background: #fff3cd;
-    color: #643c00;
-  }
+/* ==================== REGISTER.CSS ==================== */
+
+.form {
+  max-width: 400px;
+  width: calc(100% - 32px);
+  margin: 36px auto;
+  padding: 36px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  color: var(--text);
+  position: relative;
+  z-index: 1;
+}
+.form::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+  border-radius: 20px 20px 0 0;
+}
+
+.form h2 {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  color: var(--text);
+  margin: 0 0 24px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.form input[type="email"],
+.form input[type="password"],
+.form input[type="text"] {
+  width: 100%;
+  padding: 11px 15px;
+  margin: 7px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+.form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,255,136,0.1);
+}
+.form input::placeholder { color: var(--text3); }
+
+.form button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  margin: 14px 0 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  font-family: var(--font-main);
+  font-size: 0.96rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 16px rgba(0,255,136,0.35);
+}
+.form button[type="submit"]:hover {
+  background: var(--accent3);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,255,136,0.45);
+  color: var(--bg);
+}
+
+.form a {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.86rem;
+  color: var(--text3);
+  transition: color 0.2s;
+}
+.form a:hover { color: var(--accent); }
+
+.flash {
+  padding: 9px 13px;
+  margin: 8px 0;
+  border-radius: 9px;
+  font-size: 0.86rem;
+}
+.flash.success { background: rgba(0,255,136,0.09); border: 1px solid rgba(0,255,136,0.22); color: var(--accent); }
+.flash.danger  { background: rgba(255,77,106,0.09); border: 1px solid rgba(255,77,106,0.22); color: var(--danger); }
+.flash.warning { background: rgba(255,179,71,0.09); border: 1px solid rgba(255,179,71,0.22); color: var(--warning); }

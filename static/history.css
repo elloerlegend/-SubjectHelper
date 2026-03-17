@@ -1,146 +1,129 @@
-/* ==================== HISTORY.CSS — стили страницы истории ==================== */
+/* ==================== HISTORY.CSS ==================== */
+
 .history-main {
-  padding: 100px 20px 40px;
+  padding: 32px 16px;
   max-width: 900px;
+  width: 100%;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .history-container {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px);
-  padding: 25px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 28px;
   border-radius: 20px;
-  color: var(--text);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  position: relative;
 }
-
-.filters {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+.history-container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+  border-radius: 20px 20px 0 0;
 }
+.history-container h1 { text-align: center; margin-bottom: 24px; }
 
-#searchInput {
-  flex: 1;
-  min-width: 200px;
-  padding: 10px 14px;
+.filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+#searchInput, #subjectFilter, #modeFilter {
+  padding: 9px 13px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  background: var(--surface);
   color: var(--text);
-  font-size: 15px;
+  font-family: var(--font-main);
+  font-size: 0.86rem;
+  outline: none;
+  transition: border-color 0.2s;
 }
-
-#subjectFilter {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.1);
-  color: var(--text);
-}
+#searchInput { flex: 1; min-width: 160px; }
+#searchInput:focus, #subjectFilter:focus { border-color: var(--accent); }
+#subjectFilter option, #modeFilter option { background: var(--bg2); color: var(--text); }
 
 .export-btn {
-  background: #4CAF50;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+  border: none !important;
+  padding: 9px 16px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 0.83rem !important;
+  font-weight: 700 !important;
+  transition: all 0.2s !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
 }
+.export-btn:hover { background: var(--accent3) !important; transform: translateY(-1px) !important; color: var(--bg) !important; }
+.export-btn .material-icons { font-size: 15px !important; }
 
-.export-btn:hover {
-  background: #45a049;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 20px;
-}
+.history-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 
 .history-item {
-  background: rgba(255,255,255,0.08);
-  padding: 16px;
-  border-radius: 16px;
-  border-left: 4px solid #4CAF50;
-}
-
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.subject-badge {
-  background: #4CAF50;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.mode {
-  color: #aaa;
-}
-
-.timestamp {
-  font-size: 0.8rem;
-  color: #888;
-}
-
-.item-question,
-.item-answer {
-  margin: 8px 0;
-  line-height: 1.5;
-}
-
-.item-rating {
-  margin-top: 8px;
-  font-size: 1.2rem;
-  color: #ffd700;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.pagination button {
-  background: rgba(255,255,255,0.1);
+  background: var(--surface);
+  padding: 14px 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+  border-left: 3px solid var(--accent);
+  transition: border-color 0.2s;
+}
+.history-item:hover { border-color: var(--border2); }
+
+.item-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.subject-badge {
+  background: rgba(0,255,136,0.1);
+  border: 1px solid rgba(0,255,136,0.2);
+  color: var(--accent);
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.mode-badge { color: var(--text3); font-size: 0.77rem; }
+.timestamp { font-size: 0.74rem; color: var(--text3); font-family: var(--font-mono); }
+.item-question, .item-answer { margin: 5px 0; line-height: 1.55; font-size: 0.86rem; color: var(--text2); }
+.item-question strong, .item-answer strong { color: var(--text); }
+.item-rating { margin-top: 5px; font-size: 0.95rem; color: #ffd700; }
+.item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 6px; }
+.go-to-chat-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.77rem; color: var(--accent);
+  background: rgba(0,255,136,0.07);
+  border: 1px solid rgba(0,255,136,0.15);
+  padding: 4px 11px; border-radius: 20px;
+  text-decoration: none; transition: all 0.18s;
+}
+.go-to-chat-btn:hover { background: rgba(0,255,136,0.16); color: var(--accent); }
+.go-to-chat-btn .material-icons { font-size: 13px; }
+
+#countLabel { color: var(--text3); font-size: 0.78rem; margin-bottom: 10px; font-family: var(--font-mono); }
+
+.pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+.pagination button {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text2) !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 0.84rem !important;
+  transition: all 0.15s !important;
+  margin: 0 !important;
+}
+.pagination button:hover, .pagination button.active {
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+  border-color: var(--accent) !important;
+  transform: none !important;
 }
 
-.pagination button.active,
-.pagination button:hover {
-  background: #4CAF50;
-  color: white;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #aaa;
-}
-
-.empty-state .material-icons {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
+.empty-state { text-align: center; padding: 40px; color: var(--text3); }
+.empty-state .material-icons { font-size: 2.8rem; margin-bottom: 12px; opacity: 0.35; display: block; }
+.empty-state p { color: var(--text2); font-size: 0.92rem; }

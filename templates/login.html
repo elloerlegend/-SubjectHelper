@@ -6,17 +6,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
-  <style>
-    .form { max-width: 400px; margin: 50px auto; padding: 30px; background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
-    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background: #45a049; }
-    a { display: block; text-align: center; margin-top: 15px; color: #666; }
-    .flash { padding: 10px; margin: 10px 0; border-radius: 8px; }
-    .flash.success { background: #d4edda; color: #155724; }
-    .flash.danger { background: #f8d7da; color: #721c24; }
-    .flash.warning { background: #fff3cd; color: #643c00; }
-  </style>
 </head>
 <body>
 
@@ -24,10 +13,12 @@
   <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
 </header>
 
+<canvas id="formula-canvas"></canvas>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+
 <div class="form">
   <h2>Вход</h2>
 
-  <!-- FLASH -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -43,6 +34,6 @@
   </form>
   <a href="{{ url_for('register') }}">Нет аккаунта? Зарегистрироваться</a>
 </div>
-
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>

@@ -7,153 +7,205 @@
   <link rel="stylesheet" href="/static/back.css">
   <link rel="stylesheet" href="/static/welcome.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
 </head>
-{{ menu_js | safe }}
-
 <body>
+
 <header>
   <img class="logo" src="/static/img/logo.png" alt="Логотип">
-
-    {{ menu | safe }}
-
+  {{ menu | safe }}
 </header>
 
+{{ menu_js | safe }}
 
+<section class="welcome">
+  <h1>SubjectHelper</h1>
+  <p class="subtitle">Твой личный AI-репетитор для подготовки к урокам и экзаменам</p>
 
+  <!-- ── Класс ── -->
+  <h2 class="section-title">Выбери класс</h2>
+  <div class="class-grid">
+    <div class="class-card" data-class="1-4" data-num="3">1–4 класс</div>
+    <div class="class-card" data-class="5-7" data-num="6">5–7 класс</div>
+    <div class="class-card" data-class="8-9" data-num="8">8–9 класс</div>
+    <div class="class-card" data-class="10-11" data-num="10">10–11 класс</div>
+  </div>
 
-  <section class="welcome">
-    <h1>Добро пожаловать в SubjectHelper</h1>
-    <h2 class="section-title">Выбери свой класс:</h2>
-    <div class="class-grid">
-      <div class="class-card" data-class="1-4">1–4 класс</div>
-      <div class="class-card" data-class="5-7">5–7 класс</div>
-      <div class="class-card" data-class="8-9">8–9 класс</div>
-      <div class="class-card" data-class="10-11">10–11 класс</div>
-    </div>
-    <p class="subtitle">Выбери предмет и режим и начни учиться с твоим личным репетитором</p>
-    <h2 class="section-title">Выбери предмет:</h2>
-    <div class="modes" id="subjects">
-      <div class="subject-card" data-subject="Математика">📐 Математика</div>
-      <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
-      <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
-      <div class="subject-card" data-subject="Физика">🔬 Физика</div>
-      <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
-      <div class="subject-card" data-subject="Биология">🧬 Биология</div>
-      <div class="subject-card" data-subject="История">📜 История</div>
-      <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
-      <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
-    </div>
-
-    <h2 class="section-title">Выбери режим:</h2>
+  <!-- ── Интересы (появляются после выбора класса) ── -->
+  <div id="interests-block" style="display:none;">
+    <h2 class="section-title">Что тебя интересует?</h2>
     <div class="modes">
-     <div class="mode-card" data-mode="explain">
-      <h2>🧠 Объяснение темы</h2>
-        <p>Простой и понятный разбор любой темы.</p>
-     </div>
-
-<div class="mode-card" data-mode="step">
-  <h2>📚 Решение по шагам</h2>
-  <p>AI решает задачи пошагово, как настоящий учитель.</p>
-</div>
-
-<div class="mode-card" data-mode="quiz">
-  <h2>🎯 Проверка знаний</h2>
-  <p>Вопросы для самопроверки и тестирования знаний.</p>
-</div>
-
-<div class="mode-card" data-mode="exam">
-  <h2>💯 Подготовка к ЕГЭ и ОГЭ</h2>
-  <p>Составь план и методы подготовки.</p>
-</div>
+      <div class="interest-card" data-interest="games">🎮 Игры</div>
+      <div class="interest-card" data-interest="sport">⚽ Спорт</div>
+      <div class="interest-card" data-interest="music">🎵 Музыка</div>
+      <div class="interest-card" data-interest="tech">💻 Технологии</div>
+      <div class="interest-card" data-interest="nature">🌿 Природа</div>
+      <div class="interest-card" data-interest="art">🎨 Искусство</div>
     </div>
+    <p class="interests-hint">Можно выбрать несколько — буду объяснять на примерах которые тебе близки</p>
+  </div>
 
-    <form method="POST" action="/new_chat" id="new-chat-form" style="display:inline;">
-    <input type="hidden" name="subject" id="form-subject" value="">
-    <input type="hidden" name="class_number" id="form-class" value="">
-    <input type="hidden" name="mode" id="form-mode" value="">
-    <button type="submit" class="start-button" id="start-button">Начать обучение</button>
-</form>
+  <!-- ── Предмет ── -->
+  <h2 class="section-title">Выбери предмет</h2>
+  <div class="modes" id="subjects">
+    <div class="subject-card" data-subject="Математика">📐 Математика</div>
+    <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
+    <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
+    <div class="subject-card" data-subject="Физика">🔬 Физика</div>
+    <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
+    <div class="subject-card" data-subject="Биология">🧬 Биология</div>
+    <div class="subject-card" data-subject="История">📜 История</div>
+    <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
+    <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
+  </div>
+
+  <!-- ── Режим ── -->
+  <h2 class="section-title">Выбери режим</h2>
+  <div class="modes">
+    <div class="mode-card" data-mode="explain">
+      <h2>🧠 Объяснение темы</h2>
+      <p>Простой разбор любой темы с примерами из жизни.</p>
+    </div>
+    <div class="mode-card" data-mode="step">
+      <h2>📚 Решение по шагам</h2>
+      <p>Решаем задачи пошагово, объясняя каждое действие.</p>
+    </div>
+    <div class="mode-card" data-mode="quiz">
+      <h2>🎯 Проверка знаний</h2>
+      <p>Вопросы с вариантами ответов и мгновенной проверкой.</p>
+    </div>
+    <div class="mode-card" data-mode="exam">
+      <h2>💯 Подготовка к ЕГЭ/ОГЭ</h2>
+      <p>Задания в формате экзамена с оценкой по критериям.</p>
+    </div>
+  </div>
+
+  <!-- ── Форма ── -->
+  <form method="POST" action="/new_chat" id="new-chat-form">
+    <input type="hidden" name="subject"      id="form-subject"   value="">
+    <input type="hidden" name="class_number" id="form-class"     value="">
+    <input type="hidden" name="mode"         id="form-mode"      value="">
+    <input type="hidden" name="interests"    id="form-interests" value="">
+    <div id="validation-hint" class="validation-hint" style="display:none;">
+      ☝️ Выбери класс, предмет и режим
+    </div>
+    <button type="submit" class="start-button" id="start-button" disabled>
+      Начать обучение →
+    </button>
+  </form>
+</section>
 
 <script>
-    let selectedSubject = localStorage.getItem('subject') || null;
-    let selectedMode = localStorage.getItem('mode') || null;
-    let selectedClass = localStorage.getItem('user_class') || null;
+  let selectedSubject   = localStorage.getItem('subject')         || null;
+  let selectedMode      = localStorage.getItem('mode')            || null;
+  let selectedClass     = localStorage.getItem('user_class')      || null;
+  let selectedNum       = localStorage.getItem('user_class_num')  || null;
+  let selectedInterests = JSON.parse(localStorage.getItem('interests') || '[]');
 
-    const subjectCards = document.querySelectorAll('.subject-card');
-    const modeCards = document.querySelectorAll('.mode-card');
-    const classCards = document.querySelectorAll('.class-card');
-    const startBtn = document.getElementById('start-button');
+  const subjectCards  = document.querySelectorAll('.subject-card');
+  const modeCards     = document.querySelectorAll('.mode-card');
+  const classCards    = document.querySelectorAll('.class-card');
+  const interestCards = document.querySelectorAll('.interest-card');
+  const startBtn      = document.getElementById('start-button');
+  const hint          = document.getElementById('validation-hint');
 
-    function checkReady() {
-        if (selectedClass && selectedSubject && selectedMode) {
-            startBtn.disabled = false;
-            startBtn.style.opacity = '1';
-        } else {
-            startBtn.disabled = true;
-            startBtn.style.opacity = '0.5';
-        }
-    }
+  function checkReady() {
+    const ready = !!(selectedClass && selectedSubject && selectedMode);
+    startBtn.disabled      = !ready;
+    startBtn.style.opacity = ready ? '1' : '0.5';
+  }
 
-    classCards.forEach(card => {
-        card.addEventListener('click', () => {
-            classCards.forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedClass = card.dataset.class;
-            localStorage.setItem('user_class', selectedClass);
-            checkReady();
-        });
+  classCards.forEach(card => {
+    card.addEventListener('click', () => {
+      classCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedClass = card.dataset.class;
+      selectedNum   = card.dataset.num;
+      localStorage.setItem('user_class',     selectedClass);
+      localStorage.setItem('user_class_num', selectedNum);
+      document.getElementById('interests-block').style.display = 'block';
+      checkReady();
     });
+  });
 
-    subjectCards.forEach(card => {
-        card.addEventListener('click', () => {
-            subjectCards.forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedSubject = card.dataset.subject;
-            localStorage.setItem('subject', selectedSubject);
-            checkReady();
-        });
+  interestCards.forEach(card => {
+    card.addEventListener('click', () => {
+      card.classList.toggle('selected');
+      const val = card.dataset.interest;
+      if (card.classList.contains('selected')) {
+        if (!selectedInterests.includes(val)) selectedInterests.push(val);
+      } else {
+        selectedInterests = selectedInterests.filter(i => i !== val);
+      }
+      localStorage.setItem('interests', JSON.stringify(selectedInterests));
     });
+  });
 
-    modeCards.forEach(card => {
-        card.addEventListener('click', () => {
-            modeCards.forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedMode = card.dataset.mode;
-            localStorage.setItem('mode', selectedMode);
-            checkReady();
-        });
+  subjectCards.forEach(card => {
+    card.addEventListener('click', () => {
+      subjectCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedSubject = card.dataset.subject;
+      localStorage.setItem('subject', selectedSubject);
+      checkReady();
     });
+  });
 
-    // Восстановление при загрузке
-    if (selectedClass) {
-        document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
-    }
-    if (selectedSubject) {
-        document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
-    }
-    if (selectedMode) {
-        document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
-    }
-
-    document.getElementById('new-chat-form').addEventListener('submit', function(e) {
-        if (!selectedClass || !selectedSubject || !selectedMode) {
-            e.preventDefault();
-            alert('Пожалуйста, выберите класс, предмет и режим');
-            return;
-        }
-        let classNumber = parseInt(selectedClass.split('-')[0]);
-        document.getElementById('form-subject').value = selectedSubject;
-        document.getElementById('form-class').value = classNumber;
-        document.getElementById('form-mode').value = selectedMode;
+  modeCards.forEach(card => {
+    card.addEventListener('click', () => {
+      modeCards.forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedMode = card.dataset.mode;
+      localStorage.setItem('mode', selectedMode);
+      checkReady();
     });
+  });
 
-    checkReady();
+  // Восстановление сохранённого выбора
+  if (selectedClass) {
+    document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
+    document.getElementById('interests-block').style.display = 'block';
+  }
+  if (selectedSubject)
+    document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
+  if (selectedMode)
+    document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
+  selectedInterests.forEach(v =>
+    document.querySelector(`.interest-card[data-interest="${v}"]`)?.classList.add('selected')
+  );
+
+  document.getElementById('new-chat-form').addEventListener('submit', function(e) {
+    if (!selectedClass || !selectedSubject || !selectedMode) {
+      e.preventDefault();
+      hint.style.display = 'block';
+      return;
+    }
+    hint.style.display = 'none';
+    document.getElementById('form-subject').value   = selectedSubject;
+    document.getElementById('form-class').value     = selectedNum || selectedClass.split('-')[0];
+    document.getElementById('form-mode').value      = selectedMode;
+    document.getElementById('form-interests').value = selectedInterests.join(',');
+  });
+
+  // Эффект свечения под курсором на карточках
+  document.querySelectorAll('.mode-card, .class-card, .subject-card, .interest-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width  * 100).toFixed(1);
+      const y = ((e.clientY - r.top)  / r.height * 100).toFixed(1);
+      card.style.setProperty('--mx', x + '%');
+      card.style.setProperty('--my', y + '%');
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.setProperty('--mx', '50%');
+      card.style.setProperty('--my', '50%');
+    });
+  });
+
+  checkReady();
 </script>
 
-  </section>
 
-
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 
 </body>
 </html>

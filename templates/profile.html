@@ -2,15 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>SubjectHelper - Профиль</title>
+  <title>SubjectHelper — Профиль</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='profile.css') }}">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
   <header>
     <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
@@ -18,232 +16,409 @@
   </header>
 
   <main class="profile-container">
-    <div class="avatar-wrapper">
-      <img id="avatar-preview"
-           src="{{ current_user.avatar or url_for('static', filename='img/default_avatar.png') }}"
-           alt="Аватар" class="avatar-large">
-      <form method="POST" enctype="multipart/form-data" action="/update_avatar">
-        <input type="file" name="avatar" accept="image/*" id="avatarInput" style="display:none;">
-        <label for="avatarInput" class="avatar-edit-btn material-icons" title="Изменить аватар">photo_camera</label>
-      </form>
-    </div>
 
-    <h2>Привет, {{ current_user.name or "Пользователь" }}!</h2>
-
-    <form method="POST" action="/update_nickname" class="nickname-form">
-      <input type="text" name="nickname" class="nickname-input" placeholder="Новый ник (до 20 символов)" maxlength="20">
-      <button type="submit" class="nickname-btn">Сохранить</button>
-    </form>
-
-    <h2>🏆 Твои достижения</h2>
-    <div class="gamification">
-      <p>⭐ XP: <strong>{{ current_user.xp or 0 }}</strong> (Уровень {{ current_user.level or 1 }})</p>
-      <p>🔥 Стрик: <strong>{{ current_user.streak or 0 }}</strong> дней</p>
-      <div class="badges">
-        {% for badge in (current_user.badges or '').split(',') if badge %}
-          <span class="badge">🏅 {{ badge }}</span>
-        {% endfor %}
+    <!-- ── Аватар + имя ── -->
+    <div class="profile-hero">
+      <div class="avatar-wrapper">
+        <img id="avatar-preview"
+             src="{{ current_user.avatar or url_for('static', filename='img/default_avatar.png') }}"
+             alt="Аватар" class="avatar-large">
+        <form method="POST" enctype="multipart/form-data" action="/update_avatar" id="avatarForm">
+          <input type="file" name="avatar" accept="image/*" id="avatarInput" style="display:none;">
+          <label for="avatarInput" class="avatar-edit-btn material-icons" title="Изменить аватар">photo_camera</label>
+        </form>
+      </div>
+      <div class="profile-hero-info">
+        <h1 class="profile-name">{{ current_user.name or "Пользователь" }}</h1>
+        <p class="profile-email">{{ current_user.email }}</p>
+        <form method="POST" action="/update_nickname" class="nickname-form">
+          <input type="text" name="nickname" class="nickname-input"
+                 placeholder="Изменить ник..." maxlength="20"
+                 value="{{ current_user.name or '' }}">
+          <button type="submit" class="nickname-btn">Сохранить</button>
+        </form>
       </div>
     </div>
 
-    <h2>📊 Твой прогресс</h2>
-    <div class="progress-grid">
-      {% for subject, count in subject_stats.items() %}
-      <div class="progress-item">
-        <div class="progress-label">{{ subject }}</div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: {{ (count / max_queries * 100) if max_queries else 0 }}%"></div>
-        </div>
-        <div class="progress-count">{{ count }} запросов</div>
+    <!-- ── Геймификация: 3 карточки ── -->
+    <div class="gami-row">
+      <div class="gami-card">
+        <div class="gami-icon">⭐</div>
+        <div class="gami-val">{{ current_user.xp or 0 }}</div>
+        <div class="gami-lbl">XP</div>
       </div>
+      <div class="gami-card gami-main">
+        <div class="gami-icon">🎓</div>
+        <div class="gami-val">{{ current_user.level or 1 }}</div>
+        <div class="gami-lbl">Уровень</div>
+      </div>
+      <div class="gami-card">
+        <div class="gami-icon">🔥</div>
+        <div class="gami-val">{{ current_user.streak or 0 }}</div>
+        <div class="gami-lbl">Дней подряд</div>
+      </div>
+    </div>
+
+    <!-- Прогресс до следующего уровня -->
+    {% set xp = current_user.xp or 0 %}
+    {% set lvl = current_user.level or 1 %}
+    {% set xp_in_level = xp - (lvl - 1) * 100 %}
+    {% set pct = [xp_in_level, 100] | min %}
+    <div class="level-bar-wrap">
+      <div class="level-bar-labels">
+        <span>Уровень {{ lvl }}</span>
+        <span>{{ xp_in_level }}/100 XP до уровня {{ lvl + 1 }}</span>
+      </div>
+      <div class="level-bar-track">
+        <div class="level-bar-fill" style="width:{{ pct }}%"></div>
+      </div>
+    </div>
+
+    <!-- Бейджи -->
+    {% if current_user.badges %}
+    <div class="badges">
+      {% for badge in current_user.badges.split(',') if badge %}
+        <span class="badge">🏅 {{ badge }}</span>
       {% endfor %}
     </div>
+    {% endif %}
 
-    <h2>📈 Качество знаний</h2>
-    <div class="quality-grid">
-      {% for subject, avg in quality.items() %}
-      <div class="quality-item">
-        <div class="quality-label">{{ subject }}</div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: {{ avg * 20 }}%; background-color: {% if avg > 3 %}#4CAF50{% else %}#f44336{% endif %}"></div>
-        </div>
-        <div class="quality-score">{{ avg }}/5</div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- РЕКОМЕНДАЦИИ — КРАСИВЫЙ ГРИД ПЛАНА -->
-<div class="recommendation">
-    <p>📌 Создай персональный план практики на 7 дней</p>
-    <p class="ethics-note">Прогресс — ориентир, но проверяй знания с учителем.</p>
-
-    <button onclick="generatePlan('{{ weak_subject if weak_subject != '—' else 'Математика' }}')" class="plan-btn">
-        Создать план практики на 7 дней
-    </button>
-
-    <div id="planContainer" class="plan-grid"></div>
-</div>
-
-    <h2>📅 Активность за неделю</h2>
-    <canvas id="activityChart" width="400" height="200"></canvas>
-
-    <div class="stats">
+    <!-- ── Статистика ── -->
+    <div class="section-title">📊 Статистика</div>
+    <div class="stats-row">
       <div class="stat-box">
         <div class="stat-value">{{ total_queries }}</div>
-        <div class="stat-label">Всего запросов</div>
+        <div class="stat-label">Вопросов задано</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{{ "%.1f"|format(avg_rating) }}</div>
+        <div class="stat-value">{{ "%.1f"|format(avg_rating) }}<span class="stat-unit">/5</span></div>
         <div class="stat-label">Средняя оценка</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{{ top_subject }}</div>
+        <div class="stat-value">{{ top_subject or "—" }}</div>
         <div class="stat-label">Любимый предмет</div>
       </div>
     </div>
 
-    <a href="/chat" class="back-link">← Назад в чат</a>
+    <!-- ── Активность ── -->
+    {% if dates %}
+    <div class="section-title">📅 Активность за 7 дней</div>
+    <div class="chart-wrap">
+      <canvas id="activityChart" height="90"></canvas>
+    </div>
+    {% endif %}
+
+    <!-- ── Прогресс по предметам ── -->
+    {% if subject_stats %}
+    <div class="section-title">📚 Предметы</div>
+    <div class="subjects-list">
+      {% for subject, count in subject_stats.items() %}
+      <div class="subject-row">
+        <span class="subject-name">{{ subject }}</span>
+        <div class="subject-bar-track">
+          <div class="subject-bar-fill"
+               style="width:{{ (count / max_queries * 100) if max_queries else 0 }}%">
+          </div>
+        </div>
+        <span class="subject-count">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Качество знаний ── -->
+    {% if quality %}
+    <div class="section-title">⭐ Качество ответов</div>
+    <div class="subjects-list">
+      {% for subject, avg in quality.items() %}
+      <div class="subject-row">
+        <span class="subject-name">{{ subject }}</span>
+        <div class="subject-bar-track">
+          <div class="subject-bar-fill"
+               style="width:{{ avg * 20 }}%;
+               background:{% if avg >= 4 %}#4CAF50{% elif avg >= 3 %}#FF9800{% else %}#f44336{% endif %}">
+          </div>
+        </div>
+        <span class="subject-count">{{ avg }}/5</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── План практики ── -->
+    <div class="section-title">🗓 План практики</div>
+    <div class="plan-section">
+      <p class="plan-desc">
+        Слабый предмет по оценкам:
+        <strong>{{ weak_subject if weak_subject != '—' else 'не определён' }}</strong>
+      </p>
+      <p class="ethics-note">Прогресс — ориентир. Сверяй знания с учителем.</p>
+
+      <button id="planBtn"
+              onclick="generatePlan('{{ weak_subject if weak_subject != '—' else 'Математика' }}')"
+              class="plan-btn">
+        📋 Создать план на 7 дней
+      </button>
+
+      <!-- Прогресс выполнения плана -->
+      <div id="planProgress" style="display:none;" class="plan-progress-wrap">
+        <div class="plan-progress-track">
+          <div id="planProgressFill" class="plan-progress-fill" style="width:0%"></div>
+        </div>
+        <span id="planProgressLabel" class="plan-progress-label">0 / 7 дней</span>
+      </div>
+
+      <div id="planContainer" class="plan-grid"></div>
+    </div>
+
+    <a href="/" class="back-link">← На главную</a>
   </main>
 
   {{ menu_js | safe }}
 
+  <!-- Аватар: предпросмотр + авто-сабмит -->
   <script>
-    // Предпросмотр аватарки
-    const avatarInput = document.getElementById('avatarInput');
+    const avatarInput   = document.getElementById('avatarInput');
     const avatarPreview = document.getElementById('avatar-preview');
     if (avatarInput) {
       avatarInput.addEventListener('change', function() {
         const file = this.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            avatarPreview.src = e.target.result;
-          }
-          reader.readAsDataURL(file);
-          this.form.submit();
-        }
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => { avatarPreview.src = e.target.result; };
+        reader.readAsDataURL(file);
+        document.getElementById('avatarForm').submit();
       });
     }
   </script>
 
+  <!-- График активности -->
+  {% if dates %}
   <script>
-    // График активности
     const ctx = document.getElementById('activityChart').getContext('2d');
     new Chart(ctx, {
-      type: 'line',
+      type: 'bar',
       data: {
-        labels: {{ dates.keys()|list|tojson }},
+        labels:   {{ dates.keys()   | list | tojson }},
         datasets: [{
-          label: 'Запросы',
-          data: {{ dates.values()|list|tojson }},
-          borderColor: '#4CAF50',
-          fill: false
+          label:           'Запросов',
+          data:            {{ dates.values() | list | tojson }},
+          backgroundColor: 'rgba(76,175,80,0.5)',
+          borderColor:     '#4CAF50',
+          borderWidth:     2,
+          borderRadius:    6,
         }]
       },
       options: {
         responsive: true,
-        scales: { y: { beginAtZero: true } }
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: 'rgba(255,255,255,0.6)' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+          y: { beginAtZero: true, ticks: { color: 'rgba(255,255,255,0.6)', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.08)' } }
+        }
       }
     });
   </script>
+  {% endif %}
 
+  <!-- План практики -->
   <script>
-let completedDays = JSON.parse(localStorage.getItem('planCompleted') || '[]');
+    // Загружаем сохранённый прогресс из localStorage
+    let completedDays = JSON.parse(localStorage.getItem('planCompleted') || '[]');
+    let planDaysTotal = 0;
 
-async function generatePlan(subject) {
-    const btn = document.querySelector('.plan-btn');
-    const container = document.getElementById('planContainer');
+    function updatePlanProgress() {
+      const done  = completedDays.length;
+      const total = planDaysTotal || 7;
+      const pct   = Math.round((done / total) * 100);
 
-    btn.textContent = 'Генерирую план...';
-    btn.disabled = true;
-    container.innerHTML = '<p style="text-align:center;color:#aaa;padding:60px;">Создаю красивый план на 7 дней...</p>';
+      document.getElementById('planProgress').style.display = 'flex';
+      document.getElementById('planProgressFill').style.width = pct + '%';
+      document.getElementById('planProgressLabel').textContent = `${done} / ${total} дней`;
+    }
 
-    try {
-        const res = await fetch("/plan", {
-            method: "POST",
-            body: JSON.stringify({subject}),
-            headers: {"Content-Type": "application/json"}
+    async function generatePlan(subject) {
+      const btn       = document.getElementById('planBtn');
+      const container = document.getElementById('planContainer');
+
+      btn.textContent = '⏳ Генерирую...';
+      btn.disabled    = true;
+      container.innerHTML = `
+        <div class="plan-loading">
+          <div class="plan-spinner"></div>
+          <p>Создаю план на 7 дней...</p>
+        </div>`;
+
+      try {
+        const res  = await fetch("/plan", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ subject })
         });
         const data = await res.json();
 
-        const lines = data.plan.split('\n');
-        let days = [];
-        let currentDay = null;
+        // Парсим ответ
+        const lines = (data.plan || '').split('\n');
+        let days = [], cur = null;
 
         for (let line of lines) {
-            line = line.trim();
-            if (!line || line.length < 5) continue;
-
-            // Жёсткая очистка мусора
-            if (line.includes("в пользовательской области") ||
-                line.includes("сложный стрик") ||
-                line.includes("Выведите") ||
-                line.includes("ОТВЕЧАЙ")) continue;
-
-            if (line.match(/^ДЕНЬ\s*\d+/i) || line.toUpperCase().startsWith('ДЕНЬ')) {
-                if (currentDay) days.push(currentDay);
-                currentDay = { title: line, tasks: [] };
-            } else if (currentDay) {
-                currentDay.tasks.push(line);
-            }
+          line = line.trim();
+          if (!line || line.length < 3) continue;
+          if (/^ДЕНЬ\s*\d+/i.test(line)) {
+            if (cur) days.push(cur);
+            cur = { title: line, tasks: [] };
+          } else if (cur) {
+            const clean = line.replace(/^[•\-∗*]\s*/, '').trim();
+            if (clean) cur.tasks.push(clean);
+          }
         }
-        if (currentDay) days.push(currentDay);
+        if (cur) days.push(cur);
 
-        // Если парсер не сработал — создаём 7 карточек вручную
+        // Запасной вариант если парсер не сработал
         if (days.length < 2) {
-            days = [];
-            for (let i = 1; i <= 7; i++) {
-                days.push({ title: `ДЕНЬ ${i}: Практика по ${subject}`, tasks: ["• Задание 1", "• Задание 2", "• Задание 3", "Самопроверка: ..."] });
-            }
+          days = Array.from({ length: 7 }, (_, i) => ({
+            title: `ДЕНЬ ${i+1}: Практика по ${subject}`,
+            tasks: ['Повтори теоретический материал', 'Реши 3 задачи по теме', 'Проверь себя по вопросам']
+          }));
         }
 
-        let html = '';
-        days.forEach((day, index) => {
-            const isCompleted = completedDays.includes(index);
-            html += `
-                <div class="day-card ${isCompleted ? 'completed' : ''}" id="day-${index}">
-                    <h3>📅 ${day.title}</h3>
-                    <ul class="task-list">
-                        ${day.tasks.map(t => `<li>${t.replace(/^[•\\-∗]\s*/, '')}</li>`).join('')}
-                    </ul>
-                    <button onclick="markDayComplete(${index})" class="complete-btn">
-                        ${isCompleted ? '✅ Выполнено' : 'Отметить как выполненный'}
-                    </button>
-                </div>`;
-        });
+        planDaysTotal = days.length;
+        renderPlanCards(days, subject);
+        updatePlanProgress();
 
-        html += `<button onclick="finishWeek()" class="finish-plan-btn">🎉 Завершить весь план недели</button>`;
+      } catch (e) {
+        container.innerHTML = `<p class="plan-error">Не удалось создать план. Попробуй ещё раз.</p>`;
+      }
 
-        container.innerHTML = html;
-
-    } catch (e) {
-        container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">Не удалось создать план. Попробуй ещё раз.</p>';
+      btn.textContent = '🔄 Обновить план';
+      btn.disabled    = false;
     }
 
-    btn.textContent = 'Создать план практики на 7 дней';
-    btn.disabled = false;
-}
+    function renderPlanCards(days, subject) {
+      const container = document.getElementById('planContainer');
+      container.innerHTML = '';
 
-function markDayComplete(index) {
-    if (!completedDays.includes(index)) {
+      days.forEach((day, index) => {
+        const done = completedDays.includes(index);
+
+        const card = document.createElement('div');
+        card.className = 'day-card' + (done ? ' completed' : '');
+        card.id = `day-${index}`;
+
+        // Заголовок
+        const header = document.createElement('div');
+        header.className = 'day-card-header';
+        header.innerHTML = `
+          <span class="day-num">День ${index + 1}</span>
+          ${done ? '<span class="day-done-badge">✅ Выполнено</span>' : ''}`;
+        card.appendChild(header);
+
+        // Название дня
+        const title = document.createElement('div');
+        title.className = 'day-title';
+        // Убираем "ДЕНЬ N:" из начала если есть
+        title.textContent = day.title.replace(/^ДЕНЬ\s*\d+[:\s]*/i, '').trim() || day.title;
+        card.appendChild(title);
+
+        // Список заданий
+        if (day.tasks.length > 0) {
+          const ul = document.createElement('ul');
+          ul.className = 'task-list';
+          day.tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.textContent = task;
+            ul.appendChild(li);
+          });
+          card.appendChild(ul);
+        }
+
+        // Кнопка выполнения
+        const btn = document.createElement('button');
+        btn.className = done ? 'complete-btn done' : 'complete-btn';
+        btn.textContent = done ? '✅ Выполнено' : 'Отметить выполненным';
+
+        // Кнопка ВСЕГДА кликабельна — можно отменить выполнение
+        btn.onclick = () => toggleDayComplete(index, btn, card, days.length);
+        card.appendChild(btn);
+
+        container.appendChild(card);
+      });
+
+      // Кнопка "Завершить всю неделю" — только если ещё не все выполнены
+      const finishBtn = document.createElement('button');
+      finishBtn.className  = 'finish-plan-btn';
+      finishBtn.id         = 'finishBtn';
+      finishBtn.textContent = '🎉 Завершить всю неделю';
+      finishBtn.onclick    = finishWeek;
+      container.appendChild(finishBtn);
+
+      refreshFinishBtn();
+    }
+
+    function toggleDayComplete(index, btn, card, total) {
+      const alreadyDone = completedDays.includes(index);
+
+      if (alreadyDone) {
+        // Отмечаем как невыполненный
+        completedDays = completedDays.filter(i => i !== index);
+        card.classList.remove('completed');
+        btn.classList.remove('done');
+        btn.textContent = 'Отметить выполненным';
+        // Убираем бейдж
+        card.querySelector('.day-done-badge')?.remove();
+      } else {
+        // Отмечаем как выполненный
         completedDays.push(index);
-        localStorage.setItem('planCompleted', JSON.stringify(completedDays));
-    }
-    const card = document.getElementById(`day-${index}`);
-    if (card) {
         card.classList.add('completed');
-        const btn = card.querySelector('.complete-btn');
-        if (btn) btn.innerHTML = '✅ Выполнено';
+        btn.classList.add('done');
+        btn.textContent = '✅ Выполнено';
+        // Добавляем бейдж если нет
+        if (!card.querySelector('.day-done-badge')) {
+          const badge = document.createElement('span');
+          badge.className   = 'day-done-badge';
+          badge.textContent = '✅ Выполнено';
+          card.querySelector('.day-card-header')?.appendChild(badge);
+        }
+      }
+
+      localStorage.setItem('planCompleted', JSON.stringify(completedDays));
+      planDaysTotal = total;
+      updatePlanProgress();
+      refreshFinishBtn();
     }
-}
 
-function finishWeek() {
-    alert('🎉 Поздравляем! Ты прошёл полный 7-дневный план практики!\n\nТвой стрик и XP уже обновлены.');
-}
-</script>
+    function refreshFinishBtn() {
+      const btn = document.getElementById('finishBtn');
+      if (!btn) return;
+      const allDone = completedDays.length >= planDaysTotal && planDaysTotal > 0;
+      btn.style.display = allDone ? 'block' : 'none';
+    }
 
+    function finishWeek() {
+      // Красивый экран завершения вместо alert
+      const container = document.getElementById('planContainer');
+      container.innerHTML = `
+        <div class="plan-finish-screen">
+          <div class="plan-finish-trophy">🏆</div>
+          <h3>Неделя завершена!</h3>
+          <p>Ты прошёл все 7 дней плана. Это отличный результат!</p>
+          <p class="plan-finish-sub">Стрик и XP обновлены.</p>
+          <button onclick="resetPlan()" class="plan-btn" style="margin-top:16px">
+            📋 Создать новый план
+          </button>
+        </div>`;
+      completedDays = [];
+      localStorage.removeItem('planCompleted');
+      document.getElementById('planProgress').style.display = 'none';
+    }
 
-
+    function resetPlan() {
+      document.getElementById('planContainer').innerHTML = '';
+      document.getElementById('planProgress').style.display = 'none';
+      document.getElementById('planBtn').textContent = '📋 Создать план на 7 дней';
+    }
+  </script>
+  <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 
 </body>
 </html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Рейтинг</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .lb-wrap {
+      max-width: 680px; width: 100%;
+      margin: 32px auto; padding: 0 16px 60px;
+      position: relative; z-index: 1;
+    }
+    .lb-header { text-align:center; margin-bottom:28px; }
+    .lb-header h1 { font-size:2rem; margin-bottom:6px; }
+    .lb-header p { font-size:0.82rem; color:var(--text3); font-family:var(--font-mono); }
+
+    .my-rank-card {
+      background:rgba(0,255,136,0.06); border:1px solid rgba(0,255,136,0.25);
+      border-radius:18px; padding:16px 20px; margin-bottom:22px;
+      display:flex; align-items:center; gap:14px;
+    }
+    .my-rank-num { font-family:var(--font-mono); font-size:2rem; font-weight:700; color:var(--accent); min-width:50px; text-align:center; }
+    .my-rank-info { flex:1; }
+    .my-rank-info .name { font-weight:700; font-size:0.96rem; color:var(--text); margin-bottom:2px; }
+    .my-rank-info .sub { font-size:0.75rem; color:var(--text3); font-family:var(--font-mono); }
+    .my-rank-xp { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; color:var(--accent); }
+
+    .lb-list { display:flex; flex-direction:column; gap:7px; }
+
+    .lb-row {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; transition:all 0.18s;
+    }
+    .lb-row:hover { background:var(--surface2); border-color:var(--border2); transform:translateX(3px); }
+    .lb-row.me { background:rgba(0,255,136,0.05); border-color:rgba(0,255,136,0.22); }
+
+    .medal { font-size:1.2rem; min-width:28px; text-align:center; }
+    .lb-pos { font-family:var(--font-mono); font-size:0.85rem; font-weight:700; min-width:28px; text-align:center; color:var(--text3); }
+
+    .lb-avatar { width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--border); flex-shrink:0; }
+    .lb-letter {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,var(--accent2),var(--blue));
+      color:var(--bg); display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-mono); font-weight:700; font-size:0.88rem; flex-shrink:0;
+    }
+    .lb-letter.me { background:linear-gradient(135deg,var(--accent),var(--accent3)); }
+
+    .lb-name-wrap { flex:1; min-width:0; }
+    .lb-name { font-size:0.9rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-lvl  { font-size:0.72rem; color:var(--text3); font-family:var(--font-mono); }
+
+    .lb-streak { font-size:0.78rem; color:var(--warning); font-family:var(--font-mono); white-space:nowrap; }
+    .lb-xp     { font-family:var(--font-mono); font-size:0.88rem; font-weight:700; color:var(--accent); min-width:58px; text-align:right; }
+
+    .lb-empty { text-align:center; padding:48px 20px; color:var(--text3); font-family:var(--font-mono); font-size:0.85rem; }
+
+    .back-link {
+      display:inline-flex; align-items:center; gap:6px;
+      color:var(--accent); font-size:0.85rem; font-weight:500;
+      margin-bottom:20px; text-decoration:none;
+    }
+    .back-link:hover { color:var(--accent3); }
+
+    /* Топ-3 строки чуть крупнее */
+    .lb-row.top1 { border-color:rgba(255,215,0,0.3); background:rgba(255,215,0,0.04); }
+    .lb-row.top2 { border-color:rgba(192,192,192,0.25); }
+    .lb-row.top3 { border-color:rgba(205,127,50,0.25); }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+  {{ menu | safe }}
+</header>
+{{ menu_js | safe }}
+
+<main class="lb-wrap">
+
+  <a href="/" class="back-link">
+    <span class="material-icons" style="font-size:16px">arrow_back</span>
+    На главную
+  </a>
+
+  <div class="lb-header">
+    <h1>🏆 Рейтинг учеников</h1>
+    <p>Топ по накопленным XP · обновляется в реальном времени</p>
+  </div>
+
+  <!-- Моя позиция вверху -->
+  {% if my_rank %}
+  <div class="my-rank-card">
+    <div class="my-rank-num">#{{ my_rank }}</div>
+    <div class="my-rank-info">
+      <div class="name">{{ current_user.name or "Ты" }}</div>
+      <div class="sub">Уровень {{ current_user.level or 1 }} · Стрик {{ current_user.streak or 0 }} дней 🔥</div>
+    </div>
+    <div class="my-rank-xp">{{ current_user.xp or 0 }} XP</div>
+  </div>
+  {% endif %}
+
+  <!-- Таблица -->
+  <div class="lb-list">
+    {% if top_users %}
+      {% for user in top_users %}
+        {% set pos = loop.index %}
+        {% set is_me = user.id == current_user.id %}
+        <div class="lb-row
+          {% if is_me %}me{% endif %}
+          {% if pos == 1 %}top1{% elif pos == 2 %}top2{% elif pos == 3 %}top3{% endif %}">
+
+          {% if pos == 1 %}<span class="medal">🥇</span>
+          {% elif pos == 2 %}<span class="medal">🥈</span>
+          {% elif pos == 3 %}<span class="medal">🥉</span>
+          {% else %}<span class="lb-pos">{{ pos }}</span>
+          {% endif %}
+
+          {% if user.avatar %}
+            <img class="lb-avatar" src="{{ user.avatar }}" alt="">
+          {% else %}
+            <div class="lb-letter {% if is_me %}me{% endif %}">
+              {{ (user.name or user.email or "?")[0]|upper }}
+            </div>
+          {% endif %}
+
+          <div class="lb-name-wrap">
+            <div class="lb-name">
+              {{ user.name or user.email.split('@')[0] }}
+              {% if is_me %}&nbsp;<span style="font-size:0.7rem;color:var(--accent);font-family:var(--font-mono);">· ты</span>{% endif %}
+            </div>
+            <div class="lb-lvl">Уровень {{ user.level or 1 }}</div>
+          </div>
+
+          {% if user.streak and user.streak > 0 %}
+            <div class="lb-streak">🔥 {{ user.streak }}</div>
+          {% endif %}
+
+          <div class="lb-xp">{{ user.xp or 0 }} XP</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="lb-empty">
+        <span class="material-icons" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px">leaderboard</span>
+        Пока никого нет. Стань первым!
+      </div>
+    {% endif %}
+  </div>
+
+</main>
+
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+
+</body>
+</html>

@@ -29,6 +29,22 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class DuelSession(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    player1_id  = db.Column(db.Integer, db.ForeignKey('user.id'))
+    player2_id  = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    subject     = db.Column(db.String(100))
+    status      = db.Column(db.String(20), default='waiting')  # waiting|active|done
+    winner_id   = db.Column(db.Integer, nullable=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+class DuelAnswer(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    duel_id     = db.Column(db.Integer, db.ForeignKey('duel_session.id'))
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'))
+    question    = db.Column(db.Text)
+    is_correct  = db.Column(db.Boolean)
+    answer_time = db.Column(db.Float)  # секунды
 
 # === НОВАЯ МОДЕЛЬ — ОТДЕЛЬНЫЕ ЧАТЫ ===
 class Chat(db.Model):

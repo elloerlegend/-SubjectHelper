@@ -1,410 +1,333 @@
-/* ==================== PROFILE.CSS — стили профиля и плана ==================== */
+/* ==================== PROFILE.CSS ==================== */
+
 .profile-container {
-  max-width: 680px;
-  margin: 60px auto;
-  padding: 40px;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(18px);
+  max-width: 720px;
+  width: 100%;
+  margin: 40px auto;
+  padding: 36px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  text-align: center;
-  color: white;
-}
-
-/* Аватар */
-.avatar-wrapper {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  color: var(--text);
   position: relative;
-  display: inline-block;
-  margin-bottom: 15px;
+  z-index: 1;
 }
-
-.avatar-large {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid rgba(255,255,255,0.4);
-  box-shadow: 0 0 12px rgba(0,0,0,0.3);
-}
-
-.avatar-edit-btn {
+.profile-container::before {
+  content: '';
   position: absolute;
-  bottom: 5px;
-  right: 5px;
-  background: #4CAF50;
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid white;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--blue), var(--purple));
+  border-radius: 24px 24px 0 0;
+}
+
+/* ── Hero: аватар + имя ── */
+.profile-hero {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  transition: all 0.2s;
-  font-size: 20px;
-}
-
-.avatar-edit-btn:hover {
-  background: #45a049;
-  transform: scale(1.05);
-}
-
-/* Заголовки */
-h2 {
-  font-size: 1.65rem;
-  margin: 35px 0 20px;
-  font-weight: 600;
-}
-
-/* Форма смены ника */
-.nickname-form {
-  margin-bottom: 35px;
-}
-
-.nickname-input {
-  padding: 12px 16px;
-  width: 70%;
-  max-width: 300px;
-  border-radius: 25px;
-  border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.15);
-  color: white;
-  font-size: 1rem;
-  outline: none;
-}
-
-.nickname-input:focus {
-  background: rgba(255,255,255,0.25);
-}
-
-.nickname-btn {
-  padding: 12px 24px;
-  margin-left: 8px;
-  border-radius: 25px;
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.nickname-btn:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(76,175,80,0.4);
-}
-
-/* Геймификация */
-.gamification {
-  background: rgba(255,255,255,0.08);
-  padding: 20px;
-  border-radius: 18px;
-  margin-bottom: 30px;
-}
-
-.gamification p {
-  font-size: 1.1rem;
-  margin: 8px 0;
-}
-
-.badges {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.badge {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: #222;
-  padding: 6px 14px;
-  border-radius: 30px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  box-shadow: 0 2px 6px rgba(255,215,0,0.3);
-}
-
-/* Прогресс по предметам */
-.progress-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-bottom: 40px;
-}
-
-.progress-item {
-  background: rgba(255,255,255,0.08);
-  padding: 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.15);
-}
-
-.progress-label {
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #4CAF50;
-}
-
-.progress-count {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.8);
-  text-align: right;
-}
-
-/* Качество знаний */
-.quality-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-bottom: 40px;
-}
-
-.quality-item {
-  background: rgba(255,255,255,0.08);
-  padding: 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.15);
-}
-
-.quality-label {
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.quality-score {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-top: 8px;
-}
-
-/* Рекомендации и план */
-.recommendation {
-  background: rgba(255,255,255,0.08);
-  border-radius: 20px;
-  padding: 28px;
-  margin: 35px 0;
-  border: 1px solid rgba(255,255,255,0.15);
+  gap: 24px;
+  margin-bottom: 28px;
   text-align: left;
 }
+.avatar-wrapper { position: relative; flex-shrink: 0; }
+.avatar-large {
+  width: 90px; height: 90px;
+  border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 24px rgba(0,255,136,0.25);
+}
+.avatar-edit-btn {
+  position: absolute; bottom: 2px; right: 2px;
+  background: var(--accent); color: var(--bg);
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px;
+  transition: all 0.2s;
+}
+.avatar-edit-btn:hover { background: var(--accent3); transform: scale(1.1); }
 
-.ethics-note {
-  color: #aaa;
-  font-size: 0.95rem;
-  font-style: italic;
-  margin: 12px 0 22px 0;
+.profile-hero-info { flex: 1; min-width: 0; }
+.profile-name { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; color: var(--text); }
+.profile-email { font-size: 0.82rem; color: var(--text3); margin: 0 0 14px; font-family: var(--font-mono); }
+
+.nickname-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.nickname-input {
+  padding: 8px 16px; flex: 1; min-width: 140px;
+  border-radius: 25px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+}
+.nickname-input:focus { border-color: var(--accent); }
+.nickname-input::placeholder { color: var(--text3); }
+.nickname-btn {
+  padding: 8px 18px; border-radius: 25px;
+  background: var(--accent); color: var(--bg);
+  border: none; cursor: pointer; font-weight: 700;
+  font-size: 0.85rem; white-space: nowrap;
+  transition: all 0.2s; margin: 0;
+}
+.nickname-btn:hover { background: var(--accent3); transform: translateY(-1px); }
+
+/* ── Геймификация ── */
+.gami-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.gami-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px 12px;
+  text-align: center; transition: border-color 0.2s;
+}
+.gami-card:hover { border-color: var(--border2); }
+.gami-card.gami-main { border-color: var(--accent); background: rgba(0,255,136,0.05); }
+.gami-icon { font-size: 1.4rem; margin-bottom: 6px; }
+.gami-val { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.gami-lbl { font-size: 0.75rem; color: var(--text2); margin-top: 4px; }
+
+/* Прогресс-бар уровня */
+.level-bar-wrap { margin-bottom: 20px; }
+.level-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.78rem; color: var(--text3);
+  font-family: var(--font-mono); margin-bottom: 6px;
+}
+.level-bar-track {
+  height: 8px; background: var(--bg3);
+  border-radius: 999px; overflow: hidden;
+}
+.level-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+  border-radius: 999px; transition: width 0.6s ease;
 }
 
+/* Бейджи */
+.badges {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: flex-start; margin-bottom: 24px;
+}
+.badge {
+  background: rgba(255,215,0,0.12);
+  border: 1px solid rgba(255,215,0,0.3);
+  color: #ffd700; padding: 5px 14px;
+  border-radius: 30px; font-size: 0.82rem; font-weight: 600;
+}
+
+/* ── Заголовки секций ── */
+.section-title {
+  font-size: 1rem; font-weight: 700;
+  color: var(--text); margin: 24px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Статистика ── */
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 8px;
+}
+.stat-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 12px; text-align: center;
+  transition: border-color 0.2s;
+}
+.stat-box:hover { border-color: var(--border2); }
+.stat-value {
+  font-family: var(--font-mono); font-size: 1.5rem;
+  font-weight: 700; color: var(--accent);
+}
+.stat-unit { font-size: 0.9rem; color: var(--text2); }
+.stat-label { font-size: 0.75rem; color: var(--text2); margin-top: 4px; }
+
+/* ── График ── */
+.chart-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; margin-bottom: 8px;
+}
+
+/* ── Предметы и качество ── */
+.subjects-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.subject-row {
+  display: grid; grid-template-columns: 140px 1fr 48px;
+  align-items: center; gap: 12px;
+}
+.subject-name { font-size: 0.85rem; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subject-bar-track {
+  height: 8px; background: var(--bg3);
+  border-radius: 999px; overflow: hidden;
+}
+.subject-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+  border-radius: 999px; transition: width 0.5s ease;
+}
+.subject-count {
+  font-family: var(--font-mono); font-size: 0.8rem;
+  color: var(--text3); text-align: right;
+}
+
+/* ── План практики ── */
+.plan-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 22px; margin-bottom: 24px;
+}
+.plan-desc { font-size: 0.92rem; color: var(--text2); margin: 0 0 4px; }
+.ethics-note { font-size: 0.8rem; color: var(--text3); font-style: italic; margin: 4px 0 16px; }
 .plan-btn {
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  color: white;
-  border: none;
-  padding: 14px 32px;
-  border-radius: 30px;
-  font-size: 1.12rem;
-  cursor: pointer;
-  margin: 18px 0 25px 0;
-  box-shadow: 0 6px 20px rgba(76,175,80,0.4);
-  transition: all 0.3s;
+  background: var(--accent); color: var(--bg);
+  border: none; padding: 11px 24px; border-radius: 30px;
+  font-size: 0.92rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,255,136,0.3);
+  transition: all 0.2s; margin: 0;
+  display: inline-block;
 }
-
-.plan-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(76,175,80,0.5);
-}
+.plan-btn:hover { background: var(--accent3); transform: translateY(-2px); }
+.plan-btn:disabled { background: var(--surface2); color: var(--text3); box-shadow: none; transform: none; cursor: not-allowed; }
 
 /* Прогресс выполнения плана */
-.plan-progress {
-  margin: 20px 0 10px;
-  text-align: center;
+.plan-progress-wrap {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 0 0;
 }
-
-.plan-progress-bar {
-  height: 10px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 8px;
+.plan-progress-track {
+  flex: 1; height: 10px; background: var(--bg3);
+  border-radius: 999px; overflow: hidden;
 }
-
 .plan-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
-  transition: width 0.8s ease;
+  background: linear-gradient(90deg, var(--accent), #00c853);
+  border-radius: 999px; transition: width 0.5s ease;
 }
+.plan-progress-label { font-size: 0.82rem; color: var(--text2); font-family: var(--font-mono); white-space: nowrap; }
 
-/* Сетка карточек дней */
+/* ── Загрузка плана ── */
+.plan-loading {
+  text-align: center; padding: 40px 20px;
+  color: var(--text2); font-size: 0.92rem;
+}
+.plan-spinner {
+  width: 36px; height: 36px; margin: 0 auto 16px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.plan-error { color: #ff6b6b; text-align: center; padding: 20px; font-size: 0.92rem; }
+
+/* ── Карточки дней ── */
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 22px;
-  margin-top: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px; margin-top: 20px;
 }
 
 .day-card {
-  background: rgba(255,255,255,0.1);
-  border-radius: 24px;
-  padding: 26px;
-  border: 2px solid rgba(255,255,255,0.2);
-  transition: all 0.4s ease;
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: all 0.25s;
 }
-
-.day-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(76,175,80,0.3);
-}
-
-.day-card h3 {
-  color: #4CAF50;
-  margin: 0 0 18px 0;
-  font-size: 1.45rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.day-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 25px 0;
-  flex-grow: 1;
-}
-
-.day-card li {
-  padding: 11px 0 11px 32px;
-  position: relative;
-  font-size: 1.03rem;
-  line-height: 1.5;
-}
-
-.day-card li::before {
-  content: "▸";
-  position: absolute;
-  left: 0;
-  color: #4CAF50;
-  font-size: 1.4rem;
-}
-
-.complete-btn {
-  width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  color: white;
-  border: none;
-  border-radius: 30px;
-  font-size: 1.05rem;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s;
-  margin-top: auto;
-}
-
-.complete-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(76,175,80,0.5);
-}
-
+.day-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
 .day-card.completed {
-  border-color: #4CAF50;
-  background: rgba(76,175,80,0.18);
-  box-shadow: 0 0 0 4px rgba(76,175,80,0.25);
+  border-color: var(--accent);
+  background: rgba(0,255,136,0.04);
 }
 
-.day-card.completed h3::after {
-  content: " ✅";
-  font-size: 1.6rem;
-  margin-left: auto;
+.day-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.day-num {
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--accent); font-family: var(--font-mono);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.day-done-badge {
+  font-size: 0.72rem; color: var(--accent);
+  background: rgba(0,255,136,0.12);
+  border: 1px solid rgba(0,255,136,0.25);
+  padding: 2px 10px; border-radius: 20px;
 }
 
-.day-card.completed .complete-btn {
-  background: #2E7D32;
-  cursor: default;
-  opacity: 0.8;
-  box-shadow: none;
-  transform: none;
+.day-title {
+  font-size: 0.92rem; font-weight: 600; color: var(--text);
+  line-height: 1.4;
 }
 
-.finish-plan-btn {
-  width: 100%;
-  padding: 18px;
-  margin-top: 30px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: #222;
-  border: none;
-  border-radius: 30px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
+.task-list {
+  list-style: none; padding: 0; margin: 0;
+  flex: 1;
+}
+.task-list li {
+  font-size: 0.83rem; color: var(--text2);
+  padding: 6px 0 6px 18px; position: relative;
+  border-bottom: 1px solid var(--border); line-height: 1.45;
+}
+.task-list li:last-child { border-bottom: none; }
+.task-list li::before {
+  content: "›"; position: absolute; left: 0;
+  color: var(--accent); font-size: 1.1rem; line-height: 1;
 }
 
-.finish-plan-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(255,215,0,0.5);
-}
-
-/* Статистика */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 25px;
-  margin-top: 40px;
-}
-
-.stat-box {
-  background: rgba(255,255,255,0.1);
-  border-radius: 16px;
-  padding: 18px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-.stat-value {
-  font-size: 1.85rem;
-  font-weight: 700;
-  margin-bottom: 6px;
-  color: #4CAF50;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: #ccc;
-}
-
-.back-link {
-  display: inline-block;
-  margin-top: 35px;
-  color: #4CAF50;
-  text-decoration: none;
-  font-weight: 500;
+/* Кнопка выполнения — ВСЕГДА кликабельна */
+.complete-btn {
+  width: 100%; padding: 10px; margin: 0;
+  border-radius: 25px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text2);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
   transition: all 0.2s;
 }
-
-.back-link:hover {
-  color: #81C784;
+.complete-btn:hover {
+  background: rgba(0,255,136,0.12);
+  border-color: var(--accent); color: var(--accent);
+}
+/* Выполненное состояние — другой стиль, но по-прежнему кликабельно */
+.complete-btn.done {
+  background: rgba(0,255,136,0.12);
+  border-color: var(--accent); color: var(--accent);
+}
+.complete-btn.done:hover {
+  background: rgba(255,77,106,0.1);
+  border-color: var(--danger); color: var(--danger);
 }
 
-/* Адаптивность */
+/* Кнопка завершить неделю */
+.finish-plan-btn {
+  display: none; /* показывается только когда все дни выполнены */
+  width: 100%; padding: 14px; margin-top: 16px;
+  background: linear-gradient(135deg, #FFD700, #FF9800);
+  color: #111; border: none; border-radius: 25px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; grid-column: 1 / -1;
+}
+.finish-plan-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,215,0,0.4); }
+
+/* Экран завершения недели */
+.plan-finish-screen {
+  text-align: center; padding: 32px 20px;
+  grid-column: 1 / -1;
+}
+.plan-finish-trophy { font-size: 4rem; margin-bottom: 12px; }
+.plan-finish-screen h3 { font-size: 1.4rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.plan-finish-screen p { font-size: 0.92rem; color: var(--text2); margin-bottom: 4px; }
+.plan-finish-sub { color: var(--text3); font-size: 0.82rem; }
+
+/* ── Back link ── */
+.back-link {
+  display: inline-block; margin-top: 24px;
+  color: var(--accent); font-size: 0.88rem; font-weight: 500;
+}
+.back-link:hover { color: var(--accent3); }
+
+/* ── Адаптив ── */
 @media (max-width: 600px) {
-  .profile-container {
-    margin: 20px 12px;
-    padding: 25px;
-  }
-  .plan-grid {
-    grid-template-columns: 1fr;
-  }
-  .nickname-input {
-    width: 100%;
-    margin-bottom: 10px;
-  }
-  .nickname-btn {
-    width: 100%;
-    margin-left: 0;
-  }
+  .profile-container { margin: 12px; padding: 20px; }
+  .profile-hero { flex-direction: column; text-align: center; }
+  .nickname-form { justify-content: center; }
+  .gami-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stats-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .subject-row { grid-template-columns: 100px 1fr 40px; }
+  .plan-grid { grid-template-columns: 1fr; }
 }
