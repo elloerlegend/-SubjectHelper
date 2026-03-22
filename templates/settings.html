@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Настройки</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .settings-wrap {
+      max-width: 680px; margin: 0 auto;
+      padding: 28px 16px 80px; position: relative; z-index: 1;
+    }
+    .settings-header { margin-bottom: 32px; }
+    .settings-header h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 4px; }
+    .settings-header p  { font-size: 0.82rem; color: var(--text3); font-family: var(--font-mono); }
+
+    .settings-section { margin-bottom: 24px; }
+    .section-label {
+      font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text3); font-family: var(--font-mono);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .settings-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+
+    /* ── Ряд ── */
+    .setting-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row:hover { background: var(--surface2); }
+    .setting-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--surface2); display: flex; align-items: center;
+      justify-content: center; font-size: 17px; flex-shrink: 0;
+    }
+    .setting-info { flex: 1; min-width: 0; }
+    .setting-name { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 1px; }
+    .setting-desc { font-size: 0.73rem; color: var(--text3); font-family: var(--font-mono); }
+
+    /* ── Toggle ── */
+    .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-wrap input { opacity:0; width:0; height:0; position:absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .toggle-track::after {
+      content:''; position:absolute; top:2px; left:2px;
+      width:18px; height:18px; border-radius:50%;
+      background: var(--text3); transition: all 0.2s;
+    }
+    .toggle-wrap input:checked + .toggle-track { background: rgba(0,255,136,0.2); border-color: var(--accent); }
+    .toggle-wrap input:checked + .toggle-track::after { transform: translateX(20px); background: var(--accent); }
+
+    /* ── Темы ── */
+    .themes-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 14px;
+    }
+    .theme-btn {
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 11px; padding: 10px 6px 8px;
+      cursor: pointer; text-align: center; transition: all 0.18s;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-family: var(--font-main);
+    }
+    .theme-btn:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .theme-btn.active { border-color: var(--accent); background: rgba(0,255,136,0.06); }
+    .theme-btn .t-emoji { font-size: 1.4rem; }
+    .theme-btn .t-colors { display:flex; gap:3px; justify-content:center; }
+    .theme-btn .t-dot { width:7px; height:7px; border-radius:50%; }
+    .theme-btn .t-name { font-size: 0.7rem; font-weight: 600; color: var(--text2); }
+    .theme-btn.active .t-name { color: var(--accent); }
+
+    /* ── Размер шрифта ── */
+    .font-row {
+      display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+    }
+    .fs-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text2); font-size: 1rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; font-family: var(--font-main); flex-shrink: 0;
+    }
+    .fs-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .fs-track {
+      flex: 1; display: flex; gap: 4px; align-items: center; justify-content: center;
+    }
+    .fs-dot {
+      border-radius: 50%; background: var(--border2); transition: all 0.2s; cursor: pointer;
+    }
+    .fs-dot.active { background: var(--accent); }
+    .fs-label {
+      font-size: 0.75rem; color: var(--text3); font-family: var(--font-mono);
+      min-width: 80px; text-align: center;
+    }
+
+    /* ── Профиль ── */
+    .profile-edit-row {
+      display: flex; align-items: center; gap: 16px; padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-edit-row:last-child { border-bottom: none; }
+    .avatar-edit-wrap {
+      position: relative; width: 52px; height: 52px; flex-shrink: 0;
+    }
+    .avatar-edit-img {
+      width: 52px; height: 52px; border-radius: 50%; object-fit: cover;
+      border: 2px solid var(--border2);
+    }
+    .avatar-letter {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 700; color: var(--bg);
+    }
+    .avatar-change-btn {
+      position: absolute; bottom: -2px; right: -2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); color: var(--bg); border: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+    }
+    .profile-field { flex: 1; display: flex; gap: 8px; align-items: center; }
+    .profile-input {
+      flex: 1; padding: 9px 12px; border-radius: 9px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); font-size: 0.88rem; font-family: var(--font-main);
+      outline: none; transition: border-color 0.18s;
+    }
+    .profile-input:focus { border-color: var(--accent); }
+    .save-btn {
+      padding: 9px 16px; border-radius: 9px;
+      background: var(--accent); color: var(--bg); border: none;
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.18s; white-space: nowrap; font-family: var(--font-main);
+    }
+    .save-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+    /* ── Селектор ── */
+    .select-row { padding: 6px 14px 12px; }
+    .option-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .opt-pill {
+      padding: 5px 12px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: 0.78rem; font-weight: 600; color: var(--text2);
+      cursor: pointer; transition: all 0.15s; font-family: var(--font-main);
+    }
+    .opt-pill:hover { border-color: var(--border2); color: var(--text); }
+    .opt-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.08); }
+    .opt-pill.active-purple { border-color: var(--purple); color: var(--purple); background: rgba(167,139,250,0.08); }
+    .opt-label { font-size: 0.72rem; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; padding: 0 4px; }
+
+    /* ── Кнопка-ссылка ── */
+    .btn-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--accent); font-size: 0.8rem; font-weight: 600;
+      text-decoration: none; padding: 7px 12px; border-radius: 8px;
+      border: 1px solid rgba(0,255,136,0.2); background: rgba(0,255,136,0.06);
+      transition: all 0.18s; white-space: nowrap;
+    }
+    .btn-link:hover { background: rgba(0,255,136,0.12); transform: translateY(-1px); }
+
+    /* ── Danger ── */
+    .danger-btn {
+      width: 100%; padding: 11px; background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25); border-radius: 10px;
+      color: #ef4444; font-size: 0.86rem; font-weight: 600;
+      cursor: pointer; transition: all 0.18s; font-family: var(--font-main);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .danger-btn:hover { background: rgba(239,68,68,0.15); }
+
+    /* ── Тост ── */
+    .s-toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 30px; padding: 10px 22px;
+      font-size: 0.87rem; font-weight: 600; color: var(--text);
+      opacity: 0; transition: all 0.3s ease; z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3); pointer-events: none;
+    }
+    .s-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .s-toast.ok   { border-color: rgba(0,255,136,0.4); color: var(--accent); }
+    .s-toast.err  { border-color: rgba(239,68,68,0.4); color: #ef4444; }
+
+    @media (max-width: 480px) { .themes-grid { grid-template-columns: repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+  {{ menu | safe }}
+</header>
+{{ menu_js | safe }}
+<div class="s-toast" id="sToast"></div>
+
+<div class="settings-wrap">
+  <div class="settings-header">
+    <h1>⚙️ Настройки</h1>
+    <p>Персонализируй SubjectHelper под себя</p>
+  </div>
+
+  <!-- ═══ ПРОФИЛЬ ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Профиль</div>
+    <div class="settings-card">
+
+      <!-- Аватар -->
+      <div class="profile-edit-row">
+        <div class="setting-icon">🖼️</div>
+        <div class="setting-info">
+          <div class="setting-name">Аватар</div>
+          <div class="setting-desc">Загрузи фото профиля</div>
+        </div>
+        <div class="avatar-edit-wrap">
+          {% if current_user.avatar %}
+            <img class="avatar-edit-img" id="avatarPreview"
+                 src="{{ current_user.avatar }}" alt="">
+          {% else %}
+            <div class="avatar-letter" id="avatarPreview">
+              {{ (current_user.name or current_user.email or '?')[0]|upper }}
+            </div>
+          {% endif %}
+          <form method="POST" enctype="multipart/form-data"
+                action="/update_avatar" id="avatarForm">
+            <input type="file" name="avatar" accept="image/*"
+                   id="avatarInput" style="display:none"
+                   onchange="document.getElementById('avatarForm').submit()">
+            <label for="avatarInput" class="avatar-change-btn" title="Сменить аватар">
+              <span class="material-icons" style="font-size:11px">edit</span>
+            </label>
+          </form>
+        </div>
+      </div>
+
+      <!-- Никнейм -->
+      <div class="profile-edit-row">
+        <div class="setting-icon">✏️</div>
+        <div class="setting-info">
+          <div class="setting-name">Никнейм</div>
+          <div class="setting-desc">До 20 символов</div>
+        </div>
+        <form method="POST" action="/update_nickname"
+              class="profile-field" onsubmit="onNickSave(event, this)">
+          <input class="profile-input" type="text" name="nickname"
+                 value="{{ current_user.name or '' }}"
+                 placeholder="Введи ник..." maxlength="20">
+          <button class="save-btn" type="submit">Сохранить</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ ТЕМА ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Тема оформления</div>
+    <div class="settings-card">
+      <div class="themes-grid" id="themesGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══ РАЗМЕР ШРИФТА ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Размер текста</div>
+    <div class="settings-card">
+      <div class="font-row">
+        <button class="fs-btn" onclick="changeFontSize(-1)" title="Уменьшить">A−</button>
+        <div class="fs-track" id="fsDots"></div>
+        <div class="fs-label" id="fsLabel">Обычный</div>
+        <button class="fs-btn" onclick="changeFontSize(1)" title="Увеличить">A+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ИНТЕРФЕЙС ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Интерфейс</div>
+    <div class="settings-card">
+
+      <div class="setting-row">
+        <div class="setting-icon">🐉</div>
+        <div class="setting-info">
+          <div class="setting-name">Файрик-маскот</div>
+          <div class="setting-desc">Дракончик в углу экрана</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-fairik" onchange="saveSetting('fairik',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-icon">✨</div>
+        <div class="setting-info">
+          <div class="setting-name">Анимированный фон</div>
+          <div class="setting-desc">Летающие формулы на страницах</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-bg" onchange="saveSetting('bg',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-icon">🎯</div>
+        <div class="setting-info">
+          <div class="setting-name">XP-уведомления</div>
+          <div class="setting-desc">Тост +10 XP после каждого ответа</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-xp" onchange="saveSetting('xp',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-icon">🔊</div>
+        <div class="setting-info">
+          <div class="setting-name">Озвучка ответов</div>
+          <div class="setting-desc">Кнопка 🔊 на сообщениях ИИ</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-tts" onchange="saveSetting('tts',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-icon">⌨️</div>
+        <div class="setting-info">
+          <div class="setting-name">Отправка по Enter</div>
+          <div class="setting-desc">Enter отправляет, Shift+Enter — перенос строки</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-enter" onchange="saveSetting('enter',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-icon">💬</div>
+        <div class="setting-info">
+          <div class="setting-name">Анимация ответов</div>
+          <div class="setting-desc">Текст появляется по символам (как ChatGPT)</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-anim" onchange="saveSetting('anim',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ ОБУЧЕНИЕ ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Персонализация обучения</div>
+    <div class="settings-card">
+
+      <!-- Стиль объяснений -->
+      <div class="setting-row" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="setting-icon">🧠</div>
+        <div class="setting-info" style="min-width:100%">
+          <div class="setting-name">Стиль объяснений</div>
+          <div class="setting-desc">Как ИИ объясняет материал</div>
+        </div>
+        <div class="select-row" style="padding:8px 0 0 48px; width:100%;">
+          <div class="option-grid" id="styleGrid">
+            <button class="opt-pill" data-group="style" data-val="simple" onclick="selectOpt(this)">🎯 Простой</button>
+            <button class="opt-pill" data-group="style" data-val="detailed" onclick="selectOpt(this)">📚 Подробный</button>
+            <button class="opt-pill" data-group="style" data-val="examples" onclick="selectOpt(this)">💡 Через примеры</button>
+            <button class="opt-pill" data-group="style" data-val="humor" onclick="selectOpt(this)">😄 С юмором</button>
+            <button class="opt-pill" data-group="style" data-val="strict" onclick="selectOpt(this)">📐 Строго</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Темп обучения -->
+      <div class="setting-row" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="setting-icon">⚡</div>
+        <div class="setting-info" style="min-width:100%">
+          <div class="setting-name">Темп обучения</div>
+          <div class="setting-desc">Сколько информации за раз</div>
+        </div>
+        <div class="select-row" style="padding:8px 0 0 48px; width:100%;">
+          <div class="option-grid">
+            <button class="opt-pill" data-group="pace" data-val="slow" onclick="selectOpt(this)">🐌 Медленно</button>
+            <button class="opt-pill" data-group="pace" data-val="normal" onclick="selectOpt(this)">🚶 Обычно</button>
+            <button class="opt-pill" data-group="pace" data-val="fast" onclick="selectOpt(this)">🚀 Быстро</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Язык примеров -->
+      <div class="setting-row" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="setting-icon">🌍</div>
+        <div class="setting-info" style="min-width:100%">
+          <div class="setting-name">Примеры из жизни</div>
+          <div class="setting-desc">Из какой сферы брать аналогии</div>
+        </div>
+        <div class="select-row" style="padding:8px 0 0 48px; width:100%;">
+          <div class="option-grid">
+            <button class="opt-pill" data-group="context" data-val="games" onclick="selectOpt(this)">🎮 Игры</button>
+            <button class="opt-pill" data-group="context" data-val="sport" onclick="selectOpt(this)">⚽ Спорт</button>
+            <button class="opt-pill" data-group="context" data-val="music" onclick="selectOpt(this)">🎵 Музыка</button>
+            <button class="opt-pill" data-group="context" data-val="tech" onclick="selectOpt(this)">💻 Технологии</button>
+            <button class="opt-pill" data-group="context" data-val="nature" onclick="selectOpt(this)">🌿 Природа</button>
+            <button class="opt-pill" data-group="context" data-val="food" onclick="selectOpt(this)">🍕 Еда</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Длина ответов -->
+      <div class="setting-row" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="setting-icon">📏</div>
+        <div class="setting-info" style="min-width:100%">
+          <div class="setting-name">Длина ответов ИИ</div>
+          <div class="setting-desc">Насколько подробно отвечать</div>
+        </div>
+        <div class="select-row" style="padding:8px 0 0 48px; width:100%;">
+          <div class="option-grid">
+            <button class="opt-pill" data-group="length" data-val="short" onclick="selectOpt(this)">📌 Кратко</button>
+            <button class="opt-pill" data-group="length" data-val="medium" onclick="selectOpt(this)">📄 Средне</button>
+            <button class="opt-pill" data-group="length" data-val="long" onclick="selectOpt(this)">📖 Подробно</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Напоминания -->
+      <div class="setting-row">
+        <div class="setting-icon">🔔</div>
+        <div class="setting-info">
+          <div class="setting-name">Напоминания о повторении</div>
+          <div class="setting-desc">Файрик напоминает о темах для повторения</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="tog-remind" onchange="saveSetting('remind',this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <!-- Сложность квиза -->
+      <div class="setting-row" style="flex-wrap:wrap; align-items:flex-start;">
+        <div class="setting-icon">🎯</div>
+        <div class="setting-info" style="min-width:100%">
+          <div class="setting-name">Сложность квиза</div>
+          <div class="setting-desc">Насколько сложные вопросы генерировать</div>
+        </div>
+        <div class="select-row" style="padding:8px 0 0 48px; width:100%;">
+          <div class="option-grid">
+            <button class="opt-pill" data-group="quiz_diff" data-val="easy" onclick="selectOpt(this)">😊 Лёгкие</button>
+            <button class="opt-pill" data-group="quiz_diff" data-val="medium" onclick="selectOpt(this)">🙂 Средние</button>
+            <button class="opt-pill" data-group="quiz_diff" data-val="hard" onclick="selectOpt(this)">😤 Сложные</button>
+            <button class="opt-pill" data-group="quiz_diff" data-val="exam" onclick="selectOpt(this)">🔥 ЕГЭ-уровень</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ БЫСТРЫЕ ССЫЛКИ ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Разделы</div>
+    <div class="settings-card">
+      <div class="setting-row">
+        <div class="setting-icon">🧠</div>
+        <div class="setting-info">
+          <div class="setting-name">Долгосрочная память</div>
+          <div class="setting-desc">Слабые темы и история ошибок</div>
+        </div>
+        <a href="{{ url_for('memory_page') }}" class="btn-link">Открыть</a>
+      </div>
+      <div class="setting-row">
+        <div class="setting-icon">🛍️</div>
+        <div class="setting-info">
+          <div class="setting-name">Магазин скинов</div>
+          <div class="setting-desc">Внешность Файрика за XP</div>
+        </div>
+        <a href="{{ url_for('shop_page') }}" class="btn-link">В магазин</a>
+      </div>
+      <div class="setting-row">
+        <div class="setting-icon">📊</div>
+        <div class="setting-info">
+          <div class="setting-name">Профиль и статистика</div>
+          <div class="setting-desc">Прогресс, графики, достижения</div>
+        </div>
+        <a href="{{ url_for('profile') }}" class="btn-link">Профиль</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ АККАУНТ ═══ -->
+  <div class="settings-section">
+    <div class="section-label">Аккаунт</div>
+    <div class="settings-card">
+      <div style="padding:14px;">
+        <a href="{{ url_for('logout') }}" class="danger-btn" style="text-decoration:none;">
+          <span class="material-icons" style="font-size:15px">logout</span>
+          Выйти из аккаунта
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /settings-wrap -->
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+<script src="{{ url_for('static', filename='settings.js') }}"></script>
+<script src="{{ url_for('static', filename='fairik.js') }}"></script>
+
+<script>
+// ── Тост ──
+let _toastTimer;
+function showToast(msg, type='ok') {
+  const t = document.getElementById('sToast');
+  t.textContent = msg; t.className = `s-toast ${type} show`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Ник через AJAX (без перезагрузки) ──
+function onNickSave(e, form) {
+  e.preventDefault();
+  const data = new FormData(form);
+  fetch('/update_nickname', { method:'POST', body: data, credentials:'include' })
+    .then(r => { if(r.ok || r.redirected) showToast('✅ Ник сохранён'); else showToast('Ошибка','err'); })
+    .catch(() => showToast('Ошибка','err'));
+}
+
+// ═══ ТЕМЫ ═══
+const THEME_META = {
+  dark:     { name:'Тёмная',    emoji:'🌑', colors:['#0d0d1a','#00ff88','#a78bfa'] },
+  light:    { name:'Светлая',   emoji:'☀️', colors:['#f4f6fb','#00a85a','#7c3aed'] },
+  ocean:    { name:'Океан',     emoji:'🌊', colors:['#020b18','#00d4ff','#60cfff'] },
+  sunset:   { name:'Закат',     emoji:'🌅', colors:['#1a0a08','#ff7c3a','#ff88aa'] },
+  forest:   { name:'Лес',       emoji:'🌿', colors:['#060f08','#44dd66','#60d8a0'] },
+  galaxy:   { name:'Галактика', emoji:'🌌', colors:['#04020f','#a78bfa','#e088ff'] },
+  rose:     { name:'Розовая',   emoji:'🌸', colors:['#1a0812','#ff6eb0','#cc88ff'] },
+  midnight: { name:'Полночь',   emoji:'🌙', colors:['#000008','#6060ff','#9060ff'] },
+};
+
+function buildThemeGrid() {
+  const grid = document.getElementById('themesGrid');
+  const cur  = window.Themes ? window.Themes.current() : (localStorage.getItem('sh_theme')||'dark');
+  Object.entries(THEME_META).forEach(([id, m]) => {
+    const btn = document.createElement('button');
+    btn.className = `theme-btn${id===cur?' active':''}`;
+    btn.dataset.theme = id;
+    const dots = m.colors.map(c=>`<div class="t-dot" style="background:${c}"></div>`).join('');
+    btn.innerHTML = `<div class="t-emoji">${m.emoji}</div><div class="t-colors">${dots}</div><div class="t-name">${m.name}</div>`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      if (window.Themes) window.Themes.apply(id);
+      showToast('✅ Тема изменена');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+// ═══ РАЗМЕР ШРИФТА ═══
+// Шаги: индекс 0..4
+const FS_STEPS  = ['12px','14px','16px','18px','20px'];
+const FS_LABELS = ['Маленький','Небольшой','Обычный','Большой','Крупный'];
+let fsIdx = parseInt(localStorage.getItem('sh_fs_idx') || '2');
+
+function applyFontSize(idx) {
+  fsIdx = Math.max(0, Math.min(4, idx));
+  // Применяем к body и html напрямую
+  document.documentElement.style.fontSize = FS_STEPS[fsIdx];
+  document.body.style.fontSize            = FS_STEPS[fsIdx];
+  // Сохраняем
+  localStorage.setItem('sh_fs_idx', fsIdx);
+  // Обновляем точки
+  document.querySelectorAll('.fs-dot').forEach((d,i) => d.classList.toggle('active', i===fsIdx));
+  document.getElementById('fsLabel').textContent = FS_LABELS[fsIdx];
+}
+
+function changeFontSize(delta) {
+  applyFontSize(fsIdx + delta);
+  showToast('✅ Размер изменён');
+}
+
+function buildFsDots() {
+  const wrap = document.getElementById('fsDots');
+  wrap.innerHTML = '';
+  for (let i=0; i<5; i++) {
+    const d = document.createElement('div');
+    const size = 6 + i*3; // 6,9,12,15,18px
+    d.className = `fs-dot${i===fsIdx?' active':''}`;
+    d.style.cssText = `width:${size}px;height:${size}px`;
+    d.onclick = () => { applyFontSize(i); showToast('✅ Размер изменён'); };
+    wrap.appendChild(d);
+  }
+  document.getElementById('fsLabel').textContent = FS_LABELS[fsIdx];
+}
+
+// ═══ ТОГГЛЫ — централизованный settings.js ═══
+function loadToggles() {
+  const KEYS = ['fairik','bg','xp','tts','enter','anim','remind'];
+  KEYS.forEach(key => {
+    const saved = localStorage.getItem(`sh_${key}`);
+    const val   = saved !== null ? saved === 'true' : true;
+    const el    = document.getElementById(`tog-${key}`);
+    if (el) el.checked = val;
+  });
+}
+
+function saveSetting(key, val) {
+  // 1. Сохраняем в localStorage
+  localStorage.setItem(`sh_${key}`, String(val));
+  // 2. Применяем немедленно через settings.js если доступен
+  if (window.SH) {
+    window.SH.set(key, val);
+  } else {
+    // Fallback — применяем напрямую
+    if (key === 'bg') {
+      const c = document.getElementById('formula-canvas');
+      if (c) c.style.setProperty('display', val ? '' : 'none', 'important');
+    }
+    if (key === 'fairik') {
+      ['fairik-widget','fk-mini'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.setProperty('display', val ? '' : 'none', 'important');
+      });
+    }
+    if (key === 'tts') {
+      let s = document.getElementById('sh-tts-hide');
+      if (!val && !s) {
+        s = document.createElement('style');
+        s.id = 'sh-tts-hide';
+        s.textContent = '.tts-inline{display:none!important}';
+        document.head.appendChild(s);
+      } else if (val && s) { s.remove(); }
+    }
+  }
+  showToast('✅ Сохранено');
+}
+
+// ═══ ОПЦИИ ОБУЧЕНИЯ ═══
+const LEARN_KEYS = ['style','pace','context','length','quiz_diff'];
+
+function loadLearnOpts() {
+  LEARN_KEYS.forEach(group => {
+    const saved = localStorage.getItem(`sh_learn_${group}`);
+    if (saved) {
+      const btn = document.querySelector(`.opt-pill[data-group="${group}"][data-val="${saved}"]`);
+      if (btn) btn.classList.add('active');
+    }
+  });
+}
+
+function selectOpt(btn) {
+  const group = btn.dataset.group;
+  document.querySelectorAll(`.opt-pill[data-group="${group}"]`).forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  localStorage.setItem(`sh_learn_${group}`, btn.dataset.val);
+  showToast('✅ Сохранено');
+}
+
+// ═══ INIT ═══
+document.addEventListener('DOMContentLoaded', () => {
+  buildThemeGrid();
+  buildFsDots();
+  applyFontSize(fsIdx); // применяем сохранённый размер
+  loadToggles();
+  loadLearnOpts();
+});
+</script>
+</body>
+</html>

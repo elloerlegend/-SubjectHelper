@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Дуэли</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    /* ── Основа ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+    }
+
+    .duel-wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Заголовок ── */
+    .duel-title {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .duel-title h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .duel-title .swords { font-size: 2rem; }
+    .duel-title p {
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── Секция ── */
+    .section-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      margin-bottom: 12px;
+      margin-top: 28px;
+    }
+
+    /* ── Сетка предметов ── */
+    .subject-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .subj-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 12px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .subj-card .subj-icon { font-size: 1.8rem; }
+    .subj-card .subj-name { font-size: 0.84rem; font-weight: 600; color: var(--text2); }
+    .subj-card:hover {
+      border-color: var(--accent);
+      background: rgba(0,255,136,0.05);
+      transform: translateY(-2px);
+    }
+    .subj-card.selected {
+      border-color: var(--purple, #a78bfa);
+      background: rgba(167,139,250,0.1);
+      box-shadow: 0 0 18px rgba(167,139,250,0.2);
+    }
+    .subj-card.selected .subj-name { color: var(--purple, #a78bfa); }
+
+    /* ── Режимы игры ── */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .mode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .mode-card .mode-top {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .mode-card .mode-sub {
+      font-size: 0.72rem;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+    .mode-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-1px);
+    }
+    .mode-card.selected {
+      border-color: #f472b6;
+      background: rgba(244,114,182,0.1);
+    }
+    .mode-card.selected .mode-top { color: #f472b6; }
+
+    /* ── Код дуэли ── */
+    .duel-code-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 20px 20px;
+      text-align: center;
+    }
+    .duel-code {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: #a78bfa;
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+    }
+    .duel-code-hint {
+      font-size: 0.78rem;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Кнопки ── */
+    .btn-create {
+      width: 100%;
+      margin-top: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.04em;
+    }
+    .btn-create:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(124,58,237,0.4);
+    }
+    .btn-create:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-join-link {
+      display: block;
+      text-align: center;
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-join-link:hover { text-decoration: underline; }
+
+    /* ── Лобби ── */
+    #lobby-screen { display: none; }
+
+    .lobby-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .lobby-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+    .lobby-players {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    .lobby-player {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .lp-avatar {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid rgba(167,139,250,0.4);
+    }
+    .lp-avatar.empty {
+      background: var(--surface2);
+      border-style: dashed;
+      border-color: var(--border2);
+    }
+    .lp-avatar.empty::after { content: "?"; color: var(--text3); font-size: 1.4rem; }
+    .lp-name { font-size: 0.85rem; font-weight: 600; color: var(--text2); }
+    .lp-status { font-size: 0.72rem; color: var(--text3); font-family: var(--font-mono); }
+
+    .vs-badge {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #f472b6;
+      font-family: var(--font-mono);
+      text-shadow: 0 0 20px rgba(244,114,182,0.5);
+    }
+
+    .lobby-waiting {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text3);
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+    }
+    .dot-pulse { display: flex; gap: 4px; }
+    .dot-pulse span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+
+    /* ── Игровой экран ── */
+    #game-screen { display: none; }
+
+    .game-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .game-score-block { text-align: center; }
+    .game-score-name { font-size: 0.75rem; color: var(--text3); font-family: var(--font-mono); }
+    .game-score-val {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+    .game-score-val.me { color: var(--accent); }
+    .game-score-val.opp { color: #f472b6; }
+
+    .game-timer-ring {
+      width: 60px; height: 60px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-timer-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+    .game-timer-ring circle {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .timer-bg { stroke: var(--surface2); }
+    .timer-fg { stroke: var(--accent); }
+    .timer-num {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text);
+      position: relative;
+      z-index: 1;
+    }
+
+    .question-num {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+    }
+    .question-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 20px;
+      margin-bottom: 14px;
+    }
+    .question-text {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .answer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .answer-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      font-family: var(--font-main);
+    }
+    .answer-btn:hover:not(:disabled) {
+      border-color: #a78bfa;
+      background: rgba(167,139,250,0.07);
+      transform: translateY(-1px);
+    }
+    .answer-btn:disabled { cursor: not-allowed; }
+    .answer-btn.correct { border-color: var(--accent); background: rgba(0,255,136,0.1); }
+    .answer-btn.wrong   { border-color: var(--danger, #ef4444); background: rgba(239,68,68,0.1); }
+    .answer-btn.revealed { border-color: var(--accent); background: rgba(0,255,136,0.06); }
+
+    .opt-letter {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+      color: var(--text2);
+    }
+    .answer-btn.correct .opt-letter { background: var(--accent); color: var(--bg); }
+    .answer-btn.wrong   .opt-letter { background: var(--danger, #ef4444); color: #fff; }
+    .opt-text { font-size: 0.88rem; color: var(--text); font-weight: 500; }
+
+    .opp-answered {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #f472b6;
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+      min-height: 20px;
+    }
+
+    /* ── Результат ── */
+    #result-screen { display: none; }
+
+    .result-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 24px;
+      text-align: center;
+    }
+    .result-icon { font-size: 3.5rem; margin-bottom: 12px; }
+    .result-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+    .result-sub { font-size: 0.85rem; color: var(--text3); font-family: var(--font-mono); }
+    .result-scores {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin: 24px 0;
+    }
+    .rs-block { text-align: center; }
+    .rs-name { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); margin-bottom: 4px; }
+    .rs-val { font-size: 2.4rem; font-weight: 800; font-family: var(--font-mono); }
+    .rs-val.win { color: var(--accent); }
+    .rs-val.lose { color: #f472b6; }
+
+    .btn-again {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .btn-again:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Join модалка ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--bg2, var(--surface));
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 90%;
+      max-width: 380px;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; text-align: center; }
+    .modal-input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1.2rem;
+      font-family: var(--font-mono);
+      text-align: center;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .modal-input:focus { border-color: #a78bfa; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s;
+    }
+    .modal-btn.primary { background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; }
+    .modal-btn.secondary { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+    .modal-btn:hover { transform: translateY(-1px); }
+
+    /* ── XP тост ── */
+    .xp-toast-duel {
+      position: fixed;
+      top: 80px; right: 20px;
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: none;
+      z-index: 200;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from{transform:translateX(60px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* ── Прогресс вопросов ── */
+    .q-progress {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .q-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .q-dot.done-correct { background: var(--accent); border-color: var(--accent); }
+    .q-dot.done-wrong   { background: #ef4444; border-color: #ef4444; }
+    .q-dot.active       { background: #a78bfa; border-color: #a78bfa; width: 20px; border-radius: 4px; }
+
+    @media (max-width: 480px) {
+      .subject-grid { grid-template-columns: repeat(2, 1fr); }
+      .mode-grid { grid-template-columns: 1fr; }
+      .answer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+  {{ menu | safe }}
+</header>
+
+<div class="xp-toast-duel" id="xpToast">+25 XP ⚔️</div>
+
+<!-- ─── JOIN MODAL ─── -->
+<div class="modal-overlay" id="joinModal">
+  <div class="modal-box">
+    <div class="modal-title">⚔️ Присоединиться по коду</div>
+    <input class="modal-input" id="joinCodeInput" placeholder="A7X-4K" maxlength="7">
+    <div class="modal-btns">
+      <button class="modal-btn secondary" onclick="closeJoinModal()">Отмена</button>
+      <button class="modal-btn primary" onclick="doJoin()">Войти в дуэль</button>
+    </div>
+  </div>
+</div>
+
+<div class="duel-wrap">
+
+  <!-- ═══ ЭКРАН НАСТРОЙКИ ═══ -->
+  <div id="setup-screen">
+    <div class="duel-title">
+      <h1><span class="swords">⚔️</span> Дуэли</h1>
+      <p>Соревновательный режим · Реальное время</p>
+    </div>
+
+    <div class="section-label">Выбери предмет</div>
+    <div class="subject-grid">
+      <div class="subj-card selected" data-subj="Математика" onclick="selectSubj(this)">
+        <span class="subj-icon">📐</span>
+        <span class="subj-name">Математика</span>
+      </div>
+      <div class="subj-card" data-subj="Физика" onclick="selectSubj(this)">
+        <span class="subj-icon">🔬</span>
+        <span class="subj-name">Физика</span>
+      </div>
+      <div class="subj-card" data-subj="Химия" onclick="selectSubj(this)">
+        <span class="subj-icon">⚗️</span>
+        <span class="subj-name">Химия</span>
+      </div>
+      <div class="subj-card" data-subj="История" onclick="selectSubj(this)">
+        <span class="subj-icon">📜</span>
+        <span class="subj-name">История</span>
+      </div>
+      <div class="subj-card" data-subj="Информатика" onclick="selectSubj(this)">
+        <span class="subj-icon">💻</span>
+        <span class="subj-name">Информатика</span>
+      </div>
+      <div class="subj-card" data-subj="Биология" onclick="selectSubj(this)">
+        <span class="subj-icon">🧬</span>
+        <span class="subj-name">Биология</span>
+      </div>
+    </div>
+
+    <div class="section-label">Режим игры</div>
+    <div class="mode-grid">
+      <div class="mode-card selected" data-mode="fast" data-q="5" data-t="15" onclick="selectMode(this)">
+        <div class="mode-top">⚡ Быстрая</div>
+        <div class="mode-sub">5 вопросов · 15 сек</div>
+      </div>
+      <div class="mode-card" data-mode="classic" data-q="10" data-t="20" onclick="selectMode(this)">
+        <div class="mode-top">🎯 Классика</div>
+        <div class="mode-sub">10 вопросов · 20 сек</div>
+      </div>
+      <div class="mode-card" data-mode="hard" data-q="10" data-t="12" onclick="selectMode(this)">
+        <div class="mode-top">🔥 Сложная</div>
+        <div class="mode-sub">10 вопросов · 12 сек</div>
+      </div>
+    </div>
+
+    <div class="section-label">Код вашей дуэли</div>
+    <div class="duel-code-box">
+      <div class="duel-code" id="duelCode">— — — — —</div>
+      <div class="duel-code-hint">Нажми «Создать дуэль» — появится код для друга</div>
+    </div>
+
+    <button class="btn-create" id="createBtn" onclick="createDuel()">
+      <span>⚔️</span> Создать дуэль
+    </button>
+    <a class="btn-join-link" onclick="openJoinModal()">или Присоединиться по коду →</a>
+  </div>
+
+  <!-- ═══ ЭКРАН ЛОББИ ═══ -->
+  <div id="lobby-screen">
+    <div class="duel-title">
+      <h1>⏳ Ожидание</h1>
+      <p>Жди когда друг введёт код</p>
+    </div>
+    <div class="lobby-box">
+      <div class="lobby-title" id="lobbyTitle">Дуэль создана!</div>
+      <div class="lobby-players">
+        <div class="lobby-player">
+          <div class="lp-avatar" id="lp1">?</div>
+          <div class="lp-name" id="lp1name">Ты</div>
+          <div class="lp-status">Готов ✓</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="lobby-player">
+          <div class="lp-avatar empty" id="lp2"></div>
+          <div class="lp-name" id="lp2name">Соперник</div>
+          <div class="lp-status" id="lp2status">Ждём...</div>
+        </div>
+      </div>
+      <div class="lobby-waiting">
+        <span>Ожидаем соперника</span>
+        <div class="dot-pulse"><span></span><span></span><span></span></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="duel-code" id="lobbyCod" style="font-size:1.8rem;"></div>
+        <div class="duel-code-hint">Код для друга</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ИГРОВОЙ ЭКРАН ═══ -->
+  <div id="game-screen">
+    <div class="game-header">
+      <div class="game-score-block">
+        <div class="game-score-name" id="myNameScore">Ты</div>
+        <div class="game-score-val me" id="myScore">0</div>
+      </div>
+      <div class="game-timer-ring" id="timerRing">
+        <svg width="60" height="60" viewBox="0 0 60 60">
+          <circle class="timer-bg" cx="30" cy="30" r="26" stroke-dasharray="163.4" stroke-dashoffset="0"/>
+          <circle class="timer-fg" id="timerCircle" cx="30" cy="30" r="26"
+                  stroke-dasharray="163.4" stroke-dashoffset="0"/>
+        </svg>
+        <span class="timer-num" id="timerNum">20</span>
+      </div>
+      <div class="game-score-block">
+        <div class="game-score-name" id="oppNameScore">Соперник</div>
+        <div class="game-score-val opp" id="oppScore">0</div>
+      </div>
+    </div>
+
+    <div class="q-progress" id="qProgress"></div>
+
+    <div class="question-num" id="questionNum">Вопрос 1 из 5</div>
+
+    <div class="question-card">
+      <div class="question-text" id="questionText">Загрузка вопроса...</div>
+    </div>
+
+    <div class="opp-answered" id="oppAnswered"></div>
+
+    <div class="answer-grid" id="answerGrid"></div>
+  </div>
+
+  <!-- ═══ ЭКРАН РЕЗУЛЬТАТА ═══ -->
+  <div id="result-screen">
+    <div class="result-box">
+      <div class="result-icon" id="resultIcon">🏆</div>
+      <div class="result-title" id="resultTitle">Победа!</div>
+      <div class="result-sub" id="resultSub">Отличная игра</div>
+      <div class="result-scores">
+        <div class="rs-block">
+          <div class="rs-name">Ты</div>
+          <div class="rs-val win" id="rMyScore">0</div>
+        </div>
+        <div style="display:flex;align-items:center;font-size:1.4rem;font-weight:900;color:#f472b6;">:</div>
+        <div class="rs-block">
+          <div class="rs-name" id="rOppName">Соперник</div>
+          <div class="rs-val lose" id="rOppScore">0</div>
+        </div>
+      </div>
+      <button class="btn-create" onclick="resetToSetup()" style="margin-bottom:10px;">⚔️ Новая дуэль</button>
+      <button class="btn-again" onclick="location.href='/'">← На главную</button>
+    </div>
+  </div>
+
+</div><!-- /duel-wrap -->
+
+{{ menu_js | safe }}
+
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+<script src="{{ url_for('static', filename='fairik.js') }}"></script>
+
+<script>
+// ══════════════════════════════════════════════════
+//  СОСТОЯНИЕ
+// ══════════════════════════════════════════════════
+const USER_ID   = {{ session.get('user_id') | default('null') | tojson | safe }};
+const USER_NAME = {{ session.get('nickname', 'Игрок') | tojson | safe }};
+
+let socket      = null;
+let duelId      = null;
+let duelCode    = null;
+let myScore     = 0;
+let oppScore    = 0;
+let oppName     = 'Соперник';
+let currentQ    = null;
+let timerInt    = null;
+let timerSec    = 20;
+let answered    = false;
+let totalQ      = 5;
+let currentQNum = 0;
+let qResults    = [];  // 'correct'|'wrong'|'pending' per question
+
+let selectedSubj = 'Математика';
+let selectedMode = { mode:'fast', q:5, t:15 };
+
+// ══════════════════════════════════════════════════
+//  ВЫБОР ПРЕДМЕТА / РЕЖИМА
+// ══════════════════════════════════════════════════
+function selectSubj(card) {
+  document.querySelectorAll('.subj-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedSubj = card.dataset.subj;
+}
+function selectMode(card) {
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedMode = { mode: card.dataset.mode, q: +card.dataset.q, t: +card.dataset.t };
+  totalQ = selectedMode.q;
+}
+
+// ══════════════════════════════════════════════════
+//  SOCKET.IO
+// ══════════════════════════════════════════════════
+function initSocket() {
+  if (socket) return;
+  socket = io({ transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => console.log('WS connected'));
+
+  // Дуэль создана — получаем код
+  socket.on('duel_created', data => {
+    duelId   = data.duel_id;
+    duelCode = data.code;
+    document.getElementById('duelCode').textContent   = data.code;
+    document.getElementById('lobbyCod').textContent   = data.code;
+    document.getElementById('lp1').textContent        = (USER_NAME||'Ты')[0].toUpperCase();
+    document.getElementById('lp1name').textContent    = USER_NAME || 'Ты';
+    showScreen('lobby-screen');
+  });
+
+  // Соперник подключился
+  socket.on('opponent_joined', data => {
+    oppName = data.name || 'Соперник';
+    const av = document.getElementById('lp2');
+    av.classList.remove('empty');
+    av.textContent = oppName[0].toUpperCase();
+    document.getElementById('lp2name').textContent   = oppName;
+    document.getElementById('lp2status').textContent = 'Готов ✓';
+    document.querySelector('.lobby-waiting').innerHTML =
+      '<span style="color:var(--accent)">⚡ Оба игрока готовы — начинаем!</span>';
+  });
+
+  // Начало игры — первый вопрос
+  socket.on('game_start', data => {
+    totalQ      = selectedMode.q;
+    currentQNum = 0;
+    myScore     = 0;
+    oppScore    = 0;
+    qResults    = [];
+    document.getElementById('myNameScore').textContent  = USER_NAME || 'Ты';
+    document.getElementById('oppNameScore').textContent = oppName;
+    document.getElementById('rOppName').textContent     = oppName;
+    showScreen('game-screen');
+    renderQuestion(data);
+  });
+
+  // Новый вопрос
+  socket.on('next_question', data => renderQuestion(data));
+
+  // Соперник ответил (до того как мы ответили)
+  socket.on('opponent_answered', () => {
+    document.getElementById('oppAnswered').textContent = `${oppName} уже ответил ⚡`;
+  });
+
+  // Итог вопроса
+  socket.on('question_result', data => {
+    clearTimer();
+    const grid = document.getElementById('answerGrid');
+    grid.querySelectorAll('.answer-btn').forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === data.correct_index) btn.classList.add('revealed');
+    });
+
+    const wasCorrect = data.my_answer === data.correct_index;
+    qResults.push(wasCorrect ? 'correct' : 'wrong');
+    renderQDots();
+
+    myScore  = data.my_score  || myScore;
+    oppScore = data.opp_score || oppScore;
+    document.getElementById('myScore').textContent  = myScore;
+    document.getElementById('oppScore').textContent = oppScore;
+
+    if (window.Fairik) {
+      if (wasCorrect) Fairik.happy();
+      else Fairik.sad();
+    }
+  });
+
+  // Конец игры
+  socket.on('game_over', data => {
+    clearTimer();
+    const won = data.winner === USER_ID;
+    const draw = data.winner === null;
+    document.getElementById('resultIcon').textContent  = draw ? '🤝' : (won ? '🏆' : '😤');
+    document.getElementById('resultTitle').textContent = draw ? 'Ничья!' : (won ? 'Победа!' : 'Поражение');
+    document.getElementById('resultSub').textContent   =
+      draw ? `${data.my_score} : ${data.opp_score} · Равная игра!` :
+      won  ? `+25 XP · Отличная игра!` : `Не сдавайся, в следующий раз!`;
+    document.getElementById('rMyScore').textContent  = data.my_score  || myScore;
+    document.getElementById('rOppScore').textContent = data.opp_score || oppScore;
+    document.getElementById('rMyScore').className    = 'rs-val ' + (won || draw ? 'win' : 'lose');
+    document.getElementById('rOppScore').className   = 'rs-val ' + (!won || draw ? 'win' : 'lose');
+
+    if (won) { showXP(); if (window.Fairik) Fairik.celebrate?.(); }
+    showScreen('result-screen');
+  });
+
+  socket.on('error_msg', data => alert(data.message || 'Ошибка'));
+
+  socket.on('opponent_disconnected', () => {
+    if (document.getElementById('game-screen').style.display !== 'none') {
+      alert('Соперник покинул игру. Победа за тобой!');
+      resetToSetup();
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  СОЗДАНИЕ / ПРИСОЕДИНЕНИЕ
+// ══════════════════════════════════════════════════
+function createDuel() {
+  if (!USER_ID) { location.href = '/login'; return; }
+  initSocket();
+  socket.emit('create_duel', {
+    user_id:  USER_ID,
+    name:     USER_NAME || 'Игрок',
+    subject:  selectedSubj,
+    mode:     selectedMode.mode,
+    q_count:  selectedMode.q,
+    t_per_q:  selectedMode.t,
+  });
+}
+
+function openJoinModal()  { document.getElementById('joinModal').classList.add('open'); }
+function closeJoinModal() { document.getElementById('joinModal').classList.remove('open'); }
+
+function doJoin() {
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if (!code) return;
+  if (!USER_ID) { location.href = '/login'; return; }
+  initSocket();
+  socket.emit('join_duel', {
+    code:    code,
+    user_id: USER_ID,
+    name:    USER_NAME || 'Игрок',
+  });
+  closeJoinModal();
+}
+
+// ══════════════════════════════════════════════════
+//  РЕНДЕР ВОПРОСА
+// ══════════════════════════════════════════════════
+function renderQuestion(data) {
+  currentQ    = data;
+  answered    = false;
+  currentQNum = data.q_num || (currentQNum + 1);
+  timerSec    = data.time_limit || selectedMode.t;
+
+  document.getElementById('oppAnswered').textContent = '';
+  document.getElementById('questionNum').textContent =
+    `Вопрос ${currentQNum} из ${totalQ}`;
+  document.getElementById('questionText').textContent = data.question;
+
+  // Варианты
+  const grid = document.getElementById('answerGrid');
+  grid.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  data.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span><span class="opt-text">${opt}</span>`;
+    btn.onclick = () => submitAnswer(i, btn);
+    grid.appendChild(btn);
+  });
+
+  renderQDots();
+  startTimer(timerSec);
+}
+
+// ══════════════════════════════════════════════════
+//  ОТВЕТ
+// ══════════════════════════════════════════════════
+function submitAnswer(idx, btn) {
+  if (answered) return;
+  answered = true;
+  document.querySelectorAll('.answer-btn').forEach(b => b.disabled = true);
+  btn.classList.add('correct'); // предварительно, сервер подтвердит
+  socket.emit('answer', {
+    duel_id:  duelId,
+    user_id:  USER_ID,
+    answer:   idx,
+    time_left: timerSec,
+  });
+  clearTimer();
+}
+
+// ══════════════════════════════════════════════════
+//  ТАЙМЕР
+// ══════════════════════════════════════════════════
+function startTimer(sec) {
+  clearTimer();
+  timerSec = sec;
+  const total  = sec;
+  const circle = document.getElementById('timerCircle');
+  const num    = document.getElementById('timerNum');
+  const circ   = 2 * Math.PI * 26; // r=26
+
+  function tick() {
+    num.textContent = timerSec;
+    const ratio = timerSec / total;
+    circle.style.strokeDashoffset = circ * (1 - ratio);
+    circle.style.stroke = timerSec <= 5 ? 'var(--danger, #ef4444)' : 'var(--accent)';
+    if (timerSec <= 0) {
+      clearTimer();
+      if (!answered) {
+        answered = true;
+        socket.emit('answer', { duel_id: duelId, user_id: USER_ID, answer: -1, time_left: 0 });
+      }
+      return;
+    }
+    timerSec--;
+    timerInt = setTimeout(tick, 1000);
+  }
+  tick();
+}
+function clearTimer() { clearTimeout(timerInt); timerInt = null; }
+
+// ══════════════════════════════════════════════════
+//  Q ПРОГРЕСС
+// ══════════════════════════════════════════════════
+function renderQDots() {
+  const wrap = document.getElementById('qProgress');
+  wrap.innerHTML = '';
+  for (let i = 0; i < totalQ; i++) {
+    const d = document.createElement('div');
+    if (i < qResults.length)       d.className = `q-dot done-${qResults[i]}`;
+    else if (i === currentQNum - 1) d.className = 'q-dot active';
+    else                            d.className = 'q-dot';
+    wrap.appendChild(d);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  УТИЛИТЫ
+// ══════════════════════════════════════════════════
+function showScreen(id) {
+  ['setup-screen','lobby-screen','game-screen','result-screen'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function resetToSetup() {
+  clearTimer();
+  if (socket) { socket.disconnect(); socket = null; }
+  duelId = duelCode = null;
+  myScore = oppScore = 0;
+  document.getElementById('duelCode').textContent = '— — — — —';
+  showScreen('setup-screen');
+}
+
+function showXP() {
+  const t = document.getElementById('xpToast');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+// Инициализация: показываем setup
+showScreen('setup-screen');
+</script>
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+  <script src="{{ url_for('static', filename='fairik.js') }}"></script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+</body>
+</html>

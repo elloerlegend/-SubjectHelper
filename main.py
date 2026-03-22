@@ -5,12 +5,16 @@ from functools import wraps
 import os
 import logging
 from datetime import datetime, timedelta
-
+from duel_server import attach_duel, socketio as duel_socketio
 from groq import Groq
 from dotenv import load_dotenv
 load_dotenv()
 
-from models import db, User, History, Chat, save_history, get_history, DuelSession
+from models import (
+    db, User, History, Chat, save_history, get_history,
+    WeakTopic, ReviewSession, MemoryNote,
+    add_weak_topic, sm2_update, get_topics_due, get_user_memory_context
+)
 
 # ====================== НАСТРОЙКИ ======================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s')
@@ -30,16 +34,19 @@ with app.app_context():
 # ====================== GROQ ======================
 client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 AI_MODEL = "llama-3.3-70b-versatile"
+attach_duel(app, client, AI_MODEL, db, User)
 
-
-def ask_groq(prompt: str, system: str = None, max_tokens: int = 1000) -> str:
+def ask_groq(prompt: str, system: str = None, max_tokens: int = 1000,
+             chat_history: list = None) -> str:
     """Запрос к Groq API."""
     try:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
+        # Контекст предыдущих сообщений чата (последние 8 пар)
+        if chat_history:
+            messages.extend(chat_history[-16:])
         messages.append({"role": "user", "content": prompt})
-
         response = client.chat.completions.create(
             model=AI_MODEL,
             messages=messages,
@@ -60,7 +67,7 @@ def ask_groq(prompt: str, system: str = None, max_tokens: int = 1000) -> str:
 
 # ====================== ПРОМПТЫ ======================
 
-def build_cluster_profile(class_number: int, subject: str, user_stats: dict) -> str:
+def build_cluster_profile(class_number: int, subject: str, user_stats: dict, user_id: int = None) -> str:
     """Строит персонализированный профиль ученика для системного промпта."""
 
     # 1–4 класс
@@ -149,7 +156,11 @@ def build_cluster_profile(class_number: int, subject: str, user_stats: dict) -> 
     if personal:
         personal = "\nДОПОЛНИТЕЛЬНО:\n— " + personal + "\n"
 
-    return persona + personal
+    # Долгосрочная память ошибок
+    memory_ctx   = get_user_memory_context(user_id) if user_id else ""
+    memory_block = "\n\n" + memory_ctx if memory_ctx else ""
+
+    return persona + ("\n\n" + personal if personal else "") + memory_block
 
 
 def build_system(mode: str, subject: str, class_number: int, submode: str = "") -> str:
@@ -311,7 +322,10 @@ def inject_menu():
             <a href="{url_for('profile')}">Профиль</a>
             <a href="{url_for('chats_list')}">Мои чаты</a>
             <a href="{url_for('history_page')}">История</a>
+            <a href="{url_for('duel_page')}">⚔️ Дуэли</a>
+            <a href="{url_for('shop_page')}">🛍️ Магазин</a>
             <a href="{url_for('leaderboard')}">🏆 Лидерборд</a>
+            <a href="{url_for('settings_page')}">⚙️ Настройки</a>
             <a href="{url_for('logout')}">Выйти</a>
           </div>
         </div>
@@ -497,41 +511,17 @@ def api_history():
 @app.route('/leaderboard')
 @login_required
 def leaderboard():
-    # Топ по XP за эту неделю
-    from datetime import datetime, timedelta
-    week_ago = datetime.now() - timedelta(days=7)
-
-    # Все пользователи отсортированные по XP
     top_users = User.query.order_by(User.xp.desc()).limit(50).all()
 
-    # Позиция текущего пользователя
-    current = db.session.get(User, session['user_id'])
-    all_by_xp = User.query.order_by(User.xp.desc()).all()
-    my_rank = next((i+1 for i,u in enumerate(all_by_xp) if u.id == current.id), 0)
+    current   = db.session.get(User, session['user_id'])
+    all_users = User.query.order_by(User.xp.desc()).all()
+    my_rank   = next((i + 1 for i, u in enumerate(all_users) if u.id == current.id), 0)
 
     return render_template('leaderboard.html',
                            top_users=top_users,
                            current_user=current,
                            my_rank=my_rank)
 
-@app.route('/duel/create', methods=['POST'])
-@login_required
-def duel_create():
-    subject = request.json.get('subject', 'Математика')
-    duel = DuelSession(player1_id=session['user_id'], subject=subject)
-    db.session.add(duel); db.session.commit()
-    return jsonify({'duel_id': duel.id, 'status': 'waiting'})
-
-@app.route('/duel/join/<int:duel_id>', methods=['POST'])
-@login_required
-def duel_join(duel_id):
-    duel = db.session.get(DuelSession, duel_id)
-    if not duel or duel.status != 'waiting':
-        return jsonify({'error': 'Дуэль недоступна'}), 400
-    duel.player2_id = session['user_id']
-    duel.status = 'active'
-    db.session.commit()
-    return jsonify({'ok': True})
 
 # ====================== ОСНОВНОЙ ЗАПРОС К ИИ ======================
 @app.route("/ask", methods=["POST"])
@@ -564,7 +554,16 @@ def ask():
     mode_prompt = build_system(mode, subject, class_number, submode)
     system = cluster + "\n\n" + mode_prompt
 
-    answer = ask_groq(question, system=system, max_tokens=800)
+    # Загружаем историю чата для контекста (последние 8 пар)
+    raw_history = History.query.filter_by(chat_id=chat_id).order_by(
+        History.timestamp.asc()
+    ).all()
+    chat_history = []
+    for h in raw_history[-8:]:
+        chat_history.append({"role": "user",      "content": h.question})
+        chat_history.append({"role": "assistant",  "content": h.answer})
+
+    answer = ask_groq(question, system=system, max_tokens=800, chat_history=chat_history)
 
     hid = save_history(chat_id, subject, mode, question, answer)
 
@@ -702,7 +701,7 @@ def update_avatar():
     file = request.files.get('avatar')
     if not file or not file.filename:
         flash('Файл не выбран.', 'warning')
-        return redirect(url_for('profile'))
+        return redirect(url_for('settings_page'))
     os.makedirs('static/avatars', exist_ok=True)
     filename = secure_filename(f"avatar_{user.id}.png")
     file.save(os.path.join('static/avatars', filename))
@@ -710,7 +709,7 @@ def update_avatar():
     db.session.commit()
     session['avatar'] = user.avatar
     flash('✅ Аватар обновлён!', 'success')
-    return redirect(url_for('profile'))
+    return redirect(url_for('settings_page'))
 
 
 @app.route('/update_nickname', methods=['POST'])
@@ -733,8 +732,419 @@ def update_nickname():
     return redirect(url_for('profile'))
 
 
+
+
+# ====================== TTS ПРОКСИ ======================
+@app.route('/api/tts', methods=['POST'])
+@login_required
+def tts_proxy():
+    """Прокси для VoiceRSS — решает проблему CORS."""
+    key = os.environ.get('VOICERSS_API_KEY', '')
+    if not key:
+        return jsonify({'error': 'VOICERSS_API_KEY не настроен в .env'}), 404
+
+    text = request.json.get('text', '').strip()
+    if not text:
+        return jsonify({'error': 'Пустой текст'}), 400
+
+    # Ограничиваем длину
+    text = text[:500]
+
+    try:
+        import urllib.request, urllib.parse
+        params = urllib.parse.urlencode({
+            'key':  key,
+            'src':  text,
+            'hl':   'ru-ru',
+            'v':    'Ekaterina',
+            'r':    '-1',
+            'c':    'mp3',
+            'f':    '44khz_16bit_stereo',
+            'ssml': 'false',
+            'b64':  'false',
+        })
+        url = f'https://api.voicerss.org/?{params}'
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content_type = resp.headers.get('Content-Type', '')
+            data = resp.read()
+            # VoiceRSS возвращает текст ошибки если что-то не так
+            if 'audio' not in content_type and data.startswith(b'ERROR'):
+                err = data.decode('utf-8', errors='ignore')
+                logger.error(f"VoiceRSS error: {err}")
+                return jsonify({'error': err}), 400
+            from flask import Response
+            return Response(data, mimetype='audio/mpeg')
+    except Exception as e:
+        logger.error(f"TTS proxy error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ====================== ФАЙРИК API ======================
+SHOP_SKINS = [
+    {'id': 'default', 'name': 'Классический', 'price': 0,   'css': '',                                                        'emoji': '🐉'},
+    {'id': 'fire',    'name': 'Огненный',      'price': 150, 'css': 'hue-rotate(300deg) saturate(2)',                          'emoji': '🔥'},
+    {'id': 'ice',     'name': 'Ледяной',       'price': 150, 'css': 'hue-rotate(180deg) saturate(1.5) brightness(1.1)',        'emoji': '❄️'},
+    {'id': 'galaxy',  'name': 'Галактический', 'price': 300, 'css': 'hue-rotate(250deg) saturate(3) brightness(1.2)',          'emoji': '🌌'},
+    {'id': 'gold',    'name': 'Золотой',       'price': 500, 'css': 'sepia(1) saturate(4) hue-rotate(5deg) brightness(1.1)',   'emoji': '✨'},
+    {'id': 'shadow',  'name': 'Теневой',       'price': 400, 'css': 'grayscale(0.8) brightness(0.6) contrast(1.5)',            'emoji': '🌑'},
+    {'id': 'nature',  'name': 'Лесной',        'price': 200, 'css': 'hue-rotate(80deg) saturate(2)',                           'emoji': '🌿'},
+    {'id': 'neon',    'name': 'Неоновый',      'price': 350, 'css': 'hue-rotate(140deg) saturate(5) brightness(1.3)',          'emoji': '💜'},
+]
+
+@app.route('/api/fairik')
+@login_required
+def fairik_api():
+    """Отдаёт данные пользователя для Файрика."""
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        return jsonify({'error': 'not found'}), 404
+    skin_id = user.equipped_skin or 'default'
+    skin    = next((s for s in SHOP_SKINS if s['id'] == skin_id), SHOP_SKINS[0])
+    return jsonify({
+        'level':    user.level  or 1,
+        'xp':       user.xp     or 0,
+        'streak':   user.streak or 0,
+        'name':     user.name   or 'Ученик',
+        'skin_css': skin['css'],
+        'skin_id':  skin_id,
+    })
+
+
+# ====================== МАГАЗИН ======================
+@app.route('/shop')
+@login_required
+def shop_page():
+    user  = db.session.get(User, session['user_id'])
+    owned = (user.owned_skins or 'default').split(',')
+    return render_template('shop.html', current_user=user, skins=SHOP_SKINS,
+                           owned=owned, equipped=user.equipped_skin or 'default')
+
+
+@app.route('/api/shop/buy', methods=['POST'])
+@login_required
+def shop_buy():
+    data    = request.get_json() or {}
+    skin_id = data.get('skin_id')
+    skin    = next((s for s in SHOP_SKINS if s['id'] == skin_id), None)
+    if not skin:
+        return jsonify({'error': 'Скин не найден'}), 404
+    user  = db.session.get(User, session['user_id'])
+    owned = (user.owned_skins or 'default').split(',')
+    if skin_id in owned:
+        return jsonify({'error': 'Уже куплен'}), 400
+    if (user.xp or 0) < skin['price']:
+        return jsonify({'error': f"Недостаточно XP. Нужно {skin['price']}"}), 400
+    user.xp = (user.xp or 0) - skin['price']
+    owned.append(skin_id)
+    user.owned_skins = ','.join(owned)
+    db.session.commit()
+    logger.info(f"SHOP buy: user={user.id} skin={skin_id}")
+    return jsonify({'ok': True, 'xp_left': user.xp})
+
+
+@app.route('/api/shop/equip', methods=['POST'])
+@login_required
+def shop_equip():
+    data    = request.get_json() or {}
+    skin_id = data.get('skin_id')
+    user    = db.session.get(User, session['user_id'])
+    owned   = (user.owned_skins or 'default').split(',')
+    if skin_id not in owned:
+        return jsonify({'error': 'Не куплен'}), 400
+    user.equipped_skin = skin_id
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ════════════════════════════════════════════════════════
+#  СИСТЕМА ДОЛГОСРОЧНОЙ ПАМЯТИ
+# ════════════════════════════════════════════════════════
+
+@app.route('/memory')
+@login_required
+def memory_page():
+    """Страница памяти ошибок ученика."""
+    user_id = session['user_id']
+    user    = db.session.get(User, user_id)
+
+    weak     = WeakTopic.query.filter_by(user_id=user_id, is_mastered=False)                              .order_by(WeakTopic.mastery_score.asc()).all()
+    mastered = WeakTopic.query.filter_by(user_id=user_id, is_mastered=True)                              .order_by(WeakTopic.last_seen.desc()).limit(20).all()
+    due      = get_topics_due(user_id)
+    notes    = MemoryNote.query.filter_by(user_id=user_id)                               .order_by(MemoryNote.updated_at.desc()).limit(10).all()
+
+    return render_template('memory.html',
+                           current_user=user,
+                           weak_topics=weak,
+                           mastered_topics=mastered,
+                           due_topics=due,
+                           memory_notes=notes)
+
+
+@app.route('/api/memory/due')
+@login_required
+def api_memory_due():
+    """Возвращает темы для повторения сегодня."""
+    due = get_topics_due(session['user_id'], limit=5)
+    return jsonify([t.to_dict() for t in due])
+
+
+@app.route('/api/memory/topics')
+@login_required
+def api_memory_topics():
+    """Все слабые темы пользователя."""
+    topics = WeakTopic.query.filter_by(
+        user_id=session['user_id']
+    ).order_by(WeakTopic.mastery_score.asc()).all()
+    return jsonify([t.to_dict() for t in topics])
+
+
+@app.route('/api/memory/review_start', methods=['POST'])
+@login_required
+def api_review_start():
+    """Начинает сессию повторения — генерирует мини-урок по слабой теме."""
+    data     = request.get_json() or {}
+    topic_id = data.get('topic_id')
+
+    wt = db.session.get(WeakTopic, topic_id)
+    if not wt or wt.user_id != session['user_id']:
+        return jsonify({'error': 'Тема не найдена'}), 404
+
+    user       = db.session.get(User, session['user_id'])
+    class_num  = user.class_number or 8
+    interests  = user.interests    or ''
+
+    # Строим персональный промпт для мини-повторения
+    days_ago = (datetime.utcnow() - wt.first_seen).days
+
+    system = f"""Ты — репетитор SubjectHelper. Отвечай только на русском языке.
+Ученик: класс {class_num}, интересы: {interests or 'не указаны'}.
+
+ЗАДАЧА: Проведи дружелюбное мини-повторение темы которую ученик плохо знает.
+
+КОНТЕКСТ ОШИБКИ:
+- Предмет: {wt.subject}
+- Слабая тема: {wt.topic}
+- Детали: {wt.details or 'нет деталей'}
+- Ученик ошибался {wt.error_count} раз(а)
+- Первый раз столкнулся {days_ago} дней назад
+- Текущее освоение: {int(wt.mastery_score * 100)}%
+
+ФОРМАТ ОТВЕТА (строго):
+1. Начни с ТЁПЛОГО напоминания: «Помню, ты раньше путался с [тема]...»
+2. Объясни суть за 3–4 предложения — максимально просто
+3. Дай 1 конкретный пример
+4. Задай 1 проверочный вопрос с 3 вариантами ответа (A, B, C)
+
+Тон: как добрый старший друг, не как учитель. Используй примеры из интересов ученика."""
+
+    prompt = f"Проведи мини-повторение по теме «{wt.topic}» (предмет: {wt.subject})."
+
+    answer = ask_groq(prompt, system=system, max_tokens=600)
+
+    # Создаём сессию повторения
+    review = ReviewSession(
+        user_id       = session['user_id'],
+        weak_topic_id = wt.id,
+    )
+    db.session.add(review)
+    db.session.commit()
+
+    return jsonify({
+        'review_id':  review.id,
+        'topic':      wt.topic,
+        'subject':    wt.subject,
+        'error_count': wt.error_count,
+        'mastery':    int(wt.mastery_score * 100),
+        'content':    answer,
+    })
+
+
+@app.route('/api/memory/review_complete', methods=['POST'])
+@login_required
+def api_review_complete():
+    """Завершает сессию повторения и обновляет SM-2."""
+    data      = request.get_json() or {}
+    review_id = data.get('review_id')
+    score     = data.get('score', 3)  # 1–5
+
+    review = db.session.get(ReviewSession, review_id)
+    if not review or review.user_id != session['user_id']:
+        return jsonify({'error': 'Не найдено'}), 404
+
+    review.completed = True
+    review.score     = score
+
+    # Обновляем SM-2 (quality: score * 5/5 → 0–5)
+    quality = round((score - 1) * 5 / 4)  # 1→0, 2→1.25, 3→2.5, 4→3.75, 5→5
+    wt      = db.session.get(WeakTopic, review.weak_topic_id)
+    if wt:
+        sm2_update(wt, quality)
+        # Начисляем XP
+        user      = db.session.get(User, session['user_id'])
+        user.xp   = (user.xp or 0) + (5 * score)
+        user.level = user.xp // 100 + 1
+        db.session.commit()
+
+    return jsonify({
+        'ok':           True,
+        'mastery':      int(wt.mastery_score * 100) if wt else 0,
+        'is_mastered':  wt.is_mastered if wt else False,
+        'next_review':  wt.next_review.isoformat() if wt else None,
+        'xp_gained':    5 * score,
+    })
+
+
+@app.route('/api/memory/add_error', methods=['POST'])
+@login_required
+def api_add_error():
+    """Добавляет ошибку в память. Вызывается из quiz когда ученик ошибся."""
+    data    = request.get_json() or {}
+    subject = data.get('subject', '')
+    topic   = data.get('topic', '')
+    details = data.get('details', '')
+
+    if not subject or not topic:
+        return jsonify({'error': 'Нет данных'}), 400
+
+    wt = add_weak_topic(session['user_id'], subject, topic, details)
+    return jsonify({'ok': True, 'topic_id': wt.id})
+
+
+@app.route('/api/memory/analyze', methods=['POST'])
+@login_required
+def api_memory_analyze():
+    """
+    ИИ анализирует последние ответы ученика и автоматически
+    выявляет слабые темы + обновляет заметки.
+    Вызывается раз в несколько сессий.
+    """
+    user_id = session['user_id']
+    user    = db.session.get(User, user_id)
+
+    # Берём последние 20 вопросов с низкими оценками
+    recent_bad = History.query.join(Chat).filter(
+        Chat.user_id == user_id,
+        History.rating <= 2,
+        History.rating != None,
+    ).order_by(History.timestamp.desc()).limit(20).all()
+
+    if not recent_bad:
+        return jsonify({'ok': True, 'found': 0})
+
+    # Формируем список для анализа
+    items = []
+    for h in recent_bad:
+        items.append(f"Предмет: {h.subject} | Вопрос: {h.question[:120]} | Оценка: {h.rating}/5")
+
+    system = """Ты — аналитик обучения. Отвечай ТОЛЬКО валидным JSON.
+Твоя задача: найти паттерны слабых тем из истории ошибок."""
+
+    prompt = f"""Проанализируй ошибки ученика и верни JSON:
+{{
+  "weak_topics": [
+    {{"subject": "...", "topic": "...", "details": "...", "priority": 1-3}}
+  ],
+  "learning_style_note": "...",
+  "strength_note": "..."
+}}
+
+ИСТОРИЯ ОШИБОК:
+{chr(10).join(items)}
+
+Верни только JSON, без пояснений."""
+
+    try:
+        raw    = ask_groq(prompt, system=system, max_tokens=600)
+        match  = __import__('re').search(r'\{[\s\S]*\}', raw)
+        parsed = __import__('json').loads(match.group(0)) if match else {}
+
+        added = 0
+        for wt_data in parsed.get('weak_topics', []):
+            if wt_data.get('subject') and wt_data.get('topic'):
+                add_weak_topic(
+                    user_id  = user_id,
+                    subject  = wt_data['subject'],
+                    topic    = wt_data['topic'],
+                    details  = wt_data.get('details', ''),
+                )
+                added += 1
+
+        # Сохраняем заметки ИИ
+        for note_type, key in [('learning_style', 'learning_style_note'),
+                                ('strength',       'strength_note')]:
+            if parsed.get(key):
+                existing = MemoryNote.query.filter_by(
+                    user_id=user_id, note_type=note_type
+                ).first()
+                if existing:
+                    existing.content    = parsed[key]
+                    existing.updated_at = datetime.utcnow()
+                else:
+                    db.session.add(MemoryNote(
+                        user_id   = user_id,
+                        note_type = note_type,
+                        content   = parsed[key],
+                    ))
+        db.session.commit()
+        return jsonify({'ok': True, 'found': added})
+
+    except Exception as e:
+        logger.error(f"Memory analyze error: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/memory/daily_reminder')
+@login_required
+def api_daily_reminder():
+    """
+    Возвращает данные для ежедневного напоминания от Файрика.
+    Вызывается при загрузке любой страницы.
+    """
+    user_id = session['user_id']
+    due     = get_topics_due(user_id, limit=3)
+
+    if not due:
+        return jsonify({'has_reminder': False})
+
+    # Берём самую срочную тему
+    top   = due[0]
+    days  = (datetime.utcnow() - top.first_seen).days
+    month = top.first_seen.strftime('%B')
+
+    messages = [
+        f"Помнишь, {days} дней назад ты разбирал «{top.topic}» по {top.subject}? Давай повторим за 2 минуты! 🧠",
+        f"У тебя есть {len(due)} тем{'а' if len(due)==1 else 'ы'} для повторения. Начнём с «{top.topic}»? 📚",
+        f"Файрик помнит: «{top.topic}» — это было сложно. Проверим, стало ли лучше? 🐉",
+    ]
+
+    return jsonify({
+        'has_reminder': True,
+        'count':        len(due),
+        'top_topic':    top.to_dict(),
+        'message':      messages[hash(top.topic) % len(messages)],
+    })
+
+
+# ====================== НАСТРОЙКИ ======================
+@app.route('/settings')
+@login_required
+def settings_page():
+    user = db.session.get(User, session['user_id'])
+    return render_template('settings.html', current_user=user)
+
+@app.route('/api/settings/save', methods=['POST'])
+@login_required
+def settings_save():
+    data = request.get_json() or {}
+    user = db.session.get(User, session['user_id'])
+    # Сохраняем тему и другие настройки в будущем
+    # Пока только подтверждаем сохранение (тема хранится в localStorage)
+    return jsonify({'ok': True})
+
 # ====================== ЗАПУСК ======================
 if __name__ == "__main__":
     os.makedirs("static/uploads", exist_ok=True)
     os.makedirs("static/avatars", exist_ok=True)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    from duel_server import socketio as _sio
+    _sio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

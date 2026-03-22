@@ -75,15 +75,12 @@
       <!-- Поле ввода -->
       <div class="input-container" id="inputContainer">
         <div class="input-wrapper">
-          <!-- Кнопка прикрепить файл -->
           <label class="attach-btn" for="file-input" title="Прикрепить файл">
             <span class="material-icons">attach_file</span>
             <input type="file" id="file-input" accept="image/*,.pdf,.txt,.docx"
                    style="display:none;" onchange="handleFileSelect(event)">
           </label>
-
           <textarea id="question" rows="1"></textarea>
-
           <button id="voice-btn" class="voice-btn" title="Голосовой ввод">
             <span class="material-icons">mic</span>
           </button>
@@ -96,7 +93,8 @@
   </main>
 
   {{ menu_js | safe }}
-  <script src="{{ url_for('static', filename='bg.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 
   <script>
   // ══════════════════════════════════════════════
@@ -111,14 +109,12 @@
   const textarea = document.getElementById("question");
   const sendBtn  = document.getElementById("send-btn");
 
-  let lastQ       = "";
-  let attachedFile = null;   // текущий прикреплённый файл
+  let lastQ        = "";
+  let attachedFile = null;
 
-  // STEP
-  let stepState = { num:0, task:"", maxSteps:8, done:false };
-  // QUIZ
-  let quizState = { correct:0, wrong:0, num:1, topic:"", total:5 };
-  // EXAM
+  // STEP / QUIZ / EXAM состояние
+  let stepState   = { num:0, task:"", maxSteps:8, done:false };
+  let quizState   = { correct:0, wrong:0, num:1, topic:"", total:5 };
   let examSubmode = "explain";
   let examState   = { taskNum:1, maxTasks:27, topic:"", timerInterval:null, seconds:3*3600+55*60 };
 
@@ -138,103 +134,269 @@
   };
 
   // ══════════════════════════════════════════════
+  //  TTS — VoiceRSS + fallback на браузерный голос
+  //  VoiceRSS: бесплатно 350 запросов/день, из России работает
+  //  Ключ берётся с сервера через /api/tts_key
+  //  Fallback: лучший доступный браузерный голос
+  // ══════════════════════════════════════════════
+  const TTS = (() => {
+
+    // ── Браузерные голоса ────────────────────────────────────────────────
+    let bestVoice  = null;
+    let voicesReady = false;
+
+    const VOICE_PRIORITY = [
+      v => v.lang==='ru-RU' && v.name.includes('Microsoft') && v.name.includes('Svetlana'),
+      v => v.lang==='ru-RU' && v.name.includes('Microsoft') && v.name.includes('Irina'),
+      v => v.lang==='ru-RU' && v.name.includes('Microsoft'),
+      v => v.lang==='ru-RU' && v.name.includes('Milena'),
+      v => v.lang==='ru-RU' && v.name.includes('Google'),
+      v => v.lang==='ru-RU' && !v.name.toLowerCase().includes('espeak'),
+      v => v.lang.startsWith('ru'),
+    ];
+
+    function pickBestVoice() {
+      const voices = speechSynthesis.getVoices();
+      for (const fn of VOICE_PRIORITY) {
+        const v = voices.find(fn);
+        if (v) return v;
+      }
+      return null;
+    }
+
+    function initVoices() {
+      return new Promise(resolve => {
+        if (speechSynthesis.getVoices().length) {
+          bestVoice = pickBestVoice(); voicesReady = true; resolve(); return;
+        }
+        const h = () => {
+          bestVoice = pickBestVoice(); voicesReady = true;
+          speechSynthesis.removeEventListener('voiceschanged', h); resolve();
+        };
+        speechSynthesis.addEventListener('voiceschanged', h);
+        setTimeout(() => { if (!voicesReady) { bestVoice = pickBestVoice(); voicesReady = true; resolve(); } }, 2000);
+      });
+    }
+
+    if (window.speechSynthesis) initVoices();
+
+    // ── Утилиты ──────────────────────────────────────────────────────────
+    function stripHtml(html) {
+      const d = document.createElement('div');
+      d.innerHTML = html;
+      return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+
+    // ── Текущее воспроизведение ───────────────────────────────────────────
+    let currentAudio  = null;  // Audio для VoiceRSS
+    let isSpeakingBrowser = false;
+    let stopFlag = false;
+
+    function stopAll() {
+      stopFlag = true;
+      if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null; }
+      if (window.speechSynthesis) speechSynthesis.cancel();
+      isSpeakingBrowser = false;
+    }
+
+    // ── VoiceRSS через Flask-прокси (решает CORS) ───────────────────────
+    async function speakVoiceRSS(text, btn) {
+      btn.innerHTML = `<span class="tts-spin"></span> <span>Загружаю...</span>`;
+      btn.disabled  = true;
+
+      try {
+        // Запрос к Flask /api/tts — он сам ходит к VoiceRSS
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.substring(0, 500) })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+
+        if (currentAudio) { currentAudio.pause(); URL.revokeObjectURL(currentAudio.src); }
+        currentAudio = new Audio(audioUrl);
+        await currentAudio.play();
+
+        btn.innerHTML = `⏹ <span>Стоп</span>`;
+        btn.disabled  = false;
+
+        currentAudio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          currentAudio = null;
+          btn.innerHTML = `🔊 <span>Озвучить</span>`;
+          btn.onclick = () => speak(text, btn);
+        };
+        btn.onclick = () => {
+          stopAll();
+          btn.innerHTML = `🔊 <span>Озвучить</span>`;
+          btn.onclick = () => speak(text, btn);
+        };
+
+      } catch(e) {
+        console.warn('VoiceRSS error:', e.message, '— fallback to browser TTS');
+        btn.disabled = false;
+        speakBrowser(text, btn);
+      }
+    }
+
+    // ── Браузерный fallback ───────────────────────────────────────────────
+    async function speakBrowser(text, btn) {
+      if (!window.speechSynthesis) { btn.innerHTML = `🔊 <span>Озвучить</span>`; return; }
+      if (!voicesReady) await initVoices();
+
+      stopFlag = false;
+      isSpeakingBrowser = true;
+      btn.innerHTML = `⏹ <span>Стоп</span>`;
+
+      // Разбиваем на предложения (браузер обрезает длинные тексты)
+      const sentences = text.match(/[^.!?;]+[.!?;]*/g) || [text];
+      const chunks = [];
+      let cur = '';
+      for (const s of sentences) {
+        if ((cur + s).length > 180) { if (cur) chunks.push(cur.trim()); cur = s; }
+        else cur += (cur ? ' ' : '') + s;
+      }
+      if (cur) chunks.push(cur.trim());
+
+      let idx = 0;
+      function next() {
+        if (stopFlag || idx >= chunks.length) {
+          isSpeakingBrowser = false;
+          btn.innerHTML = `🔊 <span>Озвучить</span>`;
+          btn.onclick = () => speak(text, btn);
+          return;
+        }
+        const u = new SpeechSynthesisUtterance(chunks[idx++]);
+        u.lang = 'ru-RU'; u.rate = 0.92; u.pitch = 1.0; u.volume = 1.0;
+        if (bestVoice) u.voice = bestVoice;
+        u.onend = next;
+        u.onerror = () => { isSpeakingBrowser = false; btn.innerHTML = `🔊 <span>Озвучить</span>`; };
+        speechSynthesis.speak(u);
+      }
+
+      btn.onclick = () => {
+        stopFlag = true; speechSynthesis.cancel();
+        isSpeakingBrowser = false;
+        btn.innerHTML = `🔊 <span>Озвучить</span>`;
+        btn.onclick = () => speak(text, btn);
+      };
+
+      next();
+    }
+
+    // ── Главный метод ─────────────────────────────────────────────────────
+    async function speak(rawText, btn) {
+      const text = stripHtml(String(rawText));
+      if (!text) return;
+
+      // Стоп если уже играет
+      if (currentAudio && !currentAudio.paused) { stopAll(); btn.innerHTML=`🔊 <span>Озвучить</span>`; btn.onclick=()=>speak(rawText,btn); return; }
+      if (isSpeakingBrowser) { stopAll(); btn.innerHTML=`🔊 <span>Озвучить</span>`; btn.onclick=()=>speak(rawText,btn); return; }
+
+      stopFlag = false;
+
+      // Пробуем VoiceRSS через прокси
+      try {
+        await speakVoiceRSS(text, btn);
+      } catch(e) {
+        // Полный fallback на браузер если прокси недоступен
+        speakBrowser(text, btn);
+      }
+    }
+
+    function makeBtn(rawText, className = 'action-btn explain-btn') {
+      const btn = document.createElement('button');
+      btn.className = className;
+      btn.innerHTML = `🔊 <span>Озвучить</span>`;
+      btn.onclick = () => speak(rawText, btn);
+      return btn;
+    }
+
+    return { speak, makeBtn, stripHtml };
+  })();
+
+  // ══════════════════════════════════════════════
   //  ФОРМАТИРОВАНИЕ MARKDOWN → HTML
   // ══════════════════════════════════════════════
   function mdToHtml(text) {
     return text
-      // Заголовки
       .replace(/^### (.+)$/gm, '<h4>$1</h4>')
       .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
       .replace(/^# (.+)$/gm,   '<h2>$1</h2>')
-      // Жирный + курсив
       .replace(/\*\*\*(.+?)\*\*\*/g, '<b><em>$1</em></b>')
       .replace(/\*\*(.+?)\*\*/g,     '<b>$1</b>')
       .replace(/\*(.+?)\*/g,         '<em>$1</em>')
-      // Код
       .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Ненумерованные списки
       .replace(/^[\*\-] (.+)$/gm, '<li>$1</li>')
-      // Нумерованные списки
       .replace(/^\d+\. (.+)$/gm,  '<li>$1</li>')
-      // Оборачиваем блоки li в ul
-      .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, (m) => `<ul>${m}</ul>`)
-      // Горизонтальная черта
+      .replace(/(<li>[\s\S]+?<\/li>)(?!\s*<li>)/g, m => `<ul>${m}</ul>`)
       .replace(/^---$/gm, '<hr>')
-      // Переносы строк
       .replace(/\n/g, '<br>');
   }
 
   // ══════════════════════════════════════════════
-  //  АНИМАЦИЯ ОТВЕТА (побуквенная / пословная)
+  //  АНИМАЦИЯ ОТВЕТА
   // ══════════════════════════════════════════════
   function animateText(el, html, onDone) {
-    // Разбиваем HTML на токены (теги + текстовые слова)
     const tokens = [];
     const re = /(<[^>]+>)|([^<]+)/g;
     let m;
     while ((m = re.exec(html)) !== null) {
-      if (m[1]) {
-        tokens.push({ type:"tag", val:m[1] });
-      } else {
-        // Разбиваем текст на слова с сохранением пробелов
-        const words = m[2].split(/(\s+)/);
-        words.forEach(w => { if(w) tokens.push({ type:"word", val:w }); });
-      }
+      if (m[1]) tokens.push({ type:"tag",  val:m[1] });
+      else m[2].split(/(\s+)/).forEach(w => { if(w) tokens.push({ type:"word", val:w }); });
     }
-
-    let i = 0;
-    let built = "";
-    const speed = 18; // мс на токен
-
+    let i = 0, built = "";
+    const speed = 18;
     function step() {
-      if (i >= tokens.length) {
-        if (onDone) onDone();
-        return;
-      }
+      if (i >= tokens.length) { if (onDone) onDone(); return; }
       const t = tokens[i++];
       built += t.val;
-      // Для тегов не прокручиваем каждый раз (только каждые 5 шагов)
       el.innerHTML = built + '<span class="cursor-blink">▌</span>';
       if (i % 4 === 0) chatEl.scrollTop = chatEl.scrollHeight;
       setTimeout(step, t.type === "tag" ? 0 : speed);
     }
-
     step();
   }
 
   // ══════════════════════════════════════════════
-  //  ФАЙЛЫ: прикрепление
+  //  ФАЙЛЫ
   // ══════════════════════════════════════════════
-  function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  async function handleFileSelect(e) {
+    const file = e.target.files[0]; if (!file) return;
     attachedFile = file;
-
-    const bar   = document.getElementById("file-preview-bar");
-    const name  = document.getElementById("fpb-name");
-    const icon  = document.getElementById("fpb-icon");
-    const img   = document.getElementById("fpb-img");
-
+    const name = document.getElementById("fpb-name");
+    const icon = document.getElementById("fpb-icon");
+    const img  = document.getElementById("fpb-img");
     name.textContent = file.name.length > 28 ? file.name.substring(0,25)+"…" : file.name;
-
     if (file.type.startsWith("image/")) {
-      icon.style.display = "none";
-      img.style.display  = "block";
-      img.src = URL.createObjectURL(file);
+      icon.style.display="none"; img.style.display="block"; img.src=URL.createObjectURL(file);
     } else {
-      icon.style.display = "inline";
-      img.style.display  = "none";
-      icon.textContent   = file.type === "application/pdf" ? "picture_as_pdf" : "description";
+      icon.style.display="inline"; img.style.display="none";
+      icon.textContent = file.type==="application/pdf" ? "picture_as_pdf" : "description";
     }
-
-    bar.style.display = "block";
+    document.getElementById("file-preview-bar").style.display="block";
     textarea.focus();
-  }
 
+    // Проверяем напоминания о повторении
+    try {
+      const remRes = await fetch('/api/memory/daily_reminder', {credentials:'include'});
+      const remData = await remRes.json();
+      if (remData.has_reminder && window.Fairik) {
+        setTimeout(() => Fairik.say(remData.message, 'wiggle'), 3000);
+      }
+    } catch(e) {}
+  }
   function clearAttach() {
-    attachedFile = null;
-    document.getElementById("file-input").value = "";
-    document.getElementById("file-preview-bar").style.display = "none";
+    attachedFile=null; document.getElementById("file-input").value="";
+    document.getElementById("file-preview-bar").style.display="none";
   }
 
   // ══════════════════════════════════════════════
@@ -249,23 +411,19 @@
     textarea.placeholder = M.placeholder;
     document.getElementById("inputContainer").style.borderColor = M.color + "44";
 
-    if (MODE === "quiz") document.getElementById("quiz-scoreboard").style.display = "flex";
-    if (MODE === "step") document.getElementById("step-progress-bar").style.display = "flex";
-    if (MODE === "exam") document.getElementById("exam-header").style.display = "block";
+    if (MODE==="quiz") document.getElementById("quiz-scoreboard").style.display="flex";
+    if (MODE==="step") document.getElementById("step-progress-bar").style.display="flex";
+    if (MODE==="exam") document.getElementById("exam-header").style.display="block";
 
-    addAiMsg(WELCOME[MODE] || WELCOME.explain, null, false, false);
+    addAiMsg(WELCOME[MODE]||WELCOME.explain, null, false, false);
 
     try {
       const res  = await fetch("/api/history", { method:"POST", credentials:"include" });
       const hist = await res.json();
       hist.sort((a,b)=>a.id-b.id);
-      for (const h of hist) {
-        addUserMsg(h.question);
-        addAiMsg(h.answer, h.id, true, false, h.rating||0);
-      }
+      for (const h of hist) { addUserMsg(h.question); addAiMsg(h.answer,h.id,true,false,h.rating||0); }
       scrollDown();
     } catch(e){}
-
     textarea.focus();
   });
 
@@ -276,35 +434,31 @@
   function esc(t) { const d=document.createElement("div"); d.textContent=t; return d.innerHTML; }
 
   function addUserMsg(text, imgSrc) {
-    const d = document.createElement("div"); d.className="message user";
-    if (text) d.innerHTML = `<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
-    if (imgSrc) {
-      const img = document.createElement("img");
-      img.src = imgSrc; img.className = "msg-img";
-      d.appendChild(img);
-    }
+    const d=document.createElement("div"); d.className="message user";
+    if (text) d.innerHTML=`<div>${esc(text).replace(/\n/g,"<br>")}</div>`;
+    if (imgSrc) { const img=document.createElement("img"); img.src=imgSrc; img.className="msg-img"; d.appendChild(img); }
     chatEl.appendChild(d); scrollDown(); return d;
   }
 
-  // animate=true → пословная анимация; false → сразу показать
   function addAiMsg(rawText, historyId, withRating, animate=true, rating=0) {
-    const d = document.createElement("div"); d.className=`message ai mode-${MODE}`;
-    const textDiv = document.createElement("div"); textDiv.className="ai-text";
-    d.appendChild(textDiv);
-    chatEl.appendChild(d); scrollDown();
-
-    const html = mdToHtml(rawText);
-
-    if (animate) {
+    const d=document.createElement("div"); d.className=`message ai mode-${MODE}`;
+    const textDiv=document.createElement("div"); textDiv.className="ai-text";
+    d.appendChild(textDiv); chatEl.appendChild(d); scrollDown();
+    const html=mdToHtml(rawText);
+    const doAnim = animate && (window._SH_anim_enabled !== false);
+    if (doAnim) {
       animateText(textDiv, html, () => {
-        // Убираем курсор после анимации
-        textDiv.innerHTML = html;
-        if (withRating && historyId) d.appendChild(makeStars(historyId, rating));
+        textDiv.innerHTML=html;
+        if (withRating && historyId) d.appendChild(makeStars(historyId,rating));
+        if (window._SH_tts_enabled !== false)
+          d.appendChild(TTS.makeBtn(rawText, 'action-btn explain-btn tts-inline'));
         scrollDown();
       });
     } else {
-      textDiv.innerHTML = html;
-      if (withRating && historyId) d.appendChild(makeStars(historyId, rating));
+      textDiv.innerHTML=html;
+      if (withRating && historyId) d.appendChild(makeStars(historyId,rating));
+      if (window._SH_tts_enabled !== false)
+        d.appendChild(TTS.makeBtn(rawText, 'action-btn explain-btn tts-inline'));
     }
     return d;
   }
@@ -317,77 +471,29 @@
   function removeTyping() { document.getElementById("typing")?.remove(); }
 
   function showXP() {
-    const t = document.getElementById("xp-toast");
+    if (window._SH_xp_enabled === false) return;
+    const t=document.getElementById("xp-toast");
     t.textContent="+10 XP ⭐"; t.style.display="block";
     t.style.background=`linear-gradient(135deg,${M.color},var(--accent3))`;
-    setTimeout(()=>t.style.display="none", 2200);
+    setTimeout(()=>t.style.display="none",2200);
   }
 
+  // Enter handled by settings.js (capture phase)
+  // Fallback if settings.js not loaded:
   textarea.addEventListener("keydown", e => {
-    if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); askTutor(); }
+    if (e.key==="Enter" && !e.shiftKey) {
+      if (window._SH_enter_enabled === false) return; // disabled in settings
+      e.preventDefault(); askTutor();
+    }
   });
-
-  // Авто-resize textarea
   textarea.addEventListener("input", () => {
-    textarea.style.height = "auto";
-    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+    textarea.style.height="auto";
+    textarea.style.height=Math.min(textarea.scrollHeight,120)+"px";
   });
 
   // ══════════════════════════════════════════════
-  //  ГЛАВНАЯ ФУНКЦИЯ ОТПРАВКИ
+  //  КОНТЕКСТ РАЗГОВОРА (последние 6 пар)
   // ══════════════════════════════════════════════
-  async function askTutor(overrideText, submode) {
-    const q   = overrideText || textarea.value.trim();
-    const hasFile = !!attachedFile;
-    if (!q && !hasFile) return;
-    if (!USER_ID) { location.href="/login"; return; }
-
-    lastQ = q || "";
-
-    if (!overrideText) {
-      // Показываем превью файла в сообщении пользователя
-      const imgSrc = (hasFile && attachedFile.type.startsWith("image/"))
-        ? URL.createObjectURL(attachedFile) : null;
-      addUserMsg(q, imgSrc);
-      if (hasFile && !attachedFile.type.startsWith("image/")) {
-        // Для PDF/txt показываем чип
-        const chip = document.createElement("div"); chip.className="message user file-chip";
-        chip.innerHTML=`<span class="material-icons">description</span> ${esc(attachedFile.name)}`;
-        chatEl.appendChild(chip); scrollDown();
-      }
-      textarea.value=""; textarea.style.height="auto";
-    }
-
-    sendBtn.disabled=true; addTyping();
-
-    const fd = new FormData();
-    fd.append("question", q || "[файл без текста]");
-    fd.append("submode",  submode || (MODE==="exam" ? examSubmode : ""));
-    if (hasFile) fd.append("file", attachedFile);
-    clearAttach();
-
-    try {
-      const res  = await fetch("/ask", { method:"POST", credentials:"include", body:fd });
-      const data = await res.json();
-      removeTyping(); sendBtn.disabled=false;
-
-      if (data.error) { addAiMsg("⚠️ "+esc(data.error), null, false, false); return; }
-      showXP();
-      if (data.answer && lastQ) pushHistory(lastQ, data.answer);
-
-      if      (MODE==="explain") renderExplain(data);
-      else if (MODE==="step")    renderStep(data);
-      else if (MODE==="quiz")    renderQuiz(data, q);
-      else if (MODE==="exam")    renderExam(data, q);
-      else                       addAiMsg(data.answer, data.question_id, true, true);
-
-    } catch(err) {
-      removeTyping(); sendBtn.disabled=false;
-      addAiMsg("❌ Ошибка соединения. Попробуй ещё раз.", null, false, false);
-    }
-  }
-
-  // chatHistory хранит последние 6 пар Q/A для контекста
   const chatHistory = [];
   function pushHistory(q, a) {
     chatHistory.push({q, a});
@@ -400,14 +506,63 @@
     ).join("\n---\n");
   }
 
+  // ══════════════════════════════════════════════
+  //  ОТПРАВКА
+  // ══════════════════════════════════════════════
+  async function askTutor(overrideText, submode) {
+    const q = overrideText || textarea.value.trim();
+    const hasFile = !!attachedFile;
+    if (!q && !hasFile) return;
+    if (!USER_ID) { location.href="/login"; return; }
+
+    lastQ = q || "";
+    if (!overrideText) {
+      const imgSrc = (hasFile && attachedFile.type.startsWith("image/")) ? URL.createObjectURL(attachedFile) : null;
+      addUserMsg(q, imgSrc);
+      if (hasFile && !attachedFile.type.startsWith("image/")) {
+        const chip=document.createElement("div"); chip.className="message user file-chip";
+        chip.innerHTML=`<span class="material-icons">description</span> ${esc(attachedFile.name)}`;
+        chatEl.appendChild(chip); scrollDown();
+      }
+      textarea.value=""; textarea.style.height="auto";
+    }
+
+    sendBtn.disabled=true; addTyping();
+    if (window.Fairik) Fairik.think();
+    const fd=new FormData();
+    fd.append("question", q||"[файл без текста]");
+    fd.append("submode",  submode||(MODE==="exam"?examSubmode:""));
+    if (hasFile) fd.append("file", attachedFile);
+    clearAttach();
+
+    try {
+      const res  = await fetch("/ask",{method:"POST",credentials:"include",body:fd});
+      const data = await res.json();
+      removeTyping(); sendBtn.disabled=false;
+      if (window.Fairik) Fairik.doneThinking();
+      if (data.error) { addAiMsg("⚠️ "+esc(data.error),null,false,false); return; }
+      showXP();
+      if (window.Fairik) Fairik.addXP(10);
+      if (data.answer && lastQ) pushHistory(lastQ, data.answer);
+
+      if      (MODE==="explain") renderExplain(data);
+      else if (MODE==="step")    renderStep(data);
+      else if (MODE==="quiz")    renderQuiz(data, q);
+      else if (MODE==="exam")    renderExam(data, q);
+      else                       addAiMsg(data.answer,data.question_id,true,true);
+    } catch(err) {
+      removeTyping(); sendBtn.disabled=false;
+      if(window.Fairik) Fairik.doneThinking();
+      addAiMsg("❌ Ошибка соединения. Попробуй ещё раз.",null,false,false);
+    }
+  }
+
   async function sendQ(text, submode="") {
     const ctx = buildContext();
     const fullQ = ctx ? `КОНТЕКСТ ПРЕДЫДУЩЕГО РАЗГОВОРА:\n${ctx}\n\nНОВЫЙ ВОПРОС: ${text}` : text;
-    const fd=new FormData();
-    fd.append("question", fullQ);
-    fd.append("submode", submode);
+    const fd=new FormData(); fd.append("question",fullQ); fd.append("submode",submode);
     const res=await fetch("/ask",{method:"POST",credentials:"include",body:fd});
-    const data = await res.json();
+    const data=await res.json();
     if (data.answer) pushHistory(text, data.answer);
     return data;
   }
@@ -417,9 +572,7 @@
   // ══════════════════════════════════════════════
   function renderExplain(data) {
     const wrap=document.createElement("div"); wrap.className="message ai mode-explain";
-    const textDiv=document.createElement("div"); textDiv.className="ai-text";
-    wrap.appendChild(textDiv);
-
+    const textDiv=document.createElement("div"); textDiv.className="ai-text"; wrap.appendChild(textDiv);
     const btns=document.createElement("div"); btns.className="action-row"; btns.style.opacity="0";
     const actions=[
       {icon:"🔄",label:"Проще",          q:`Объясни максимально просто, как для ребёнка: ${lastQ}`},
@@ -434,30 +587,18 @@
       b.onclick=()=>{
         btns.remove(); addUserMsg(a.icon+" "+a.label);
         sendBtn.disabled=true; addTyping();
-        sendQ(a.q).then(d2=>{ removeTyping(); sendBtn.disabled=false; renderExplain(d2); });
+        sendQ(a.q).then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); renderExplain(d2); });
       };
       btns.appendChild(b);
     });
-    // Озвучка
-    const sb=document.createElement("button"); sb.className="action-btn explain-btn";
-    sb.innerHTML=`🔊 <span>Озвучить</span>`;
-    sb.onclick=()=>{
-      if(!("speechSynthesis" in window)) return;
-      if(speechSynthesis.speaking){speechSynthesis.cancel();sb.innerHTML=`🔊 <span>Озвучить</span>`;return;}
-      const u=new SpeechSynthesisUtterance(data.answer); u.lang="ru-RU"; u.rate=0.88;
-      speechSynthesis.speak(u); sb.innerHTML=`⏹ <span>Стоп</span>`;
-      u.onend=()=>sb.innerHTML=`🔊 <span>Озвучить</span>`;
-    };
-    btns.appendChild(sb);
-
+    // Кнопка озвучки через единый TTS
+    btns.appendChild(TTS.makeBtn(data.answer));
     wrap.appendChild(btns);
     if (data.question_id) wrap.appendChild(makeStars(data.question_id));
     chatEl.appendChild(wrap); scrollDown();
-
     animateText(textDiv, mdToHtml(data.answer), () => {
-      textDiv.innerHTML = mdToHtml(data.answer);
-      btns.style.opacity="1"; btns.style.transition="opacity .4s";
-      scrollDown();
+      textDiv.innerHTML=mdToHtml(data.answer);
+      btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown();
     });
   }
 
@@ -476,92 +617,76 @@
   }
 
   function renderStep(data) {
-    const isFirst = stepState.num===0 || stepState.done;
-    if (isFirst) stepState={num:1,task:lastQ,maxSteps:8,done:false};
-    else stepState.num++;
+    const isFirst=stepState.num===0||stepState.done;
+    if(isFirst) stepState={num:1,task:lastQ,maxSteps:8,done:false}; else stepState.num++;
     updateStepProgress();
 
     const wrap=document.createElement("div"); wrap.className="message ai mode-step";
     const isAnswer=/^\*?\*?ответ\s*[:：]/i.test(data.answer.trim())||data.answer.toLowerCase().includes("**ответ:**");
-
     const badge=document.createElement("div"); badge.className="step-badge";
-    if(isAnswer){
-      badge.textContent="✅ Решение";
-      badge.style.cssText="background:rgba(0,255,136,.15);color:var(--accent);border-color:rgba(0,255,136,.3)";
-      stepState.done=true;
-    } else {
-      badge.textContent=`Шаг ${stepState.num}`;
-    }
+    if(isAnswer){ badge.textContent="✅ Решение"; badge.style.cssText="background:rgba(0,255,136,.15);color:var(--accent);border-color:rgba(0,255,136,.3)"; stepState.done=true; }
+    else badge.textContent=`Шаг ${stepState.num}`;
     wrap.appendChild(badge);
-
     const textDiv=document.createElement("div"); textDiv.className="ai-text"; wrap.appendChild(textDiv);
     const btns=document.createElement("div"); btns.className="action-row"; btns.style.opacity="0";
 
     if(isAnswer||stepState.done){
       const nb=document.createElement("button"); nb.className="action-btn step-btn step-done-btn";
       nb.innerHTML="🏁 <span>Новая задача</span>";
-      nb.onclick=()=>{ stepState={num:0,task:"",maxSteps:8,done:false}; updateStepProgress(); addAiMsg("Отлично! 🎉 Напиши следующую задачу.",null,false,false); };
+      nb.onclick=()=>{ stepState={num:0,task:"",maxSteps:8,done:false}; updateStepProgress(); if(window.Fairik) Fairik.happy('Задача решена! 🎉'); addAiMsg("Отлично! 🎉 Напиши следующую задачу.",null,false,false); };
       btns.appendChild(nb);
       const sb=document.createElement("button"); sb.className="action-btn step-btn";
       sb.innerHTML="📝 <span>Похожая задача</span>";
-      sb.onclick=()=>{
-        btns.remove(); const t=stepState.task||lastQ; stepState={num:0,task:"",maxSteps:8,done:false};
+      sb.onclick=()=>{ btns.remove(); const t=stepState.task||lastQ; stepState={num:0,task:"",maxSteps:8,done:false};
         addUserMsg("📝 Похожая задача"); sendBtn.disabled=true; addTyping();
         sendQ(`Придумай похожую задачу на: ${t}. Только задачу, без решения.`)
-          .then(d2=>{ removeTyping(); sendBtn.disabled=false; addAiMsg(d2.answer,d2.question_id,false,true); });
-      };
+          .then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); addAiMsg(d2.answer,d2.question_id,false,true); }); };
       btns.appendChild(sb);
     } else {
-      [
-        {icon:"✅",label:"Понял, следующий шаг", fn:()=>{
+      [{icon:"✅",label:"Понял, следующий шаг",fn:()=>{
           btns.remove(); addUserMsg("✅ Понял, следующий шаг"); sendBtn.disabled=true; addTyping();
-          sendQ(`Продолжай, давай следующий шаг: ${stepState.task}`).then(d2=>{ removeTyping(); sendBtn.disabled=false; renderStep(d2); });
+          sendQ(`Продолжай, давай следующий шаг: ${stepState.task}`).then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); renderStep(d2); });
         }},
-        {icon:"🔍",label:"Объясни подробнее", fn:()=>{
+        {icon:"🔍",label:"Объясни подробнее",fn:()=>{
           btns.remove(); addUserMsg("🔍 Объясни подробнее"); sendBtn.disabled=true; addTyping();
           sendQ(`Объясни шаг ${stepState.num} подробнее: ${data.answer.substring(0,150)}`).then(d2=>{
             removeTyping(); sendBtn.disabled=false;
             const ew=document.createElement("div"); ew.className="message ai mode-step";
-            const eb=document.createElement("div"); eb.className="step-badge";
-            eb.textContent=`Шаг ${stepState.num} — подробнее`; ew.appendChild(eb);
+            const eb=document.createElement("div"); eb.className="step-badge"; eb.textContent=`Шаг ${stepState.num} — подробнее`; ew.appendChild(eb);
             const etd=document.createElement("div"); etd.className="ai-text"; ew.appendChild(etd);
             const cr=document.createElement("div"); cr.className="action-row"; cr.style.opacity="0";
-            const cb=document.createElement("button"); cb.className="action-btn step-btn";
-            cb.innerHTML="✅ <span>Понял, продолжаем</span>";
+            const cb=document.createElement("button"); cb.className="action-btn step-btn"; cb.innerHTML="✅ <span>Понял, продолжаем</span>";
             cb.onclick=()=>{ cr.remove(); addUserMsg("✅ Продолжаем"); sendBtn.disabled=true; addTyping();
               sendQ(`Продолжай шаг за шагом: ${stepState.task}`).then(d3=>{ removeTyping(); sendBtn.disabled=false; renderStep(d3); }); };
-            cr.appendChild(cb); ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
-            animateText(etd, mdToHtml(d2.answer), ()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
+            cr.appendChild(cb); cr.appendChild(TTS.makeBtn(d2.answer,'action-btn step-btn'));
+            ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
+            animateText(etd,mdToHtml(d2.answer),()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
           });
         }},
-        {icon:"💡",label:"Почему так?", fn:()=>{
+        {icon:"💡",label:"Почему так?",fn:()=>{
           btns.remove(); addUserMsg("💡 Почему так?"); sendBtn.disabled=true; addTyping();
           sendQ(`Объясни смысл действия на шаге ${stepState.num}.`).then(d2=>{
             removeTyping(); sendBtn.disabled=false;
             const ew=document.createElement("div"); ew.className="message ai mode-step";
             const etd=document.createElement("div"); etd.className="ai-text"; ew.appendChild(etd);
             const cr=document.createElement("div"); cr.className="action-row"; cr.style.opacity="0";
-            const cb=document.createElement("button"); cb.className="action-btn step-btn";
-            cb.innerHTML="✅ <span>Понял, продолжаем</span>";
+            const cb=document.createElement("button"); cb.className="action-btn step-btn"; cb.innerHTML="✅ <span>Понял, продолжаем</span>";
             cb.onclick=()=>{ cr.remove(); addUserMsg("✅ Продолжаем"); sendBtn.disabled=true; addTyping();
               sendQ(`Продолжай: ${stepState.task}`).then(d3=>{ removeTyping(); sendBtn.disabled=false; renderStep(d3); }); };
-            cr.appendChild(cb); ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
-            animateText(etd, mdToHtml(d2.answer), ()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
+            cr.appendChild(cb); cr.appendChild(TTS.makeBtn(d2.answer,'action-btn step-btn'));
+            ew.appendChild(cr); chatEl.appendChild(ew); scrollDown();
+            animateText(etd,mdToHtml(d2.answer),()=>{ etd.innerHTML=mdToHtml(d2.answer); cr.style.opacity="1"; cr.style.transition="opacity .4s"; scrollDown(); });
           });
         }},
-      ].forEach(a=>{
-        const b=document.createElement("button"); b.className="action-btn step-btn";
-        b.innerHTML=`${a.icon} <span>${a.label}</span>`; b.onclick=a.fn; btns.appendChild(b);
-      });
+      ].forEach(a=>{ const b=document.createElement("button"); b.className="action-btn step-btn"; b.innerHTML=`${a.icon} <span>${a.label}</span>`; b.onclick=a.fn; btns.appendChild(b); });
     }
 
+    // Озвучка шага
+    btns.appendChild(TTS.makeBtn(data.answer, 'action-btn step-btn'));
     wrap.appendChild(btns);
     if(data.question_id) wrap.appendChild(makeStars(data.question_id));
     chatEl.appendChild(wrap); scrollDown();
-    animateText(textDiv, mdToHtml(data.answer), ()=>{
-      textDiv.innerHTML=mdToHtml(data.answer);
-      btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown();
-    });
+    animateText(textDiv,mdToHtml(data.answer),()=>{ textDiv.innerHTML=mdToHtml(data.answer); btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown(); });
   }
 
   // ══════════════════════════════════════════════
@@ -575,19 +700,14 @@
   }
 
   function renderQuiz(data, originalQ) {
-    if(originalQ&&!originalQ.startsWith("__NEXT__")) quizState.topic=originalQ;
+    if(originalQ&&!originalQ.startsWith("__NEXT__")) { quizState.topic=originalQ; if(window.Fairik && quizState.num===1) Fairik.quizStart(); }
     let parsed=null;
     try{ const m=data.answer.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch(e){}
     if(!parsed||!parsed.question||!parsed.options){ addAiMsg(data.answer,data.question_id,false,true); return; }
 
     const wrap=document.createElement("div"); wrap.className="message ai mode-quiz";
     const card=document.createElement("div"); card.className="quiz-card";
-    card.innerHTML=`
-      <div class="quiz-q-header">
-        <span class="quiz-q-num">Вопрос ${quizState.num} из ${quizState.total}</span>
-        <span class="quiz-q-topic">${esc(quizState.topic)}</span>
-      </div>
-      <div class="quiz-question">${esc(parsed.question)}</div>`;
+    card.innerHTML=`<div class="quiz-q-header"><span class="quiz-q-num">Вопрос ${quizState.num} из ${quizState.total}</span><span class="quiz-q-topic">${esc(quizState.topic)}</span></div><div class="quiz-question">${esc(parsed.question)}</div>`;
 
     const opts=document.createElement("div"); opts.className="quiz-options";
     parsed.options.forEach((opt,idx)=>{
@@ -598,26 +718,42 @@
         const isOk=(idx===parsed.correct_index);
         btn.classList.add(isOk?"correct":"wrong");
         opts.querySelectorAll(".quiz-opt-btn")[parsed.correct_index]?.classList.add("correct");
-        if(isOk) quizState.correct++; else quizState.wrong++;
+        if(isOk){
+          quizState.correct++;
+          if(window.Fairik) Fairik.happy();
+        } else {
+          quizState.wrong++;
+          if(window.Fairik) Fairik.sad();
+          // Записываем ошибку в долгосрочную память
+          fetch('/api/memory/add_error',{
+            method:'POST',credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              subject: SUBJECT,
+              topic:   quizState.topic || lastQ,
+              details: `Неверный ответ: ${esc(parsed.options[idx])}. Верно: ${esc(parsed.options[parsed.correct_index])}`
+            })
+          }).catch(()=>{});
+        }
         updateQuizScore();
 
         const expl=document.createElement("div"); expl.className=`quiz-expl ${isOk?"ok":"fail"}`;
-        expl.innerHTML=isOk
-          ?`<b>✅ Правильно!</b> ${esc(parsed.explanation||"")}`
-          :`<b>❌ Неверно.</b> Правильно: <b>${esc(parsed.options[parsed.correct_index])}</b>. ${esc(parsed.explanation||"")}`;
+        expl.innerHTML=isOk?`<b>✅ Правильно!</b> ${esc(parsed.explanation||"")}`:`<b>❌ Неверно.</b> Правильно: <b>${esc(parsed.options[parsed.correct_index])}</b>. ${esc(parsed.explanation||"")}`;
         card.appendChild(expl);
+
+        // Озвучка объяснения
+        const ttsBtn=TTS.makeBtn(parsed.explanation||parsed.question,'action-btn quiz-action-btn');
+        ttsBtn.style.marginTop="8px"; card.appendChild(ttsBtn);
 
         const total=quizState.correct+quizState.wrong;
         if(total>=quizState.total){
-          const fb=document.createElement("button"); fb.className="quiz-next-btn";
-          fb.textContent="🏆 Итог"; fb.onclick=()=>{fb.remove();showQuizResult();}; card.appendChild(fb);
+          const fb=document.createElement("button"); fb.className="quiz-next-btn"; fb.textContent="🏆 Итог"; fb.onclick=()=>{fb.remove();showQuizResult();}; card.appendChild(fb);
         } else {
           quizState.num++;
-          const nb=document.createElement("button"); nb.className="quiz-next-btn";
-          nb.textContent="➡ Следующий вопрос";
+          const nb=document.createElement("button"); nb.className="quiz-next-btn"; nb.textContent="➡ Следующий вопрос";
           nb.onclick=()=>{ nb.remove(); sendBtn.disabled=true; addTyping();
             sendQ(`__NEXT__ Задай новый вопрос по теме "${quizState.topic}". Не повторяй. Только JSON.`)
-              .then(d2=>{ removeTyping(); sendBtn.disabled=false; renderQuiz(d2,null); }); };
+              .then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); renderQuiz(d2,null); }); };
           card.appendChild(nb);
         }
       };
@@ -631,18 +767,10 @@
     const pct=Math.round(quizState.correct/total*100);
     const g=pct>=80?{icon:"🏆",text:"Отлично!",color:"var(--accent)"}:pct>=60?{icon:"👍",text:"Хорошо!",color:"var(--blue)"}:{icon:"📚",text:"Нужно повторить",color:"var(--warning)"};
     const wrap=document.createElement("div"); wrap.className="message ai mode-quiz";
-    wrap.innerHTML=`<div class="quiz-result">
-      <div class="qr-icon">${g.icon}</div>
-      <div class="qr-score" style="color:${g.color}">${quizState.correct}/${total}</div>
-      <div class="qr-pct">${pct}% · ${g.text}</div>
-      <div class="qr-bar-wrap"><div class="qr-bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
-      <div class="qr-detail">Правильных: ${quizState.correct} · Ошибок: ${quizState.wrong}</div>
-      <div class="action-row" style="justify-content:center;margin-top:16px;">
-        <button class="action-btn quiz-action-btn" onclick="restartQuiz()">🔄 Новая тема</button>
-        <button class="action-btn quiz-action-btn" onclick="retryQuiz()">🔁 Та же тема</button>
-      </div></div>`;
+    wrap.innerHTML=`<div class="quiz-result"><div class="qr-icon">${g.icon}</div><div class="qr-score" style="color:${g.color}">${quizState.correct}/${total}</div><div class="qr-pct">${pct}% · ${g.text}</div><div class="qr-bar-wrap"><div class="qr-bar-fill" style="width:${pct}%;background:${g.color}"></div></div><div class="qr-detail">Правильных: ${quizState.correct} · Ошибок: ${quizState.wrong}</div><div class="action-row" style="justify-content:center;margin-top:16px;"><button class="action-btn quiz-action-btn" onclick="restartQuiz()">🔄 Новая тема</button><button class="action-btn quiz-action-btn" onclick="retryQuiz()">🔁 Та же тема</button></div></div>`;
     chatEl.appendChild(wrap); scrollDown();
     document.getElementById("qs-progress").style.width="100%";
+  if(window.Fairik && pct>=80) Fairik.celebrate();
   }
   function restartQuiz(){ quizState={correct:0,wrong:0,num:1,topic:"",total:5}; updateQuizScore(); addAiMsg("Напиши новую тему 🎯",null,false,false); }
   function retryQuiz(){ const t=quizState.topic; quizState={correct:0,wrong:0,num:1,topic:t,total:5}; updateQuizScore();
@@ -655,22 +783,14 @@
   function setExamSubmode(sub) {
     examSubmode=sub;
     ["explain","practice","full"].forEach(s=>document.getElementById(`btn-${s}`).classList.toggle("active",s===sub));
-    // Заменяем подсказку — не добавляем новое сообщение, а обновляем существующее
-    const msgs = {
+    const msgs={
       explain:  `📖 Разбор формата ЕГЭ/ОГЭ по ${SUBJECT}. Напиши тему или задай вопрос.`,
       practice: `🎯 Тренировка заданий в перемешку. Напиши тему или номер задания ЕГЭ.`,
       full:     `⏱ Полный экзамен с таймером 3:55. Напиши <b>начать</b> когда готов.`,
     };
-    // Всегда один элемент — обновляем текст, не добавляем новый
-    let hint = document.getElementById("exam-hint-msg");
-    if (!hint) {
-      hint = document.createElement("div");
-      hint.id = "exam-hint-msg";
-      hint.className = "message ai mode-exam";
-      hint.innerHTML = `<div class="ai-text"></div>`;
-      chatEl.appendChild(hint);
-    }
-    hint.querySelector(".ai-text").innerHTML = msgs[sub] || msgs.explain;
+    let hint=document.getElementById("exam-hint-msg");
+    if(!hint){ hint=document.createElement("div"); hint.id="exam-hint-msg"; hint.className="message ai mode-exam"; hint.innerHTML=`<div class="ai-text"></div>`; chatEl.appendChild(hint); }
+    hint.querySelector(".ai-text").innerHTML=msgs[sub]||msgs.explain;
     scrollDown();
     const epb=document.getElementById("exam-progress-bar");
     if(sub==="practice"||sub==="full"){
@@ -678,7 +798,7 @@
       examState.maxTasks=sub==="full"?27:10;
       document.getElementById("epb-total").textContent=examState.maxTasks; renderExamDots();
       document.getElementById("exam-timer").style.display=sub==="full"?"flex":"none";
-    } else { epb.style.display="none"; }
+    } else epb.style.display="none";
   }
   function renderExamDots(){
     const dots=document.getElementById("epb-dots"); dots.innerHTML="";
@@ -709,7 +829,6 @@
     const card=document.createElement("div"); card.className="exam-card";
     const taskLabel=examSubmode==="full"?`Задание ${examState.taskNum} из ${examState.maxTasks}`:`Задание ${examState.taskNum}`;
     card.innerHTML=`<div class="exam-header"><span class="exam-badge">📋 ${taskLabel}</span><span class="exam-subject">${esc(SUBJECT)}</span></div>`;
-
     const taskDiv=document.createElement("div"); taskDiv.className="ai-text exam-task"; card.appendChild(taskDiv);
 
     const ansBlock=document.createElement("div"); ansBlock.className="exam-ans-block";
@@ -725,10 +844,16 @@
         checkBtn.remove();
         const txt=d2.answer.toLowerCase();
         const good=txt.includes("правильно")||txt.includes("верно")||txt.includes("балл");
+        if(window.Fairik) { if(good) Fairik.happy(); else Fairik.encourage(); }
         const res=document.createElement("div"); res.className=`exam-result ${good?"good":"bad"}`;
         const rDiv=document.createElement("div"); rDiv.className="er-text"; res.innerHTML=`<div class="er-icon">${good?"✅":"❌"}</div>`;
         res.appendChild(rDiv); ansBlock.appendChild(res);
-        animateText(rDiv, mdToHtml(d2.answer), ()=>{ rDiv.innerHTML=mdToHtml(d2.answer); scrollDown(); });
+        animateText(rDiv,mdToHtml(d2.answer),()=>{ rDiv.innerHTML=mdToHtml(d2.answer); scrollDown(); });
+
+        // Озвучка результата проверки
+        const ttsRow=document.createElement("div"); ttsRow.className="action-row"; ttsRow.style.marginTop="8px";
+        ttsRow.appendChild(TTS.makeBtn(d2.answer,'action-btn exam-btn'));
+        ansBlock.appendChild(ttsRow);
 
         const btnRow=document.createElement("div"); btnRow.className="action-row";
         if(examState.taskNum<examState.maxTasks){
@@ -744,8 +869,7 @@
         if(examSubmode==="practice"){
           const hb=document.createElement("button"); hb.className="action-btn exam-btn-secondary"; hb.innerHTML="💡 Эталонный ответ";
           hb.onclick=()=>{ hb.remove(); addTyping();
-            sendQ(`Эталонный ответ на: ${data.answer}`,"practice")
-              .then(d3=>{ removeTyping(); addAiMsg(d3.answer,d3.question_id,false,true); }); };
+            sendQ(`Эталонный ответ на: ${data.answer}`,"practice").then(d3=>{ removeTyping(); addAiMsg(d3.answer,d3.question_id,false,true); }); };
           btnRow.appendChild(hb);
         }
         ansBlock.appendChild(btnRow);
@@ -753,8 +877,7 @@
     };
     ansBlock.appendChild(ans); ansBlock.appendChild(checkBtn);
     card.appendChild(ansBlock); wrap.appendChild(card); chatEl.appendChild(wrap); scrollDown();
-    animateText(taskDiv, mdToHtml(data.answer), ()=>{ taskDiv.innerHTML=mdToHtml(data.answer); setTimeout(()=>ans.focus(),50); scrollDown(); });
-
+    animateText(taskDiv,mdToHtml(data.answer),()=>{ taskDiv.innerHTML=mdToHtml(data.answer); setTimeout(()=>ans.focus(),50); scrollDown(); });
     if(examSubmode==="full"&&examState.taskNum===1&&!examState.timerInterval) startExamTimer();
   }
 
@@ -774,13 +897,13 @@
         sendQ(a.q,"explain").then(d2=>{ removeTyping(); sendBtn.disabled=false; renderExamExplain(d2); }); };
       btns.appendChild(b);
     });
+    btns.appendChild(TTS.makeBtn(data.answer,'action-btn exam-btn'));
     wrap.appendChild(btns); chatEl.appendChild(wrap); scrollDown();
-    animateText(textDiv, mdToHtml(data.answer), ()=>{ textDiv.innerHTML=mdToHtml(data.answer); btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown(); });
+    animateText(textDiv,mdToHtml(data.answer),()=>{ textDiv.innerHTML=mdToHtml(data.answer); btns.style.opacity="1"; btns.style.transition="opacity .4s"; scrollDown(); });
   }
 
   function finishExamSession(){
-    clearInterval(examState.timerInterval);
-    addTyping();
+    clearInterval(examState.timerInterval); addTyping();
     sendQ(examSubmode==="full"?`Итоги экзамена по ${SUBJECT}, примерный балл.`:`Итоги тренировки по ${SUBJECT}.`,examSubmode)
       .then(d=>{ removeTyping(); addAiMsg(d.answer,d.question_id,false,true); });
     examState.taskNum=1; renderExamDots();
@@ -788,7 +911,7 @@
   function finishFullExam(){ addAiMsg("⏰ Время вышло!",null,false,false); finishExamSession(); }
 
   // ── Звёзды ──
-  function makeStars(historyId, rating=0){
+  function makeStars(historyId,rating=0){
     const stars=document.createElement("div"); stars.className="rating-stars";
     for(let i=1;i<=5;i++){
       const s=document.createElement("span"); s.textContent="★";
@@ -800,9 +923,18 @@
   }
   async function rateAnswer(hid,rating){
     try{ await fetch("/rate",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({history_id:hid,rating})}); }catch(e){}
+    // Если низкая оценка — записываем в память ошибок
+    if(rating <= 2) { if(window.Fairik) Fairik.encourage(); }
+    if(rating <= 2 && lastQ){
+      fetch('/api/memory/add_error',{
+        method:'POST',credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({subject:SUBJECT, topic:lastQ.substring(0,120), details:'Низкая оценка ответа: '+rating+'/5'})
+      }).catch(()=>{});
+    }
   }
 
-  // ── Голос ──
+  // ── Голосовой ввод ──
   const voiceBtn=document.getElementById("voice-btn");
   if("webkitSpeechRecognition" in window||"SpeechRecognition" in window){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -813,6 +945,31 @@
     rec.onend=()=>voiceBtn.classList.remove("recording");
   } else { voiceBtn.style.display="none"; }
   </script>
+
+  <style>
+    /* Спиннер на кнопке пока грузится ElevenLabs */
+    .tts-spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: tts-spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 2px;
+    }
+    @keyframes tts-spin { to { transform: rotate(360deg); } }
+    /* Кнопка озвучки на обычных AI-сообщениях */
+    .tts-inline {
+      margin-top: 8px;
+      font-size: 0.75rem !important;
+      padding: 4px 10px !important;
+      opacity: 0.7;
+    }
+    .tts-inline:hover { opacity: 1 !important; }
+  </style>
+  <script src="{{ url_for('static', filename='themes.js') }}"></script>
+  <script src="{{ url_for('static', filename='fairik.js') }}"></script>
 <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>

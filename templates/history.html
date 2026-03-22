@@ -9,6 +9,8 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
 
 </head>
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+
 <body class="{% if session.get('theme') == 'dark' %}dark-theme{% else %}light-theme{% endif %}">
   <header>
     <a href="/"><img class="logo" src="/static/img/logo.png" alt="Логотип"></a>
@@ -231,6 +233,9 @@
 
   <!-- jsPDF для экспорта -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="{{ url_for('static', filename='themes.js') }}"></script>
+  <script src="{{ url_for('static', filename='fairik.js') }}"></script>
 <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+
 </body>
 </html>

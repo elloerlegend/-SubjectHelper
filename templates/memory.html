@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Память ошибок</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .mem-wrap {
+      max-width: 780px; width: 100%;
+      margin: 0 auto; padding: 28px 16px 80px;
+      position: relative; z-index: 1;
+    }
+
+    /* Заголовок */
+    .mem-header { margin-bottom: 28px; }
+    .mem-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+    .mem-header p  { font-size: 0.85rem; color: var(--text3); font-family: var(--font-mono); }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--accent); font-size: 0.84rem; text-decoration: none;
+      margin-bottom: 20px; font-weight: 500;
+    }
+    .back-link:hover { color: var(--accent3); }
+
+    /* Сегодняшнее повторение */
+    .due-card {
+      background: rgba(0,255,136,0.05);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 18px; padding: 20px 22px;
+      margin-bottom: 24px; display: none;
+    }
+    .due-card.show { display: block; }
+    .due-card-title {
+      font-size: 0.8rem; font-family: var(--font-mono);
+      color: var(--accent); letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 12px;
+    }
+    .due-list { display: flex; flex-direction: column; gap: 8px; }
+    .due-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+      cursor: pointer; transition: all 0.18s; text-decoration: none;
+    }
+    .due-item:hover {
+      background: var(--surface2); border-color: var(--accent);
+      transform: translateX(3px);
+    }
+    .due-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .due-info { flex: 1; min-width: 0; }
+    .due-topic { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+    .due-meta  { font-size: 0.75rem; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; }
+    .due-mastery {
+      font-family: var(--font-mono); font-size: 0.78rem;
+      color: var(--accent); white-space: nowrap;
+    }
+
+    /* Секции */
+    .section { margin-bottom: 32px; }
+    .section-label {
+      font-size: 0.72rem; font-family: var(--font-mono);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text3); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .section-count {
+      background: var(--surface2); color: var(--text3);
+      padding: 1px 7px; border-radius: 10px; font-size: 0.68rem;
+    }
+
+    /* Карточки тем */
+    .topics-grid { display: flex; flex-direction: column; gap: 8px; }
+
+    .topic-card {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px;
+      transition: all 0.18s;
+    }
+    .topic-card:hover { background: var(--surface2); border-color: var(--border2); }
+
+    .topic-emoji { font-size: 1.5rem; flex-shrink: 0; }
+
+    .topic-body { flex: 1; min-width: 0; }
+    .topic-name {
+      font-size: 0.92rem; font-weight: 600; color: var(--text);
+      margin-bottom: 3px;
+    }
+    .topic-subject {
+      font-size: 0.75rem; color: var(--text3);
+      font-family: var(--font-mono);
+    }
+    .topic-details {
+      font-size: 0.78rem; color: var(--text2);
+      margin-top: 4px; line-height: 1.5;
+    }
+
+    /* Прогресс-бар освоения */
+    .mastery-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .mastery-pct {
+      font-family: var(--font-mono); font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .mastery-bar {
+      width: 80px; height: 5px;
+      background: var(--bg3); border-radius: 3px; overflow: hidden;
+    }
+    .mastery-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+    .mastery-label {
+      font-size: 0.68rem; color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    /* Кнопка повторить */
+    .review-btn {
+      padding: 6px 14px; border-radius: 16px;
+      border: 1px solid rgba(0,255,136,0.25);
+      background: rgba(0,255,136,0.07); color: var(--accent);
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      transition: all 0.18s; flex-shrink: 0; font-family: var(--font-main);
+      white-space: nowrap;
+    }
+    .review-btn:hover { background: rgba(0,255,136,0.16); transform: translateY(-1px); }
+
+    /* Освоенные */
+    .topic-card.mastered { opacity: 0.6; }
+    .topic-card.mastered:hover { opacity: 1; }
+    .mastered-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(0,255,136,0.1); color: var(--accent);
+      border: 1px solid rgba(0,255,136,0.2);
+      padding: 3px 8px; border-radius: 10px;
+      font-size: 0.7rem; font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    /* Заметки ИИ */
+    .notes-grid { display: flex; flex-direction: column; gap: 8px; }
+    .note-card {
+      padding: 12px 16px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+    }
+    .note-type {
+      display: inline-block; font-size: 0.7rem;
+      font-family: var(--font-mono); letter-spacing: 0.06em;
+      text-transform: uppercase; margin-bottom: 5px;
+      padding: 2px 8px; border-radius: 8px;
+    }
+    .note-type.learning_style { background: rgba(77,159,255,.1); color: var(--blue); }
+    .note-type.strength       { background: rgba(0,255,136,.1); color: var(--accent); }
+    .note-type.struggle       { background: rgba(255,77,106,.1); color: var(--danger); }
+    .note-type.personality    { background: rgba(176,106,255,.1); color: var(--purple); }
+    .note-content { font-size: 0.88rem; color: var(--text2); line-height: 1.6; }
+
+    /* Пустое состояние */
+    .empty-state {
+      text-align: center; padding: 36px 20px;
+      color: var(--text3); font-family: var(--font-mono); font-size: 0.82rem;
+    }
+    .empty-state .icon { font-size: 2.5rem; opacity: 0.3; display: block; margin-bottom: 10px; }
+
+    /* Модальное окно повторения */
+    .review-modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .review-modal-overlay.open { display: flex; }
+    .review-modal {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 20px; padding: 28px; max-width: 620px; width: 100%;
+      max-height: 80vh; overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      animation: modalIn 0.3s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes modalIn {
+      from { transform: scale(0.9) translateY(20px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .modal-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 18px; gap: 12px;
+    }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .modal-subject {
+      font-size: 0.75rem; color: var(--accent);
+      font-family: var(--font-mono); margin-top: 3px;
+    }
+    .modal-close {
+      background: none; border: none; color: var(--text3);
+      cursor: pointer; font-size: 1.3rem; padding: 0;
+      transition: color 0.2s; flex-shrink: 0;
+    }
+    .modal-close:hover { color: var(--danger); }
+    .modal-content {
+      font-size: 0.9rem; color: var(--text2); line-height: 1.75;
+      white-space: pre-wrap; margin-bottom: 22px;
+    }
+    .modal-content b  { color: var(--text); font-weight: 700; }
+    .modal-content h4 { font-size: 0.95rem; color: var(--text); margin: 12px 0 5px; }
+
+    /* Оценка себя */
+    .self-rate {
+      display: flex; flex-direction: column; gap: 10px;
+      border-top: 1px solid var(--border); padding-top: 18px;
+    }
+    .self-rate-label { font-size: 0.82rem; color: var(--text2); font-weight: 600; }
+    .rate-stars {
+      display: flex; gap: 8px;
+    }
+    .rate-star-btn {
+      padding: 8px 14px; border-radius: 12px; cursor: pointer;
+      font-size: 0.82rem; font-weight: 600; transition: all 0.18s;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text2); font-family: var(--font-main);
+    }
+    .rate-star-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+    .rate-star-btn.sel-1 { border-color: var(--danger); background: rgba(255,77,106,.1); color: var(--danger); }
+    .rate-star-btn.sel-2 { border-color: var(--warning); background: rgba(255,179,71,.1); color: var(--warning); }
+    .rate-star-btn.sel-3 { border-color: var(--blue); background: rgba(77,159,255,.1); color: var(--blue); }
+    .rate-star-btn.sel-4 { border-color: var(--accent); background: rgba(0,255,136,.1); color: var(--accent); }
+    .rate-star-btn.sel-5 { border-color: var(--accent); background: rgba(0,255,136,.15); color: var(--accent); }
+
+    .submit-review-btn {
+      padding: 12px 24px; border-radius: 24px;
+      background: var(--accent); color: var(--bg);
+      border: none; font-weight: 700; font-size: 0.92rem;
+      cursor: pointer; transition: all 0.2s; font-family: var(--font-main);
+      box-shadow: 0 4px 16px rgba(0,255,136,0.35);
+    }
+    .submit-review-btn:hover { background: var(--accent3); transform: translateY(-1px); }
+    .submit-review-btn:disabled { background: var(--surface2); color: var(--text3); box-shadow: none; transform: none; cursor: not-allowed; }
+
+    /* Кнопка анализа */
+    .analyze-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 20px;
+      border: 1px solid rgba(77,159,255,.25);
+      background: rgba(77,159,255,.07); color: var(--blue);
+      font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+      font-family: var(--font-main); font-weight: 500;
+    }
+    .analyze-btn:hover { background: rgba(77,159,255,.16); transform: translateY(-1px); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  </style>
+</head>
+<body>
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+  {{ menu | safe }}
+</header>
+{{ menu_js | safe }}
+
+<main class="mem-wrap">
+
+  <a href="/profile" class="back-link">
+    <span class="material-icons" style="font-size:16px">arrow_back</span>
+    Профиль
+  </a>
+
+  <div class="mem-header">
+    <h1>🧠 Долгосрочная память</h1>
+    <p>ИИ помнит твои ошибки и напоминает о них в нужный момент · Алгоритм SM-2</p>
+  </div>
+
+  <!-- Сегодня к повторению -->
+  <div class="due-card {% if due_topics %}show{% endif %}" id="dueCard">
+    <div class="due-card-title">
+      🔔 Пора повторить — {{ due_topics|length }} тем{{ 'а' if due_topics|length == 1 else 'ы' }}
+    </div>
+    <div class="due-list">
+      {% for t in due_topics %}
+      <div class="due-item" onclick="startReview({{ t.id }})">
+        <div class="due-icon">
+          {% if t.subject == 'Математика' %}📐
+          {% elif t.subject == 'Физика' %}🔬
+          {% elif t.subject == 'Химия' %}⚗️
+          {% elif t.subject == 'Биология' %}🧬
+          {% elif t.subject == 'История' %}📜
+          {% elif t.subject == 'Информатика' %}💻
+          {% else %}📚{% endif %}
+        </div>
+        <div class="due-info">
+          <div class="due-topic">{{ t.topic }}</div>
+          <div class="due-meta">{{ t.subject }} · ошибок: {{ t.error_count }} · {{ t.days_ago }} дн. назад</div>
+        </div>
+        <div class="due-mastery" style="color:
+          {% if t.mastery_score < 0.3 %}var(--danger)
+          {% elif t.mastery_score < 0.6 %}var(--warning)
+          {% else %}var(--accent){% endif %}">
+          {{ (t.mastery_score * 100)|int }}%
+        </div>
+        <button class="review-btn">Повторить →</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Слабые темы -->
+  <div class="section">
+    <div class="section-label">
+      Слабые темы
+      <span class="section-count">{{ weak_topics|length }}</span>
+    </div>
+    <div class="topics-grid">
+      {% if weak_topics %}
+        {% for t in weak_topics %}
+        <div class="topic-card">
+          <div class="topic-emoji">
+            {% if t.subject == 'Математика' %}📐
+            {% elif t.subject == 'Физика' %}🔬
+            {% elif t.subject == 'Химия' %}⚗️
+            {% elif t.subject == 'Биология' %}🧬
+            {% elif t.subject == 'История' %}📜
+            {% elif t.subject == 'Информатика' %}💻
+            {% elif t.subject == 'Английский язык' %}🌍
+            {% else %}📚{% endif %}
+          </div>
+          <div class="topic-body">
+            <div class="topic-name">{{ t.topic }}</div>
+            <div class="topic-subject">{{ t.subject }} · ошибок: {{ t.error_count }} · {{ t.days_ago }} дн. назад</div>
+            {% if t.details %}
+            <div class="topic-details">{{ t.details[:120] }}{% if t.details|length > 120 %}…{% endif %}</div>
+            {% endif %}
+          </div>
+          <div class="mastery-wrap">
+            <span class="mastery-pct" style="color:
+              {% if t.mastery_score < 0.3 %}var(--danger)
+              {% elif t.mastery_score < 0.6 %}var(--warning)
+              {% else %}var(--accent){% endif %}">
+              {{ (t.mastery_score * 100)|int }}%
+            </span>
+            <div class="mastery-bar">
+              <div class="mastery-fill" style="width:{{ (t.mastery_score * 100)|int }}%;
+                background:{% if t.mastery_score < 0.3 %}var(--danger){% elif t.mastery_score < 0.6 %}var(--warning){% else %}var(--accent){% endif %}">
+              </div>
+            </div>
+            <span class="mastery-label">освоение</span>
+          </div>
+          <button class="review-btn" onclick="startReview({{ t.id }})">Повторить</button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <span class="icon">🎉</span>
+          Слабых тем пока нет. Занимайся и оценивай ответы — система запомнит!
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Освоенные -->
+  {% if mastered_topics %}
+  <div class="section">
+    <div class="section-label">
+      Освоено
+      <span class="section-count">{{ mastered_topics|length }}</span>
+    </div>
+    <div class="topics-grid">
+      {% for t in mastered_topics %}
+      <div class="topic-card mastered">
+        <div class="topic-emoji">✅</div>
+        <div class="topic-body">
+          <div class="topic-name">{{ t.topic }}</div>
+          <div class="topic-subject">{{ t.subject }} · повторений: {{ t.review_count }}</div>
+        </div>
+        <div class="mastered-badge">✓ Освоено</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Заметки ИИ -->
+  {% if memory_notes %}
+  <div class="section">
+    <div class="section-label">Наблюдения ИИ о тебе</div>
+    <div class="notes-grid">
+      {% for note in memory_notes %}
+      <div class="note-card">
+        <div class="note-type {{ note.note_type }}">{{ note.note_type|replace('_', ' ') }}</div>
+        <div class="note-content">{{ note.content }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Кнопка анализа -->
+  <div style="text-align:center;margin-top:24px;">
+    <button class="analyze-btn" id="analyzeBtn" onclick="runAnalysis()">
+      <span class="material-icons" style="font-size:16px">auto_awesome</span>
+      Проанализировать мои ошибки
+    </button>
+    <p style="font-size:0.75rem;color:var(--text3);margin-top:8px;font-family:var(--font-mono);">
+      ИИ просмотрит твои оценки и найдёт паттерны слабых тем
+    </p>
+  </div>
+
+</main>
+
+<!-- Модальное окно повторения -->
+<div class="review-modal-overlay" id="reviewModal">
+  <div class="review-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Повторение темы</div>
+        <div class="modal-subject" id="modalSubject"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-content" id="modalContent">
+      <div style="text-align:center;padding:24px;color:var(--text3)">
+        🐉 Файрик готовит мини-урок...
+      </div>
+    </div>
+    <div class="self-rate" id="selfRate" style="display:none">
+      <div class="self-rate-label">Насколько понял теперь? Оцени себя честно:</div>
+      <div class="rate-stars" id="rateStars">
+        <button class="rate-star-btn" onclick="selectScore(1)">😵 Всё ещё сложно</button>
+        <button class="rate-star-btn" onclick="selectScore(3)">🤔 Частично понял</button>
+        <button class="rate-star-btn" onclick="selectScore(4)">😊 Понял хорошо</button>
+        <button class="rate-star-btn" onclick="selectScore(5)">🚀 Отлично усвоил!</button>
+      </div>
+      <button class="submit-review-btn" id="submitBtn" onclick="submitReview()" disabled>
+        Завершить повторение
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+<script>
+let currentReviewId = null;
+let selectedScore   = null;
+
+async function startReview(topicId) {
+  document.getElementById('reviewModal').classList.add('open');
+  document.getElementById('modalContent').innerHTML =
+    '<div style="text-align:center;padding:24px;color:var(--text3)">🐉 Файрик готовит мини-урок...</div>';
+  document.getElementById('selfRate').style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/memory/review_start', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({topic_id: topicId})
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); closeModal(); return; }
+
+    currentReviewId = data.review_id;
+    document.getElementById('modalTitle').textContent   = data.topic;
+    document.getElementById('modalSubject').textContent = data.subject + ' · ' + data.mastery + '% освоено';
+    document.getElementById('modalContent').innerHTML   = formatContent(data.content);
+    document.getElementById('selfRate').style.display   = 'flex';
+  } catch(e) {
+    document.getElementById('modalContent').innerHTML =
+      '<div style="color:var(--danger)">Ошибка загрузки. Попробуй снова.</div>';
+  }
+}
+
+function formatContent(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/\n/g, '<br>');
+}
+
+function closeModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+  currentReviewId = null;
+  selectedScore   = null;
+  document.getElementById('rateStars').querySelectorAll('button').forEach(b => {
+    b.className = 'rate-star-btn';
+  });
+  document.getElementById('submitBtn').disabled = true;
+}
+
+function selectScore(s) {
+  selectedScore = s;
+  document.getElementById('rateStars').querySelectorAll('button').forEach((b,i) => {
+    b.className = 'rate-star-btn' + (i === [1,3,4,5].indexOf(s) ? ' sel-'+s : '');
+  });
+  // Простая подсветка нажатой кнопки
+  const btns = document.getElementById('rateStars').querySelectorAll('button');
+  btns.forEach(b => b.classList.remove('sel-1','sel-2','sel-3','sel-4','sel-5'));
+  event.target.classList.add('sel-' + s);
+  document.getElementById('submitBtn').disabled = false;
+}
+
+async function submitReview() {
+  if (!currentReviewId || !selectedScore) return;
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Сохраняю...';
+
+  try {
+    const res  = await fetch('/api/memory/review_complete', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({review_id: currentReviewId, score: selectedScore})
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      const msg = data.is_mastered
+        ? '🎉 Тема освоена! Она переходит в архив.'
+        : `📈 Освоение: ${data.mastery}%. Следующее повторение через ${Math.round((new Date(data.next_review) - new Date()) / 86400000)} дн.`;
+
+      btn.textContent = msg;
+      if (window.Fairik) {
+        selectedScore >= 4 ? Fairik.happy('+' + data.xp_gained + ' XP за повторение! 🧠')
+                           : Fairik.say('Продолжаем работать! 💪');
+      }
+      setTimeout(() => { closeModal(); location.reload(); }, 2200);
+    }
+  } catch(e) {
+    btn.textContent = 'Ошибка'; btn.disabled = false;
+  }
+}
+
+async function runAnalysis() {
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-icons" style="font-size:16px;animation:spin .8s linear infinite">refresh</span> Анализирую...';
+
+  try {
+    const res  = await fetch('/api/memory/analyze', {method:'POST', credentials:'include'});
+    const data = await res.json();
+    if (data.ok) {
+      btn.innerHTML = `✅ Найдено тем: ${data.found}`;
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      btn.innerHTML = '❌ Ошибка';
+      btn.disabled  = false;
+    }
+  } catch(e) {
+    btn.innerHTML = '❌ Ошибка'; btn.disabled = false;
+  }
+}
+
+// Закрытие по клику на оверлей
+document.getElementById('reviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+  <script src="{{ url_for('static', filename='fairik.js') }}"></script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+</body>
+</html>

@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 </head>
+
+
 <body>
     <header>
         <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
@@ -64,6 +66,8 @@
     </main>
 
     {{ menu_js | safe }}
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+  <script src="{{ url_for('static', filename='fairik.js') }}"></script>
 <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>
