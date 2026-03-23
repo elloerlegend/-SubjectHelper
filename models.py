@@ -27,9 +27,16 @@ class User(db.Model, UserMixin):
     interests      = db.Column(db.String(200), default='', nullable=True)  # "games,sport,music"
     class_number   = db.Column(db.Integer, default=8, nullable=True)
 
-    # Магазин скинов
-    owned_skins   = db.Column(db.String(500), default='default', nullable=True)
-    equipped_skin = db.Column(db.String(50),  default='default', nullable=True)
+    # Онбординг
+    is_onboarded   = db.Column(db.Boolean,   default=False, nullable=False)
+    learning_style = db.Column(db.String(30), default='', nullable=True)  # read/practice/examples/mixed
+    goal           = db.Column(db.String(30), default='', nullable=True)  # exams/grades/homework/curious
+    hard_subjects  = db.Column(db.String(200), default='', nullable=True) # "Математика,Физика"
+    referral       = db.Column(db.String(30), default='', nullable=True)  # friend/social/teacher/search
+
+    # Магазин и кастомизация (скины)
+    owned_skins = db.Column(db.Text, default='default', nullable=True)
+    equipped_skin = db.Column(db.String(50), default='default', nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -148,7 +155,7 @@ class MemoryNote(db.Model):
 
 
 # ════════════════════════════════════════════════════════
-#  АЛГОРИТМ SM-2 (интервальное повторение)
+#  АЛГОРИТМ SM-2 (интервальное повторение как в Anki)
 # ════════════════════════════════════════════════════════
 
 def sm2_update(topic: WeakTopic, quality: int) -> WeakTopic:
@@ -268,6 +275,11 @@ def get_user_memory_context(user_id: int) -> str:
             lines.append(f"  • [{n.note_type}] {n.content}")
 
     return "\n".join(lines) if lines else ""
+
+
+# ════════════════════════════════════════════════════════
+#  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (оригинальные)
+# ════════════════════════════════════════════════════════
 
 def save_history(chat_id, subject, mode, question, answer):
     chat = db.session.get(Chat, chat_id)

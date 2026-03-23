@@ -10,6 +10,10 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <script src="{{ url_for('static', filename='fairik.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+  <script src="{{ url_for('static', filename='themes.js') }}"></script>
+
 <body>
   <header>
     <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
@@ -24,20 +28,12 @@
         <img id="avatar-preview"
              src="{{ current_user.avatar or url_for('static', filename='img/default_avatar.png') }}"
              alt="Аватар" class="avatar-large">
-        <form method="POST" enctype="multipart/form-data" action="/update_avatar" id="avatarForm">
-          <input type="file" name="avatar" accept="image/*" id="avatarInput" style="display:none;">
-          <label for="avatarInput" class="avatar-edit-btn material-icons" title="Изменить аватар">photo_camera</label>
-        </form>
+
       </div>
       <div class="profile-hero-info">
         <h1 class="profile-name">{{ current_user.name or "Пользователь" }}</h1>
         <p class="profile-email">{{ current_user.email }}</p>
-        <form method="POST" action="/update_nickname" class="nickname-form">
-          <input type="text" name="nickname" class="nickname-input"
-                 placeholder="Изменить ник..." maxlength="20"
-                 value="{{ current_user.name or '' }}">
-          <button type="submit" class="nickname-btn">Сохранить</button>
-        </form>
+
       </div>
     </div>
 
@@ -892,9 +888,6 @@
     document.getElementById('tab-stats').style.display   = 'block';
   });
   </script>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
-  <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
-  <script src="{{ url_for('static', filename='themes.js') }}"></script>
 
 </body>
 </html>

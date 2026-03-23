@@ -16,7 +16,7 @@ from models import (
     add_weak_topic, sm2_update, get_topics_due, get_user_memory_context
 )
 
-# ====================== НАСТРОЙКИ ===================
+# ====================== НАСТРОЙКИ ======================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -709,7 +709,7 @@ def update_avatar():
     db.session.commit()
     session['avatar'] = user.avatar
     flash('✅ Аватар обновлён!', 'success')
-    return redirect(url_for('settings_page'))
+    return redirect(url_for('welcome'))
 
 
 @app.route('/update_nickname', methods=['POST'])
