@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>SubjectHelper — Магазин</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='back.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .shop-wrap {
+      max-width: 760px; margin: 0 auto;
+      padding: 28px 16px 80px; position: relative; z-index: 1;
+    }
+    .shop-header { text-align: center; margin-bottom: 32px; }
+    .shop-header h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+    .shop-header p  { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.1em; }
+    .xp-balance {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.25);
+      border-radius: 30px; padding: 8px 20px;
+      font-family: var(--font-mono); font-size: 1rem; font-weight: 700;
+      color: var(--accent); margin-bottom: 32px;
+    }
+    .skins-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 16px;
+    }
+    .skin-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 20px 16px 16px;
+      text-align: center; transition: all 0.22s ease; position: relative;
+    }
+    .skin-card:hover { border-color: var(--border2); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
+    .skin-card.equipped { border-color: var(--accent); background: rgba(0,255,136,0.04); box-shadow: 0 0 28px rgba(0,255,136,0.12); }
+    .skin-card.owned:not(.equipped) { border-color: #a78bfa; background: rgba(167,139,250,0.04); }
+    .skin-badge {
+      position: absolute; top: 12px; right: 12px;
+      font-size: 0.62rem; font-family: var(--font-mono); font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; letter-spacing: 0.05em;
+    }
+    .badge-equipped { background: rgba(0,255,136,0.15); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
+    .badge-owned    { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+    .badge-locked   { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+    .skin-preview {
+      width: 100px; height: 118px; margin: 0 auto 10px;
+      position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .skin-preview-svg { width: 100px; height: 118px; transition: filter 0.4s ease; }
+    .skin-glow {
+      position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+      width: 64px; height: 8px; border-radius: 50%; filter: blur(6px); opacity: 0.55;
+    }
+    .skin-name  { font-size: 0.98rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .skin-emoji { font-size: 1.1rem; margin-bottom: 5px; }
+    .skin-price { font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent); font-weight: 700; margin-bottom: 13px; }
+    .skin-price.free { color: var(--text3); }
+    .skin-btn {
+      width: 100%; padding: 10px 0; border-radius: 10px;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none;
+      transition: all 0.18s; font-family: var(--font-main);
+    }
+    .btn-buy { background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; }
+    .btn-buy:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+    .btn-buy:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+    .btn-equip { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+    .btn-equip:hover { background: rgba(167,139,250,0.28); transform: translateY(-1px); }
+    .btn-equipped { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); cursor: default; }
+    .shop-toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 30px; padding: 12px 24px;
+      font-size: 0.9rem; font-weight: 600; color: var(--text);
+      opacity: 0; transition: all 0.3s ease; z-index: 200;
+      white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .shop-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .shop-toast.success { border-color: rgba(0,255,136,0.4); color: var(--accent); }
+    .shop-toast.error   { border-color: rgba(239,68,68,0.4); color: #ef4444; }
+    @media (max-width: 480px) { .skins-grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+
+<body>
+<header>
+  <a href="/"><img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Логотип"></a>
+  {{ menu | safe }}
+</header>
+{{ menu_js | safe }}
+<div class="shop-toast" id="shopToast"></div>
+
+<div class="shop-wrap">
+  <div class="shop-header">
+    <h1>🛍️ Магазин Файрика</h1>
+    <p>Покупай скины за XP · меняй внешность своего дракончика</p>
+  </div>
+  <div style="text-align:center;">
+    <div class="xp-balance">⭐ <span id="xpBalance">{{ current_user.xp or 0 }}</span> XP</div>
+  </div>
+
+  <div class="skins-grid">
+    {% for skin in skins %}
+    {% set is_owned    = skin.id in owned %}
+    {% set is_equipped = skin.id == equipped %}
+    <div class="skin-card {% if is_equipped %}equipped{% elif is_owned %}owned{% endif %}" id="card-{{ skin.id }}">
+
+      {% if is_equipped %}
+        <div class="skin-badge badge-equipped">✓ Надет</div>
+      {% elif is_owned %}
+        <div class="skin-badge badge-owned">Куплен</div>
+      {% else %}
+        <div class="skin-badge badge-locked">🔒</div>
+      {% endif %}
+
+      <!-- Настоящий SVG Файрика с фильтром скина -->
+      <div class="skin-preview">
+        <div class="skin-glow" id="glow-{{ skin.id }}"></div>
+        <svg class="skin-preview-svg" id="prev-{{ skin.id }}"
+             viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg"
+             style="filter: {{ skin.css + ' ' if skin.css else '' }}drop-shadow(0 6px 16px rgba(78,205,196,.4));"
+             data-skin-css="{{ skin.css }}">
+          <defs>
+            <radialGradient id="b{{ loop.index }}" cx="38%" cy="30%" r="62%">
+              <stop offset="0%" stop-color="#b2ede8"/><stop offset="35%" stop-color="#5ec4bb"/>
+              <stop offset="70%" stop-color="#2a9d8f"/><stop offset="100%" stop-color="#1a6b60"/>
+            </radialGradient>
+            <radialGradient id="bl{{ loop.index }}" cx="50%" cy="25%" r="55%">
+              <stop offset="0%" stop-color="#f2fffe"/><stop offset="50%" stop-color="#caf2ee"/>
+              <stop offset="100%" stop-color="#8dd8d0"/>
+            </radialGradient>
+            <radialGradient id="h{{ loop.index }}" cx="36%" cy="28%" r="60%">
+              <stop offset="0%" stop-color="#b8ece7"/><stop offset="40%" stop-color="#4db8ae"/>
+              <stop offset="100%" stop-color="#1f7a70"/>
+            </radialGradient>
+            <radialGradient id="e{{ loop.index }}" cx="30%" cy="25%" r="58%">
+              <stop offset="0%" stop-color="#80d4f8"/><stop offset="30%" stop-color="#2196f3"/>
+              <stop offset="65%" stop-color="#0d3b8a"/><stop offset="100%" stop-color="#050f2a"/>
+            </radialGradient>
+            <linearGradient id="w{{ loop.index }}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5eccc3" stop-opacity=".75"/>
+              <stop offset="100%" stop-color="#145a52" stop-opacity=".45"/>
+            </linearGradient>
+            <linearGradient id="hr{{ loop.index }}" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#1a9d8f"/><stop offset="100%" stop-color="#e8f8f6"/>
+            </linearGradient>
+            <filter id="sf{{ loop.index }}"><feGaussianBlur stdDeviation="1.5"/></filter>
+          </defs>
+          <ellipse cx="120" cy="264" rx="50" ry="6" fill="rgba(0,0,0,.2)"/>
+          <!-- Хвост -->
+          <path d="M90 193 Q60 207 44 226 Q36 238 46 242 Q57 237 65 226 Q78 214 92 200Z" fill="url(#b{{ loop.index }})"/>
+          <!-- Левое крыло -->
+          <path d="M65 123 L16 76 L20 115 Z" fill="url(#w{{ loop.index }})"/>
+          <path d="M65 123 L20 115 L12 148 Z" fill="url(#w{{ loop.index }})" opacity=".9"/>
+          <path d="M65 123 L12 148 L26 166 Z" fill="url(#w{{ loop.index }})" opacity=".8"/>
+          <line x1="65" y1="123" x2="16" y2="76"  stroke="#1a6b60" stroke-width="3"   stroke-linecap="round"/>
+          <line x1="65" y1="123" x2="20" y2="115" stroke="#1a6b60" stroke-width="2.4" stroke-linecap="round"/>
+          <line x1="65" y1="123" x2="12" y2="148" stroke="#1a6b60" stroke-width="2.4" stroke-linecap="round"/>
+          <!-- Правое крыло -->
+          <path d="M175 123 L224 76 L220 115 Z" fill="url(#w{{ loop.index }})"/>
+          <path d="M175 123 L220 115 L228 148 Z" fill="url(#w{{ loop.index }})" opacity=".9"/>
+          <path d="M175 123 L228 148 L214 166 Z" fill="url(#w{{ loop.index }})" opacity=".8"/>
+          <line x1="175" y1="123" x2="224" y2="76"  stroke="#1a6b60" stroke-width="3"   stroke-linecap="round"/>
+          <line x1="175" y1="123" x2="220" y2="115" stroke="#1a6b60" stroke-width="2.4" stroke-linecap="round"/>
+          <line x1="175" y1="123" x2="228" y2="148" stroke="#1a6b60" stroke-width="2.4" stroke-linecap="round"/>
+          <!-- Тело -->
+          <ellipse cx="120" cy="178" rx="50" ry="62" fill="url(#b{{ loop.index }})"/>
+          <ellipse cx="120" cy="183" rx="30" ry="46" fill="url(#bl{{ loop.index }})" opacity=".9"/>
+          <!-- Шея + шипы -->
+          <path d="M94 136 Q120 120 146 136 Q141 146 120 148 Q99 146 94 136Z" fill="url(#b{{ loop.index }})"/>
+          <path d="M110 125 Q108 113 113 107 Q116 116 114 125Z" fill="#4ecdc4"/>
+          <path d="M120 123 Q119 111 124 105 Q127 114 125 123Z" fill="#4ecdc4"/>
+          <path d="M130 125 Q130 113 135 108 Q137 117 135 125Z" fill="#4ecdc4"/>
+          <!-- Голова -->
+          <path d="M120 52 C138 54 158 62 164 78 C170 94 162 108 154 116 C146 122 134 126 120 128 C106 126 94 122 86 116 C78 108 70 94 76 78 C82 62 102 54 120 52Z" fill="url(#h{{ loop.index }})"/>
+          <!-- Рога -->
+          <path d="M90 60 Q84 36 90 22 Q95 32 96 48 Q96 56 90 60Z" fill="url(#hr{{ loop.index }})"/>
+          <path d="M150 60 Q156 36 150 22 Q145 32 144 48 Q144 56 150 60Z" fill="url(#hr{{ loop.index }})"/>
+          <!-- Гребень -->
+          <path d="M104 50 Q103 41 106 37 Q108 43 106 50Z" fill="#4ecdc4" opacity=".85"/>
+          <path d="M120 45 Q120 36 124 31 Q126 38 124 45Z" fill="#5eccc3"/>
+          <path d="M136 50 Q138 41 141 38 Q142 44 140 50Z" fill="#3db5aa" opacity=".8"/>
+          <!-- Морда -->
+          <path d="M120 108 C108 108 96 112 92 120 C89 127 94 134 102 138 C108 141 114 142 120 142 C126 142 132 141 138 138 C146 134 151 127 148 120 C144 112 132 108 120 108Z" fill="url(#h{{ loop.index }})"/>
+          <ellipse cx="111" cy="122" rx="4.5" ry="3.5" fill="rgba(20,90,84,.75)"/>
+          <ellipse cx="129" cy="122" rx="4.5" ry="3.5" fill="rgba(20,90,84,.75)"/>
+          <!-- Глаза -->
+          <ellipse cx="94"  cy="95" rx="17" ry="18" fill="white"/>
+          <ellipse cx="146" cy="95" rx="17" ry="18" fill="white"/>
+          <circle  cx="94"  cy="96" r="13" fill="url(#e{{ loop.index }})"/>
+          <circle  cx="146" cy="96" r="13" fill="url(#e{{ loop.index }})"/>
+          <circle  cx="94"  cy="97" r="7.5" fill="#04080f"/>
+          <circle  cx="146" cy="97" r="7.5" fill="#04080f"/>
+          <circle  cx="98"  cy="89" r="5.5" fill="white" opacity=".88"/>
+          <circle  cx="150" cy="89" r="5.5" fill="white" opacity=".88"/>
+          <circle  cx="90"  cy="92" r="2.5" fill="white" opacity=".5"/>
+          <circle  cx="142" cy="92" r="2.5" fill="white" opacity=".5"/>
+          <path d="M78 90 Q94 82 110 90"  stroke="#1a6b60" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M130 90 Q146 82 162 90" stroke="#1a6b60" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <ellipse cx="76"  cy="106" rx="12" ry="8" fill="rgba(255,150,150,.28)" filter="url(#sf{{ loop.index }})"/>
+          <ellipse cx="164" cy="106" rx="12" ry="8" fill="rgba(255,150,150,.28)" filter="url(#sf{{ loop.index }})"/>
+          <!-- Рот + зубки -->
+          <path d="M105 136 Q120 144 135 136" stroke="#1a6b60" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+          <path d="M110 138 L111 144 L114 138" fill="white" opacity=".95"/>
+          <path d="M117 140 L118 147 L121 140" fill="white" opacity=".95"/>
+          <path d="M123 140 L124 147 L127 140" fill="white" opacity=".95"/>
+          <!-- Лапки -->
+          <ellipse cx="68"  cy="194" rx="14" ry="19" fill="url(#b{{ loop.index }})" transform="rotate(-18,68,194)"/>
+          <ellipse cx="172" cy="194" rx="14" ry="19" fill="url(#b{{ loop.index }})" transform="rotate(18,172,194)"/>
+          <ellipse cx="90"  cy="244" rx="22" ry="13" fill="url(#b{{ loop.index }})"/>
+          <ellipse cx="150" cy="244" rx="22" ry="13" fill="url(#b{{ loop.index }})"/>
+        </svg>
+      </div>
+
+      <div class="skin-emoji">{{ skin.emoji }}</div>
+      <div class="skin-name">{{ skin.name }}</div>
+      <div class="skin-price {% if skin.price == 0 %}free{% endif %}">
+        {% if skin.price == 0 %}Бесплатно{% else %}{{ skin.price }} XP{% endif %}
+      </div>
+
+      {% if is_equipped %}
+        <button class="skin-btn btn-equipped">✓ Надет сейчас</button>
+      {% elif is_owned %}
+        <button class="skin-btn btn-equip" onclick="equipSkin('{{ skin.id }}', this)">Надеть</button>
+      {% else %}
+        <button class="skin-btn btn-buy" id="buy-{{ skin.id }}"
+                {% if (current_user.xp or 0) < skin.price %}disabled title="Недостаточно XP"{% endif %}
+                onclick="buySkin('{{ skin.id }}', {{ skin.price }}, this)">
+          Купить за {{ skin.price }} XP
+        </button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+<script src="{{ url_for('static', filename='fairik.js') }}"></script>
+
+<script>
+  let currentXP = {{ current_user.xp or 0 }};
+
+  // Цвета свечения под каждым скином
+  const glowColors = {
+    'default':'#4ecdc4','fire':'#ff6b00','ice':'#60cfff',
+    'galaxy':'#a78bfa','gold':'#ffd700','shadow':'#888',
+    'nature':'#6bcb77','neon':'#bf5af2',
+  };
+  document.querySelectorAll('.skin-glow').forEach(g => {
+    const id = g.id.replace('glow-', '');
+    g.style.background = glowColors[id] || '#4ecdc4';
+  });
+
+  function showToast(msg, type='success') {
+    const t = document.getElementById('shopToast');
+    t.textContent = msg; t.className = `shop-toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  async function buySkin(skinId, price, btn) {
+    if (currentXP < price) { showToast('Недостаточно XP', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Покупаю...';
+    try {
+      const res  = await fetch('/api/shop/buy', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ skin_id: skinId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Ошибка', 'error');
+        btn.disabled = false; btn.textContent = `Купить за ${price} XP`; return;
+      }
+      currentXP = data.xp_left;
+      document.getElementById('xpBalance').textContent = currentXP;
+      const card = document.getElementById(`card-${skinId}`);
+      card.classList.add('owned');
+      card.querySelector('.skin-badge').className   = 'skin-badge badge-owned';
+      card.querySelector('.skin-badge').textContent = 'Куплен';
+      btn.className = 'skin-btn btn-equip'; btn.textContent = 'Надеть';
+      btn.disabled  = false; btn.onclick = () => equipSkin(skinId, btn);
+      showToast('🎉 Куплен! Нажми «Надеть»', 'success');
+      if (window.Fairik) Fairik.happy?.();
+    } catch(e) {
+      showToast('Ошибка соединения', 'error');
+      btn.disabled = false; btn.textContent = `Купить за ${price} XP`;
+    }
+  }
+
+  async function equipSkin(skinId, btn) {
+    try {
+      const res  = await fetch('/api/shop/equip', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ skin_id: skinId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Ошибка', 'error'); return; }
+
+      // Сбрасываем все карточки
+      document.querySelectorAll('.skin-card').forEach(c => {
+        c.classList.remove('equipped');
+        const badge = c.querySelector('.skin-badge');
+        const b     = c.querySelector('.skin-btn');
+        if (badge && badge.classList.contains('badge-equipped')) {
+          badge.className = 'skin-badge badge-owned'; badge.textContent = 'Куплен';
+          if (b) {
+            b.className = 'skin-btn btn-equip'; b.textContent = 'Надеть'; b.disabled = false;
+            const cId = c.id.replace('card-', ''); b.onclick = () => equipSkin(cId, b);
+          }
+        }
+      });
+
+      // Помечаем выбранную
+      const card = document.getElementById(`card-${skinId}`);
+      card.classList.add('equipped');
+      card.querySelector('.skin-badge').className   = 'skin-badge badge-equipped';
+      card.querySelector('.skin-badge').textContent = '✓ Надет';
+      btn.className = 'skin-btn btn-equipped'; btn.textContent = '✓ Надет сейчас'; btn.onclick = null;
+
+      // Применяем к виджету Файрика
+      const prevSvg = document.getElementById(`prev-${skinId}`);
+      if (prevSvg && window.FairikSkin) {
+        const skinCss = prevSvg.getAttribute('data-skin-css') || '';
+        window.FairikSkin.apply(skinCss);
+      }
+
+      showToast('✅ Скин надет на Файрика!', 'success');
+      if (window.Fairik) Fairik.happy?.();
+    } catch(e) { showToast('Ошибка соединения', 'error'); }
+  }
+</script>
+</body>
+</html>
