@@ -734,7 +734,7 @@ def update_nickname():
 
 
 
-# ====================== TTS ПРОКСИ ======================
+# ====================== TTS ПРОКСИ ====================
 @app.route('/api/tts', methods=['POST'])
 @login_required
 def tts_proxy():

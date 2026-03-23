@@ -27,11 +27,11 @@ class User(db.Model, UserMixin):
     interests      = db.Column(db.String(200), default='', nullable=True)  # "games,sport,music"
     class_number   = db.Column(db.Integer, default=8, nullable=True)
 
-    # Онбординг
+    # Онбордин
     is_onboarded   = db.Column(db.Boolean,   default=False, nullable=False)
     learning_style = db.Column(db.String(30), default='', nullable=True)  # read/practice/examples/mixed
     goal           = db.Column(db.String(30), default='', nullable=True)  # exams/grades/homework/curious
-    hard_subjects  = db.Column(db.String(200), default='', nullable=True) # "Математика,Физика"
+    hard_subjects  = db.Column(db.String(200), default='', nullable=True) # "Математика"
     referral       = db.Column(db.String(30), default='', nullable=True)  # friend/social/teacher/search
 
     # Магазин и кастомизация (скины)
@@ -95,7 +95,7 @@ class WeakTopic(db.Model):
     # Интервальное повторение (алгоритм SM-2)
     easiness     = db.Column(db.Float, default=2.5)  # E-фактор
     interval     = db.Column(db.Integer, default=1)  # Дней до следующего повторения
-    repetitions  = db.Column(db.Integer, default=0)  # Успешных повторений подряд
+    repetitions  = db.Column(db.Integer, default=0)  # Успешныe повторения подряд
 
     first_seen   = db.Column(db.DateTime, default=datetime.utcnow)
     last_seen    = db.Column(db.DateTime, default=datetime.utcnow)
