@@ -21,6 +21,8 @@ _SUBJECT_PO = {
     "Искусство": "искусству",
     "Музыка": "музыке",
     "ОБЖ": "ОБЖ",
+    "Астрономия": "астрономии",
+    "Экология": "экологии",
 }
 
 
@@ -34,5 +36,17 @@ def subject_po(name: str) -> str:
         return "школьному предмету"
     if key in _SUBJECT_PO:
         return _SUBJECT_PO[key]
+    # Пробуем совпадение без учёта регистра первой буквы
+    for canon, form in _SUBJECT_PO.items():
+        if canon.lower() == key.lower():
+            return form
     return f"предмету «{key}»"
+
+
+def decline_subject(subject: str) -> str:
+    """
+    Склонение названия предмета для конструкций «по биологии», «по русскому языку».
+    Алиас subject_po — используй decline_subject в промптах и шаблонах для ясности.
+    """
+    return subject_po(subject)
 

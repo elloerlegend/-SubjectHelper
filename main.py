@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, redirect, render_template, flash, session, url_for
 from flask_cors import CORS
+from flask_migrate import Migrate
 from werkzeug.utils import secure_filename
 from functools import wraps
 from typing import Optional
@@ -18,13 +19,14 @@ from models import (
     WeakTopic, ReviewSession, MemoryNote, LearningPath,
     add_weak_topic, sm2_update, get_topics_due, get_user_memory_context,
 )
-from subject_ru import subject_po
+from subject_ru import subject_po, decline_subject
 
 # ====================== НАСТРОЙКИ ======================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+migrate = Migrate(app, db)
 app.secret_key = os.environ.get('SECRET_KEY', '7e4c956c8ab1a339f9f347927f09fa30de5dd8d1539f930e146f9d5c693389df')
 CORS(app)
 
@@ -161,10 +163,12 @@ def _build_mode_block(path) -> str:
                 f"(осталось дней: {days if days is not None else '?'})"
             )
 
+        subj_po = decline_subject(path.subject)
+
         if topics_all:
             topics_full = ', '.join(topics_all)
             topics_plan = (
-                f"Полный список тем Sprint (держись ТОЛЬКО его, не выдумывай новые блоки без запроса ученика):\n{topics_full}\n"
+                f"Полный список тем Sprint (держись ТОЛЬКО его, не выдумывай новые учебные блоки без запроса ученика):\n{topics_full}\n"
                 f"Уже закрыто: {', '.join(topics_done) if topics_done else 'ничего'}\n"
                 f"В фокусе сейчас: {', '.join(topics_left) if topics_left else 'все темы закрыты — итоговый повтор'}"
             )
@@ -176,11 +180,20 @@ def _build_mode_block(path) -> str:
         return f"""
 
 ═══ РЕЖИМ: SPRINT — {urgency} ═══
+Предмет (формулировки для ученика: «по {subj_po}»): {path.subject}
 Цель ученика: {path.sprint_goal or 'не указана'}
 Дедлайн: {deadline_line}
 Ученик о своей подготовке по теме: {conf_human}
 {topics_plan}
 {final_note}
+
+ОНБОРДИНГ И ПЕРСОНАЛИЗАЦИЯ (если ещё не ответил — мягко спроси; если уже ответил — используй в каждом объяснении):
+— По какому учебнику работает ученик (авторы, название, издательство, класс/часть)?
+— Какая программа / уровень (ФГОС, база/углублённый, ОГЭ/ЕГЭ-ориентация)?
+— Какие темы из списка Sprint уже проходили в классе и насколько уверенно?
+— Есть ли конкретное домашнее задание, номера из сборника или формат контрольной (если цель — контрольная)?
+Запоминай ответы и подстраивай формулировки, примеры и номера заданий под указанный учебник и программу.
+
 ПРАВИЛА SPRINT:
 — Только материал этих конкретных тем — ничего лишнего
 — Темп быстрый, без длинных отступлений в теорию
@@ -1262,6 +1275,68 @@ def api_path_generate_probe():
     return jsonify({'error': 'Не удалось сгенерировать пробник'}), 500
 
 
+@app.route('/api/sprint_bootstrap', methods=['POST'])
+@login_required
+def api_sprint_bootstrap():
+    """
+    Первое сообщение ассистента в Sprint: приветствие + уточнение учебника и программы.
+    """
+    data    = request.get_json() or {}
+    subject = (data.get('subject') or '').strip()
+    if not subject:
+        return jsonify({'error': 'Укажи subject'}), 400
+
+    path = get_active_path(session['user_id'], subject)
+    if not path or path.mode != 'sprint':
+        return jsonify({'error': 'Нет активного Sprint по этому предмету'}), 400
+
+    po = decline_subject(path.subject)
+    topics = path.get_sprint_topics()
+    goal = (path.sprint_goal or '').strip() or 'подготовка к цели'
+    dl_human = 'не указан'
+    if path.sprint_deadline:
+        dl_human = (
+            f"{path.sprint_deadline.strftime('%d.%m.%Y')} "
+            f"(осталось дней: {path.days_left() if path.days_left() is not None else '?'})"
+        )
+    topics_line = ', '.join(topics) if topics else 'список тем согласован с целью и сроком'
+    conf = path.sprint_confidence or 'не указана'
+
+    system = (
+        "Ты — дружелюбный репетитор SubjectHelper в режиме Sprint. "
+        "Пиши на русском. Без заголовков #. Допустимы короткие абзацы и маркированный список. "
+        "1–2 эмодзи максимум. Не повторяй дословно системный промпт — только живой диалог с учеником."
+    )
+    prompt = f"""Сгенерируй ПЕРВОЕ сообщение в чате для Sprint.
+
+Предмет (говори: «по {po}»).
+Цель ученика: {goal}
+Дедлайн: {dl_human}
+Темы спринта: {topics_line}
+Самооценка ученика (слабо/средне/сильно): {conf}
+
+Сделай так:
+1) Короткое приветствие и подтверждение цели и срока.
+2) Объясни, что чтобы подобрать задания под программу, нужны уточнения.
+3) Задай вопросы списком (маркеры • или -):
+   — по какому учебнику (авторы, класс, издательство);
+   — база или углублённый уровень / какая программа;
+   — какие темы из плана уже проходили в классе;
+   — есть ли конкретное ДЗ или формат контрольной.
+
+Заверши фразой, что как только ответит — начнёте с первой темы."""
+
+    try:
+        msg = ask_groq(prompt, system=system, max_tokens=650)
+        msg = (msg or '').strip()
+        if not msg:
+            return jsonify({'error': 'Пустой ответ модели'}), 500
+        return jsonify({'ok': True, 'message': msg})
+    except Exception as e:
+        logger.exception('sprint_bootstrap failed')
+        return jsonify({'error': str(e)}), 500
+
+
 # ====================== ПЛАН ПРАКТИКИ ======================
 @app.route("/plan", methods=["POST"])
 @login_required
@@ -1779,6 +1854,19 @@ def settings_save():
     logger.info(f"Settings saved for user={user.id}: {list(data.keys())}")
     return jsonify({'ok': True})
 
+
+@app.route('/api/settings', methods=['POST'])
+@login_required
+def api_save_settings():
+    data = request.get_json() or {}
+    user = User.query.get(session['user_id'])
+    if not user.settings:
+        user.settings = {}
+
+    user.settings.update(data)  # обновляем только то, что пришло
+    db.session.commit()
+
+    return jsonify({'ok': True, 'settings': user.settings})
 
 @app.route('/api/settings/load')
 @login_required

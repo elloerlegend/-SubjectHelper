@@ -169,29 +169,34 @@
     } catch (e) { return iso; }
   }
 
+  function fallbackSprintWelcome(p) {
+    const po = esc(SUBJECT_PO);
+    const goal = esc((p.sprint_goal || '').trim() || 'твоей цели');
+    const dl = p.sprint_deadline
+      ? ` Дедлайн: <b>${esc(fmtPathDeadline(p.sprint_deadline))}</b>.`
+      : '';
+    const topics = p.sprint_topics || [];
+    const tline = topics.length
+      ? `<br>Темы спринта: <b>${topics.slice(0, 10).map(x => esc(x)).join(', ')}</b>${topics.length > 10 ? '…' : ''}`
+      : '';
+    return `Отлично! Мы в <b>Sprint</b> по <b>${po}</b>. Цель: <b>${goal}</b>.${dl}${tline}<br><br>`
+      + `Чтобы подбирать задания под твой учебник и программу, ответь, пожалуйста:<br>`
+      + `• По какому учебнику ты занимаешься? (авторы, класс, издательство)<br>`
+      + `• База или углублённый уровень? Какая программа (ФГОС и т.д.)?<br>`
+      + `• Какие темы из плана уже проходили в классе?<br>`
+      + `• Есть ли конкретное ДЗ или формат ближайшей контрольной?<br><br>`
+      + `Как ответишь — начнём с первой темы. Можно приложить <b>фото</b> задания 📎`;
+  }
+
   function buildWelcomeHtml(activePath) {
-    const po = SUBJECT_PO;
-    const subj = esc(SUBJECT);
-    if (activePath && activePath.mode === 'sprint') {
-      const goal = esc(activePath.sprint_goal || 'твоей цели');
-      const topics = activePath.sprint_topics || [];
-      const topicsStr = topics.length
-        ? topics.slice(0, 8).map(t => esc(t)).join(', ') + (topics.length > 8 ? '…' : '')
-        : 'список тем подстроен под цель и срок';
-      const dl = activePath.sprint_deadline
-        ? ` Срок: <b>${esc(fmtPathDeadline(activePath.sprint_deadline))}</b>.`
-        : '';
-      return `⚡ Привет! Это <b>Sprint</b> по <b>${subj}</b> — цель: <b>${goal}</b>.${dl}<br>`
-        + `Темы цикла: ${topicsStr}<br>`
-        + `Напиши, с какой темы начнём, или пришли <b>фото задания</b> 📎`;
-    }
+    const po = esc(SUBJECT_PO);
     if (activePath && activePath.mode === 'journey') {
       const goal = esc(activePath.journey_goal || 'твоей цели');
       const unit = activePath.current_unit_data && activePath.current_unit_data.title
         ? esc(activePath.current_unit_data.title)
         : '';
       const unitLine = unit ? ` Сейчас юнит: <b>${unit}</b>.` : '';
-      return `🗺 Привет! Ты в <b>Journey</b> по <b>${subj}</b> — долгая цель: <b>${goal}</b>.${unitLine}<br>`
+      return `🗺 Привет! Ты в <b>Journey</b> по <b>${po}</b> — долгая цель: <b>${goal}</b>.${unitLine}<br>`
         + `Пиши вопросы по материалу или проси план на сессию 📚`;
     }
     return {
@@ -215,10 +220,10 @@
     }
     const goalS = (activePath.sprint_goal || activePath.journey_goal || '').trim() || 'цель';
     if (activePath.mode === 'sprint') {
-      banner.textContent = `⚡ Sprint  ·  ${SUBJECT}  ·  ${goalS}`;
+      banner.textContent = `⚡ Sprint · ${SUBJECT}`;
       banner.style.color = '#ff6b35';
-      info.innerText = `Sprint · ${SUBJECT} · ${goalS}`;
-      textarea.placeholder = 'Вопрос по теме спринта или фото задания 📎';
+      info.innerText = `Sprint · ${SUBJECT} — ${goalS}`;
+      textarea.placeholder = 'Ответь про учебник / темы или задай вопрос по спринту 📎';
     } else if (activePath.mode === 'journey') {
       banner.textContent = `🗺 Journey  ·  ${SUBJECT}  ·  ${goalS}`;
       banner.style.color = 'var(--blue)';
@@ -241,41 +246,70 @@
       const left    = path.sprint_topics_left ?? [];
       const pct     = path.progress_pct ?? 0;
       const isUrgent = (typeof days === 'number') && days <= 1;
-      const goalLine = esc((path.sprint_goal || '').trim() || 'цель');
-      const deadlineStr = path.sprint_deadline
-        ? esc(fmtPathDeadline(path.sprint_deadline))
-        : '';
+      const goalRaw = (path.sprint_goal || '').trim();
+      const goalLine = goalRaw ? esc(goalRaw) : '<span class="sprint-b-goal-miss">Добавь цель в настройках пути</span>';
+      const deadlineIso = path.sprint_deadline;
+      let deadlineLong = '—';
+      if (deadlineIso) {
+        try {
+          deadlineLong = esc(new Date(deadlineIso.slice(0, 10) + 'T12:00:00').toLocaleDateString('ru-RU', {
+            day: 'numeric', month: 'long',
+          }));
+        } catch (e) { deadlineLong = esc(String(deadlineIso)); }
+      }
+      const nTopics = total.length;
+      const doneN = done.length;
+      const leftLbl = (typeof days === 'number')
+        ? (days === 0 ? 'сегодня' : days === 1 ? 'завтра' : `${days} дн.`)
+        : esc(String(days));
+
+      const topicsHtml = nTopics
+        ? total.map(t =>
+            `<span class="pb-topic ${done.includes(t) ? 'done' : left[0] === t ? 'active' : ''}"
+                   onclick="markTopicDone('${t.replace(/'/g, "\\'")}')">
+              ${done.includes(t) ? '✅ ' : ''}${esc(t)}
+            </span>`
+          ).join('')
+        : '<span class="pb-topic sprint-topic-placeholder">Темы появятся из плана Sprint</span>';
 
       banner.innerHTML = `
-        <div class="path-banner sprint-banner" id="sprintBanner">
-          <div class="pb-left">
-            <div class="pb-headline">
-              <span class="pb-badge sprint-badge">⚡ SPRINT</span>
-              <span class="pb-sep">·</span>
-              <span class="pb-subject">${esc(SUBJECT)}</span>
-              <span class="pb-sep">·</span>
-              <span class="pb-goal-line">${goalLine}</span>
+        <div class="path-banner sprint-banner sprint-banner-v2" id="sprintBanner">
+          <div class="sprint-b-top">
+            <div class="sprint-b-brand">
+              <span class="sprint-b-lightning" aria-hidden="true">⚡</span>
+              <div>
+                <div class="sprint-b-title-row">
+                  <span class="sprint-b-mode-label">Sprint</span>
+                  <span class="sprint-b-dot">·</span>
+                  <span class="sprint-b-subject-title">${esc(SUBJECT)}</span>
+                </div>
+                <p class="sprint-b-goal-text">${goalLine}</p>
+              </div>
             </div>
-            ${deadlineStr ? `<div class="pb-meta-row">до ${deadlineStr} · ${esc(String(days))} дн.</div>` : ''}
+            <button type="button" class="pb-stop-btn sprint-b-x" onclick="stopPath()" title="Завершить Sprint">✕</button>
           </div>
-          <div class="pb-center">
-            <div class="pb-track"><div class="pb-fill sprint-fill" style="width:${pct}%"></div></div>
-            <div class="pb-topics">
-              ${total.map(t =>
-                `<span class="pb-topic ${done.includes(t) ? 'done' : left[0] === t ? 'active' : ''}"
-                       onclick="markTopicDone('${t.replace(/'/g,"\\'")}')">
-                  ${done.includes(t) ? '✅ ' : ''}${esc(t)}
-                </span>`
-              ).join('')}
+          <div class="sprint-b-metrics">
+            <div class="sprint-b-metric">
+              <span class="sprint-b-metric-val">${deadlineLong}</span>
+              <span class="sprint-b-metric-lbl">дедлайн</span>
+            </div>
+            <div class="sprint-b-metric ${isUrgent ? 'sprint-b-metric-urgent' : ''}">
+              <span class="sprint-b-metric-val">${leftLbl}</span>
+              <span class="sprint-b-metric-lbl">осталось</span>
+            </div>
+            <div class="sprint-b-metric">
+              <span class="sprint-b-metric-val">${nTopics ? `${doneN}/${nTopics}` : '—'}</span>
+              <span class="sprint-b-metric-lbl">тем</span>
+            </div>
+            <div class="sprint-b-metric">
+              <span class="sprint-b-metric-val">${pct}%</span>
+              <span class="sprint-b-metric-lbl">прогресс</span>
             </div>
           </div>
-          <div class="pb-right">
-            <span class="pb-days ${isUrgent ? 'urgent' : ''}">
-              ${days === 0 ? '🔥 Сегодня!' : days === 1 ? '⏰ Завтра!' : `📅 ${days} дн.`}
-            </span>
-            <span class="pb-progress">${done.length}/${total.length} тем</span>
-            <button class="pb-stop-btn" onclick="stopPath()" title="Завершить Sprint">✕</button>
+          <div class="sprint-b-bar-wrap">
+            <div class="pb-track sprint-b-bar"><div class="pb-fill sprint-fill" style="width:${pct}%"></div></div>
           </div>
+          <div class="pb-topics sprint-b-chip-row">${topicsHtml}</div>
         </div>`;
 
       // Fairik реагирует на Sprint
@@ -699,7 +733,27 @@
     applyLearningPathChrome(pathData);
 
     if (!hist.length) {
-      addAiMsg(buildWelcomeHtml(pathData), null, false, false);
+      if (pathData && pathData.mode === 'sprint') {
+        try {
+          const br = await fetch('/api/sprint_bootstrap', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject: SUBJECT }),
+          });
+          const bd = await br.json();
+          if (bd.ok && bd.message) {
+            addAiMsg(bd.message, null, false, false);
+          } else {
+            addAiMsg(fallbackSprintWelcome(pathData), null, false, false);
+          }
+        } catch (e) {
+          console.warn('sprint_bootstrap', e);
+          addAiMsg(fallbackSprintWelcome(pathData), null, false, false);
+        }
+      } else {
+        addAiMsg(buildWelcomeHtml(pathData), null, false, false);
+      }
     }
 
     // 5. Напоминания о повторении
@@ -1311,6 +1365,96 @@
   .sprint-banner {
     background: rgba(255,107,53,0.07);
     border: 1px solid rgba(255,107,53,0.22);
+  }
+  .path-banner.sprint-banner-v2 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .sprint-b-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .sprint-b-brand {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    min-width: 0;
+    flex: 1;
+  }
+  .sprint-b-lightning {
+    font-size: 1.45rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .sprint-b-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 0.72rem;
+  }
+  .sprint-b-mode-label {
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ff6b35;
+  }
+  .sprint-b-dot { color: var(--text3); font-weight: 700; }
+  .sprint-b-subject-title {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+  .sprint-b-goal-text {
+    margin: 5px 0 0;
+    font-size: 0.8rem;
+    color: var(--text2);
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .sprint-b-goal-miss { color: var(--warning); font-style: italic; }
+  .sprint-b-x { flex-shrink: 0; }
+  .sprint-b-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sprint-b-metric {
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+    padding: 7px 6px;
+    text-align: center;
+    border: 1px solid rgba(255,107,53,0.12);
+  }
+  .sprint-b-metric-val {
+    display: block;
+    font-weight: 700;
+    font-size: 0.76rem;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .sprint-b-metric-lbl {
+    font-size: 0.58rem;
+    color: var(--text3);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sprint-b-metric-urgent .sprint-b-metric-val { color: var(--danger); }
+  .sprint-b-bar-wrap { margin-top: 2px; }
+  .sprint-b-bar { height: 6px; margin-bottom: 0; }
+  .sprint-b-chip-row { margin-top: 2px; }
+  .sprint-topic-placeholder {
+    opacity: 0.75;
+    cursor: default;
+    font-style: italic;
+  }
+  @media (max-width: 520px) {
+    .sprint-b-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   /* Journey — синий */
   .journey-banner {

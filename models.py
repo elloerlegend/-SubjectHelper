@@ -38,12 +38,26 @@ class User(db.Model, UserMixin):
     owned_skins   = db.Column(db.Text, default='default', nullable=True)
     equipped_skin = db.Column(db.String(50), default='default', nullable=True)
 
-    # Настройки интерфейса
+    # Настройки интерфейса (legacy-колонки; новый единый JSON — settings)
     theme        = db.Column(db.String(20), default='dark',  nullable=True)
     tts_enabled  = db.Column(db.Boolean,   default=False,   nullable=False)
     anim_enabled = db.Column(db.Boolean,   default=True,    nullable=False)
     enter_send   = db.Column(db.Boolean,   default=True,    nullable=False)
     daily_goal   = db.Column(db.Integer,   default=5,       nullable=False)
+
+    # Единое хранилище настроек UI (tts, анимации, Fairik, XP-тосты, тема и т.д.)
+    settings = db.Column(db.JSON, nullable=True)
+
+    def get_settings(self) -> dict:
+        """Возвращает словарь настроек; None и невалидные значения → {}."""
+        s = self.settings
+        if isinstance(s, dict):
+            return s
+        return {}
+
+    def set_settings(self, data: dict) -> None:
+        """Полная замена или слияние выполняется в роуте; здесь — присвоение."""
+        self.settings = data if isinstance(data, dict) else {}
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -197,6 +211,19 @@ class LearningPath(db.Model):
     probe_strong     = db.Column(db.Text, default='[]')   # JSON: темы которые знает хорошо
     probe_weak       = db.Column(db.Text, default='[]')   # JSON: темы-пробелы
 
+    # Онбординг и персонализация (JSON; гибкие структуры под разные клиенты)
+    # textbook: {"author": "...", "title": "..."} или строка
+    textbook = db.Column(db.JSON, nullable=True)
+    # program: {"name": "ФГОС", "track": "база"} или строка
+    program = db.Column(db.JSON, nullable=True)
+    # class_parallel: число 1–11 или {"parallel": 9}
+    class_parallel = db.Column(db.JSON, nullable=True)
+    # preferred_minutes_per_day: число минут
+    preferred_minutes_per_day = db.Column(db.JSON, nullable=True)
+
+    # Заготовка под напоминания по дедлайну, OCR учебника и др. (без бизнес-логики на этом этапе)
+    path_metadata = db.Column(db.JSON, nullable=True)
+
     user = db.relationship('User', backref=db.backref('learning_paths', lazy=True))
 
     # ── Хелперы ───────────────────────────────────────
@@ -235,6 +262,50 @@ class LearningPath(db.Model):
         roadmap = self.get_roadmap()
         return next((u for u in roadmap if u.get('unit') == self.current_unit), {})
 
+    def get_path_metadata(self) -> dict:
+        m = self.path_metadata
+        return m if isinstance(m, dict) else {}
+
+    def textbook_display(self) -> str:
+        """Строка для промпта: автор и название учебника."""
+        t = self.textbook
+        if isinstance(t, dict):
+            a = (t.get('author') or '').strip()
+            ti = (t.get('title') or '').strip()
+            if a and ti:
+                return f"{a} — {ti}"
+            return a or ti
+        if isinstance(t, str) and t.strip():
+            return t.strip()
+        return ''
+
+    def program_display(self) -> str:
+        p = self.program
+        if isinstance(p, dict):
+            parts = [p.get('name'), p.get('track')]
+            return ', '.join(x for x in parts if x)
+        if isinstance(p, str) and p.strip():
+            return p.strip()
+        return ''
+
+    def class_parallel_display(self):
+        """Число параллели или None."""
+        c = self.class_parallel
+        if isinstance(c, dict):
+            return c.get('parallel', c.get('grade'))
+        if isinstance(c, (int, float)):
+            return int(c)
+        return None
+
+    def preferred_minutes_day(self):
+        m = self.preferred_minutes_per_day
+        if isinstance(m, dict):
+            v = m.get('minutes', m.get('value'))
+            return int(v) if v is not None else None
+        if isinstance(m, (int, float)):
+            return int(m)
+        return None
+
     def days_left(self):
         if not self.sprint_deadline:
             return None
@@ -260,6 +331,17 @@ class LearningPath(db.Model):
             'mode':      self.mode,
             'is_active': self.is_active,
         }
+        d.update({
+            'textbook':                   self.textbook,
+            'program':                    self.program,
+            'class_parallel':             self.class_parallel,
+            'preferred_minutes_per_day': self.preferred_minutes_per_day,
+            'path_metadata':              self.get_path_metadata(),
+            'textbook_display':           self.textbook_display(),
+            'program_display':            self.program_display(),
+            'class_parallel_display':     self.class_parallel_display(),
+            'preferred_minutes_day':      self.preferred_minutes_day(),
+        })
         if self.mode == 'sprint':
             topics     = self.get_sprint_topics()
             done       = self.get_sprint_done()
