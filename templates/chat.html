@@ -16,11 +16,22 @@
 
   <main>
     <div class="mode-banner" id="modeBanner"></div>
+
+    <!-- ══ БАННЕР РЕЖИМА ОБУЧЕНИЯ (Sprint / Journey) ══ -->
+    <div id="path-banner"></div>
+
     <div class="text-center" style="padding-top:10px;">
       <div class="info-bar"><p id="selected-info"></p></div>
     </div>
 
     <div id="xp-toast" class="xp-toast" style="display:none;"></div>
+
+    <!-- Полоска ежедневной цели -->
+    <div id="daily-goal-bar" class="daily-goal-bar" style="display:none;">
+      <span id="dg-label">0 / 5 сегодня</span>
+      <div class="dg-track"><div class="dg-fill" id="dg-fill" style="width:0%"></div></div>
+      <span id="dg-streak">🔥 0 дней</span>
+    </div>
 
     <section class="main">
 
@@ -94,16 +105,24 @@
 
   {{ menu_js | safe }}
   <script src="{{ url_for('static', filename='app.js') }}"></script>
-<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 
   <script>
   // ══════════════════════════════════════════════
-  //  КОНСТАНТЫ
+  //  КОНСТАНТЫ — данные из сессии
   // ══════════════════════════════════════════════
+  const USER_ID = {{ session.get('user_id') | default('null') | tojson | safe }};
+
+  {% if chat %}
+  const MODE    = {{ chat.mode    | tojson | safe }};
+  const SUBJECT = {{ chat.subject | tojson | safe }};
+  const CLASS   = {{ chat.class_number | tojson | safe }};
+  {% else %}
   const MODE    = localStorage.getItem("mode")       || "explain";
   const SUBJECT = localStorage.getItem("subject")    || "Математика";
-  const CLASS   = localStorage.getItem("user_class") || "8";
-  const USER_ID = {{ session.get('user_id') | default('null') | tojson | safe }};
+  const CLASS   = parseInt(localStorage.getItem("user_class") || "8");
+  {% endif %}
+  const SUBJECT_PO = {{ (subject_po if subject_po is defined else 'предмету') | tojson | safe }};
+  const INITIAL_PATH = {{ (initial_path_json if initial_path_json is defined else 'null') | safe }};
 
   const chatEl   = document.getElementById("chat");
   const textarea = document.getElementById("question");
@@ -114,9 +133,25 @@
 
   // STEP / QUIZ / EXAM состояние
   let stepState   = { num:0, task:"", maxSteps:8, done:false };
-  let quizState   = { correct:0, wrong:0, num:1, topic:"", total:5 };
+  let quizState   = { correct:0, wrong:0, num:1, topic:"", total:5, askedQuestions:[] };
   let examSubmode = "explain";
   let examState   = { taskNum:1, maxTasks:27, topic:"", timerInterval:null, seconds:3*3600+55*60 };
+
+  // Активный путь обучения (null = Casual)
+  window._activePath = null;
+
+  // Настройки из БД
+  let userSettings = {
+    tts_enabled:  true,
+    anim_enabled: true,
+    enter_send:   true,
+    daily_goal:   5,
+    streak:       0,
+    xp:           0,
+    level:        1,
+  };
+
+  let sessionQuestions = 0;
 
   const MODES = {
     explain:{ color:"var(--accent)",  label:"🧠 Объяснение",       placeholder:"Напиши тему, которую хочешь понять..." },
@@ -126,23 +161,272 @@
   };
   const M = MODES[MODE] || MODES.explain;
 
-  const WELCOME = {
-    explain:`👋 Привет! Напиши любую тему по <b>${SUBJECT}</b> — объясню просто и понятно для ${CLASS} класса.<br>Можно прикрепить <b>фото задания</b> 📎`,
-    step:   `📐 Привет! Напиши задачу по <b>${SUBJECT}</b> — будем решать по одному шагу.<br>Можно прикрепить <b>фото</b> с условием 📎`,
-    quiz:   `🎯 Привет! Напиши тему по <b>${SUBJECT}</b> — задам тебе 5 вопросов с вариантами ответа.`,
-    exam:   `📋 Привет! Выбери режим подготовки к ЕГЭ/ОГЭ по <b>${SUBJECT}</b>:<br><b>📖 Объяснение</b> — разбор формата<br><b>🎯 Тренировка</b> — задания вперемешку<br><b>⏱ Полный экзамен</b> — симуляция с таймером`,
-  };
+  function fmtPathDeadline(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso.slice(0, 10) + 'T12:00:00');
+      return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    } catch (e) { return iso; }
+  }
+
+  function buildWelcomeHtml(activePath) {
+    const po = SUBJECT_PO;
+    const subj = esc(SUBJECT);
+    if (activePath && activePath.mode === 'sprint') {
+      const goal = esc(activePath.sprint_goal || 'твоей цели');
+      const topics = activePath.sprint_topics || [];
+      const topicsStr = topics.length
+        ? topics.slice(0, 8).map(t => esc(t)).join(', ') + (topics.length > 8 ? '…' : '')
+        : 'список тем подстроен под цель и срок';
+      const dl = activePath.sprint_deadline
+        ? ` Срок: <b>${esc(fmtPathDeadline(activePath.sprint_deadline))}</b>.`
+        : '';
+      return `⚡ Привет! Это <b>Sprint</b> по <b>${subj}</b> — цель: <b>${goal}</b>.${dl}<br>`
+        + `Темы цикла: ${topicsStr}<br>`
+        + `Напиши, с какой темы начнём, или пришли <b>фото задания</b> 📎`;
+    }
+    if (activePath && activePath.mode === 'journey') {
+      const goal = esc(activePath.journey_goal || 'твоей цели');
+      const unit = activePath.current_unit_data && activePath.current_unit_data.title
+        ? esc(activePath.current_unit_data.title)
+        : '';
+      const unitLine = unit ? ` Сейчас юнит: <b>${unit}</b>.` : '';
+      return `🗺 Привет! Ты в <b>Journey</b> по <b>${subj}</b> — долгая цель: <b>${goal}</b>.${unitLine}<br>`
+        + `Пиши вопросы по материалу или проси план на сессию 📚`;
+    }
+    return {
+      explain:`👋 Привет! Напиши любую тему по <b>${po}</b> — объясню просто и понятно для ${CLASS} класса.<br>Можно прикрепить <b>фото задания</b> 📎`,
+      step:   `📐 Привет! Напиши задачу по <b>${po}</b> — будем решать по одному шагу.<br>Можно прикрепить <b>фото</b> с условием 📎`,
+      quiz:   `🎯 Привет! Напиши тему по <b>${po}</b> — задам тебе 5 вопросов с вариантами ответа.`,
+      exam:   `📋 Привет! Выбери режим подготовки к ЕГЭ/ОГЭ по <b>${po}</b>:<br><b>📖 Объяснение</b> — разбор формата<br><b>🎯 Тренировка</b> — задания вперемешку<br><b>⏱ Полный экзамен</b> — симуляция с таймером`,
+    }[MODE] || `👋 Привет! Напиши вопрос по <b>${po}</b>.`;
+  }
+
+  function applyLearningPathChrome(activePath) {
+    const banner = document.getElementById('modeBanner');
+    const info = document.getElementById('selected-info');
+    if (!banner || !info) return;
+    if (!activePath) {
+      banner.textContent = `${M.label}  ·  ${SUBJECT}  ·  ${CLASS} класс`;
+      banner.style.color = M.color;
+      info.innerText = `${CLASS} класс · ${SUBJECT} · ${M.label.replace(/^\S+\s/, '')}`;
+      textarea.placeholder = M.placeholder;
+      return;
+    }
+    const goalS = (activePath.sprint_goal || activePath.journey_goal || '').trim() || 'цель';
+    if (activePath.mode === 'sprint') {
+      banner.textContent = `⚡ Sprint  ·  ${SUBJECT}  ·  ${goalS}`;
+      banner.style.color = '#ff6b35';
+      info.innerText = `Sprint · ${SUBJECT} · ${goalS}`;
+      textarea.placeholder = 'Вопрос по теме спринта или фото задания 📎';
+    } else if (activePath.mode === 'journey') {
+      banner.textContent = `🗺 Journey  ·  ${SUBJECT}  ·  ${goalS}`;
+      banner.style.color = 'var(--blue)';
+      info.innerText = `Journey · ${SUBJECT} · ${goalS}`;
+      textarea.placeholder = 'Вопрос по юниту или закрепление материала 📚';
+    }
+  }
 
   // ══════════════════════════════════════════════
-  //  TTS — VoiceRSS + fallback на браузерный голос
-  //  VoiceRSS: бесплатно 350 запросов/день, из России работает
-  //  Ключ берётся с сервера через /api/tts_key
-  //  Fallback: лучший доступный браузерный голос
+  //  PATH BANNER — визуал для Sprint / Journey
+  // ══════════════════════════════════════════════
+  function renderPathBanner(path) {
+    const banner = document.getElementById('path-banner');
+    if (!banner || !path) return;
+
+    if (path.mode === 'sprint') {
+      const days    = path.days_left ?? '?';
+      const done    = path.sprint_topics_done ?? [];
+      const total   = path.sprint_topics ?? [];
+      const left    = path.sprint_topics_left ?? [];
+      const pct     = path.progress_pct ?? 0;
+      const isUrgent = (typeof days === 'number') && days <= 1;
+      const goalLine = esc((path.sprint_goal || '').trim() || 'цель');
+      const deadlineStr = path.sprint_deadline
+        ? esc(fmtPathDeadline(path.sprint_deadline))
+        : '';
+
+      banner.innerHTML = `
+        <div class="path-banner sprint-banner" id="sprintBanner">
+          <div class="pb-left">
+            <div class="pb-headline">
+              <span class="pb-badge sprint-badge">⚡ SPRINT</span>
+              <span class="pb-sep">·</span>
+              <span class="pb-subject">${esc(SUBJECT)}</span>
+              <span class="pb-sep">·</span>
+              <span class="pb-goal-line">${goalLine}</span>
+            </div>
+            ${deadlineStr ? `<div class="pb-meta-row">до ${deadlineStr} · ${esc(String(days))} дн.</div>` : ''}
+          </div>
+          <div class="pb-center">
+            <div class="pb-track"><div class="pb-fill sprint-fill" style="width:${pct}%"></div></div>
+            <div class="pb-topics">
+              ${total.map(t =>
+                `<span class="pb-topic ${done.includes(t) ? 'done' : left[0] === t ? 'active' : ''}"
+                       onclick="markTopicDone('${t.replace(/'/g,"\\'")}')">
+                  ${done.includes(t) ? '✅ ' : ''}${esc(t)}
+                </span>`
+              ).join('')}
+            </div>
+          </div>
+          <div class="pb-right">
+            <span class="pb-days ${isUrgent ? 'urgent' : ''}">
+              ${days === 0 ? '🔥 Сегодня!' : days === 1 ? '⏰ Завтра!' : `📅 ${days} дн.`}
+            </span>
+            <span class="pb-progress">${done.length}/${total.length} тем</span>
+            <button class="pb-stop-btn" onclick="stopPath()" title="Завершить Sprint">✕</button>
+          </div>
+        </div>`;
+
+      // Fairik реагирует на Sprint
+      if (window.Fairik && days === 0) {
+        setTimeout(() => Fairik.say('Финальный день! Ты готов — погнали 🔥', 'bounce'), 1500);
+      } else if (window.Fairik && days === 1) {
+        setTimeout(() => Fairik.say('Завтра дедлайн! Последний рывок 💥', 'wiggle'), 1500);
+      }
+
+    } else if (path.mode === 'journey') {
+      const roadmap = path.roadmap ?? [];
+      const unit    = path.current_unit_data ?? {};
+      const pct     = path.progress_pct ?? 0;
+      const show    = roadmap.slice(0, 10);
+      const jgoal = esc((path.journey_goal || '').trim() || 'цель');
+
+      banner.innerHTML = `
+        <div class="path-banner journey-banner" id="journeyBanner">
+          <div class="pb-left">
+            <div class="pb-headline">
+              <span class="pb-badge journey-badge">🗺 JOURNEY</span>
+              <span class="pb-sep">·</span>
+              <span class="pb-subject">${esc(SUBJECT)}</span>
+              <span class="pb-sep">·</span>
+              <span class="pb-goal-line">${jgoal}</span>
+            </div>
+          </div>
+          <div class="pb-center">
+            <div class="pb-track"><div class="pb-fill journey-fill" style="width:${pct}%"></div></div>
+            <div class="pb-units">
+              ${show.map(u =>
+                `<span class="pb-unit ${u.unit < path.current_unit ? 'done' : u.unit === path.current_unit ? 'active' : 'locked'}"
+                       title="${esc(u.title)}">${u.unit}</span>`
+              ).join('')}
+              ${roadmap.length > 10 ? `<span class="pb-unit locked" title="...">…</span>` : ''}
+            </div>
+          </div>
+          <div class="pb-right">
+            <span class="pb-unit-label">Юнит ${path.current_unit}/${roadmap.length}</span>
+            <span class="pb-unit-title">${esc(unit.title || '—')}</span>
+            <button class="pb-stop-btn" onclick="stopPath()" title="Завершить Journey">✕</button>
+          </div>
+        </div>`;
+
+      // Fairik
+      if (window.Fairik) {
+        setTimeout(() => Fairik.say(`Юнит ${path.current_unit}: ${unit.title || SUBJECT}. Продолжаем! 📚`, 'nod'), 1500);
+      }
+    }
+
+    // Сохраняем глобально
+    window._activePath = path;
+  }
+
+  // Отметить тему Sprint выполненной
+  async function markTopicDone(topic) {
+    if (!window._activePath || window._activePath.mode !== 'sprint') return;
+    const done = window._activePath.sprint_topics_done ?? [];
+    if (done.includes(topic)) return;
+
+    try {
+      const res  = await fetch('/api/learning_path/complete_topic', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({path_id: window._activePath.id, topic}),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window._activePath.sprint_topics_done = data.done;
+        window._activePath.sprint_topics_left = (window._activePath.sprint_topics ?? []).filter(t => !data.done.includes(t));
+        window._activePath.progress_pct = data.progress_pct;
+        renderPathBanner(window._activePath);
+        if (window.Fairik) Fairik.happy(`✅ ${topic} — закрыто! ${data.is_complete ? 'Sprint завершён! 🏆' : 'Дальше! 💥'}`);
+        if (data.is_complete) {
+          addAiMsg(`🏆 <b>Sprint завершён!</b> Все темы пройдены. Хочешь изучить ${SUBJECT} глубже? Попробуй Journey!`, null, false, false);
+        }
+      }
+    } catch(e) { console.error('complete_topic error', e); }
+  }
+
+  // Завершить / отменить путь
+  async function stopPath() {
+    if (!window._activePath) return;
+    if (!confirm('Завершить этот путь обучения?')) return;
+    try {
+      await fetch('/api/learning_path/deactivate', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({path_id: window._activePath.id}),
+      });
+      window._activePath = null;
+      document.getElementById('path-banner').innerHTML = '';
+      applyLearningPathChrome(null);
+      if (window.Fairik) Fairik.say('Путь завершён. Возвращайся когда будешь готов! 🐉', 'nod');
+    } catch(e) { console.error('stopPath error', e); }
+  }
+
+  // ══════════════════════════════════════════════
+  //  ЗАГРУЗКА НАСТРОЕК ИЗ БД
+  // ══════════════════════════════════════════════
+  async function loadSettings() {
+    try {
+      const res  = await fetch('/api/settings/load', { credentials: 'include' });
+      const data = await res.json();
+      userSettings = { ...userSettings, ...data };
+
+      window._SH_tts_enabled   = userSettings.tts_enabled;
+      window._SH_anim_enabled  = userSettings.anim_enabled;
+      window._SH_enter_enabled = userSettings.enter_send;
+
+      if (userSettings.theme) {
+        document.documentElement.setAttribute('data-theme', userSettings.theme);
+        localStorage.setItem('theme', userSettings.theme);
+      }
+
+      updateDailyGoalBar();
+    } catch(e) {
+      window._SH_tts_enabled   = localStorage.getItem('tts_enabled')  !== 'false';
+      window._SH_anim_enabled  = localStorage.getItem('anim_enabled') !== 'false';
+      window._SH_enter_enabled = localStorage.getItem('enter_send')   !== 'false';
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  //  ДНЕВНАЯ ЦЕЛЬ
+  // ══════════════════════════════════════════════
+  function updateDailyGoalBar() {
+    const goal = userSettings.daily_goal || 5;
+    const done = sessionQuestions;
+    const pct  = Math.min(100, Math.round(done / goal * 100));
+
+    const bar = document.getElementById('daily-goal-bar');
+    if (goal > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('dg-label').textContent = `${done} / ${goal} сегодня`;
+      document.getElementById('dg-fill').style.width  = pct + '%';
+      document.getElementById('dg-streak').textContent = `🔥 ${userSettings.streak || 0} дней`;
+    }
+
+    if (done === goal && window.Fairik) {
+      setTimeout(() => Fairik.celebrate(), 300);
+      addAiMsg(`🎯 Цель дня достигнута! Ты прошёл <b>${goal} вопросов</b> сегодня. Файрик гордится! 🐉`, null, false, true);
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  //  TTS
   // ══════════════════════════════════════════════
   const TTS = (() => {
 
-    // ── Браузерные голоса ────────────────────────────────────────────────
-    let bestVoice  = null;
+    let bestVoice   = null;
     let voicesReady = false;
 
     const VOICE_PRIORITY = [
@@ -180,17 +464,15 @@
 
     if (window.speechSynthesis) initVoices();
 
-    // ── Утилиты ──────────────────────────────────────────────────────────
     function stripHtml(html) {
       const d = document.createElement('div');
       d.innerHTML = html;
       return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim();
     }
 
-    // ── Текущее воспроизведение ───────────────────────────────────────────
-    let currentAudio  = null;  // Audio для VoiceRSS
+    let currentAudio      = null;
     let isSpeakingBrowser = false;
-    let stopFlag = false;
+    let stopFlag          = false;
 
     function stopAll() {
       stopFlag = true;
@@ -199,13 +481,11 @@
       isSpeakingBrowser = false;
     }
 
-    // ── VoiceRSS через Flask-прокси (решает CORS) ───────────────────────
     async function speakVoiceRSS(text, btn) {
       btn.innerHTML = `<span class="tts-spin"></span> <span>Загружаю...</span>`;
       btn.disabled  = true;
 
       try {
-        // Запрос к Flask /api/tts — он сам ходит к VoiceRSS
         const res = await fetch('/api/tts', {
           method: 'POST',
           credentials: 'include',
@@ -218,7 +498,7 @@
           throw new Error(err.error || `HTTP ${res.status}`);
         }
 
-        const blob = await res.blob();
+        const blob     = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
 
         if (currentAudio) { currentAudio.pause(); URL.revokeObjectURL(currentAudio.src); }
@@ -247,19 +527,17 @@
       }
     }
 
-    // ── Браузерный fallback ───────────────────────────────────────────────
     async function speakBrowser(text, btn) {
       if (!window.speechSynthesis) { btn.innerHTML = `🔊 <span>Озвучить</span>`; return; }
       if (!voicesReady) await initVoices();
 
-      stopFlag = false;
+      stopFlag          = false;
       isSpeakingBrowser = true;
-      btn.innerHTML = `⏹ <span>Стоп</span>`;
+      btn.innerHTML     = `⏹ <span>Стоп</span>`;
 
-      // Разбиваем на предложения (браузер обрезает длинные тексты)
       const sentences = text.match(/[^.!?;]+[.!?;]*/g) || [text];
-      const chunks = [];
-      let cur = '';
+      const chunks    = [];
+      let cur         = '';
       for (const s of sentences) {
         if ((cur + s).length > 180) { if (cur) chunks.push(cur.trim()); cur = s; }
         else cur += (cur ? ' ' : '') + s;
@@ -277,7 +555,7 @@
         const u = new SpeechSynthesisUtterance(chunks[idx++]);
         u.lang = 'ru-RU'; u.rate = 0.92; u.pitch = 1.0; u.volume = 1.0;
         if (bestVoice) u.voice = bestVoice;
-        u.onend = next;
+        u.onend   = next;
         u.onerror = () => { isSpeakingBrowser = false; btn.innerHTML = `🔊 <span>Озвучить</span>`; };
         speechSynthesis.speak(u);
       }
@@ -292,31 +570,27 @@
       next();
     }
 
-    // ── Главный метод ─────────────────────────────────────────────────────
     async function speak(rawText, btn) {
       const text = stripHtml(String(rawText));
       if (!text) return;
 
-      // Стоп если уже играет
       if (currentAudio && !currentAudio.paused) { stopAll(); btn.innerHTML=`🔊 <span>Озвучить</span>`; btn.onclick=()=>speak(rawText,btn); return; }
       if (isSpeakingBrowser) { stopAll(); btn.innerHTML=`🔊 <span>Озвучить</span>`; btn.onclick=()=>speak(rawText,btn); return; }
 
       stopFlag = false;
 
-      // Пробуем VoiceRSS через прокси
       try {
         await speakVoiceRSS(text, btn);
       } catch(e) {
-        // Полный fallback на браузер если прокси недоступен
         speakBrowser(text, btn);
       }
     }
 
     function makeBtn(rawText, className = 'action-btn explain-btn') {
-      const btn = document.createElement('button');
+      const btn     = document.createElement('button');
       btn.className = className;
       btn.innerHTML = `🔊 <span>Озвучить</span>`;
-      btn.onclick = () => speak(rawText, btn);
+      btn.onclick   = () => speak(rawText, btn);
       return btn;
     }
 
@@ -347,7 +621,7 @@
   // ══════════════════════════════════════════════
   function animateText(el, html, onDone) {
     const tokens = [];
-    const re = /(<[^>]+>)|([^<]+)/g;
+    const re     = /(<[^>]+>)|([^<]+)/g;
     let m;
     while ((m = re.exec(html)) !== null) {
       if (m[1]) tokens.push({ type:"tag",  val:m[1] });
@@ -384,15 +658,6 @@
     }
     document.getElementById("file-preview-bar").style.display="block";
     textarea.focus();
-
-    // Проверяем напоминания о повторении
-    try {
-      const remRes = await fetch('/api/memory/daily_reminder', {credentials:'include'});
-      const remData = await remRes.json();
-      if (remData.has_reminder && window.Fairik) {
-        setTimeout(() => Fairik.say(remData.message, 'wiggle'), 3000);
-      }
-    } catch(e) {}
   }
   function clearAttach() {
     attachedFile=null; document.getElementById("file-input").value="";
@@ -403,27 +668,49 @@
   //  INIT
   // ══════════════════════════════════════════════
   window.addEventListener("load", async () => {
-    const banner = document.getElementById("modeBanner");
-    banner.textContent = `${M.label}  ·  ${SUBJECT}  ·  ${CLASS} класс`;
-    banner.style.color = M.color;
-    document.getElementById("selected-info").innerText =
-      `${CLASS} класс · ${SUBJECT} · ${M.label.replace(/^\S+\s/,"")}`;
-    textarea.placeholder = M.placeholder;
+    // 1. Настройки из БД
+    await loadSettings();
+
     document.getElementById("inputContainer").style.borderColor = M.color + "44";
 
     if (MODE==="quiz") document.getElementById("quiz-scoreboard").style.display="flex";
     if (MODE==="step") document.getElementById("step-progress-bar").style.display="flex";
     if (MODE==="exam") document.getElementById("exam-header").style.display="block";
 
-    addAiMsg(WELCOME[MODE]||WELCOME.explain, null, false, false);
-
+    let hist = [];
     try {
       const res  = await fetch("/api/history", { method:"POST", credentials:"include" });
-      const hist = await res.json();
+      hist = await res.json();
       hist.sort((a,b)=>a.id-b.id);
       for (const h of hist) { addUserMsg(h.question); addAiMsg(h.answer,h.id,true,false,h.rating||0); }
       scrollDown();
     } catch(e){}
+
+    let pathData = (INITIAL_PATH && INITIAL_PATH.mode) ? INITIAL_PATH : null;
+    try {
+      if (!pathData) {
+        const pathRes  = await fetch(`/api/learning_path/active?subject=${encodeURIComponent(SUBJECT)}`, {credentials:'include'});
+        const fetched = await pathRes.json();
+        pathData = fetched && fetched.mode ? fetched : null;
+      }
+      if (pathData) renderPathBanner(pathData);
+    } catch(e) { console.warn('Could not load learning path', e); }
+
+    applyLearningPathChrome(pathData);
+
+    if (!hist.length) {
+      addAiMsg(buildWelcomeHtml(pathData), null, false, false);
+    }
+
+    // 5. Напоминания о повторении
+    try {
+      const remRes  = await fetch('/api/memory/daily_reminder', {credentials:'include'});
+      const remData = await remRes.json();
+      if (remData.has_reminder && window.Fairik) {
+        setTimeout(() => Fairik.say(remData.message, 'wiggle'), 2000);
+      }
+    } catch(e){}
+
     textarea.focus();
   });
 
@@ -431,7 +718,9 @@
   //  УТИЛИТЫ
   // ══════════════════════════════════════════════
   function scrollDown() { chatEl.scrollTop = chatEl.scrollHeight; }
-  function esc(t) { const d=document.createElement("div"); d.textContent=t; return d.innerHTML; }
+  function esc(t) {
+    const d=document.createElement("div"); d.textContent=String(t||''); return d.innerHTML;
+  }
 
   function addUserMsg(text, imgSrc) {
     const d=document.createElement("div"); d.className="message user";
@@ -444,7 +733,7 @@
     const d=document.createElement("div"); d.className=`message ai mode-${MODE}`;
     const textDiv=document.createElement("div"); textDiv.className="ai-text";
     d.appendChild(textDiv); chatEl.appendChild(d); scrollDown();
-    const html=mdToHtml(rawText);
+    const html   = mdToHtml(rawText);
     const doAnim = animate && (window._SH_anim_enabled !== false);
     if (doAnim) {
       animateText(textDiv, html, () => {
@@ -470,19 +759,17 @@
   }
   function removeTyping() { document.getElementById("typing")?.remove(); }
 
-  function showXP() {
+  function showXP(amount=10) {
     if (window._SH_xp_enabled === false) return;
     const t=document.getElementById("xp-toast");
-    t.textContent="+10 XP ⭐"; t.style.display="block";
+    t.textContent=`+${amount} XP ⭐`; t.style.display="block";
     t.style.background=`linear-gradient(135deg,${M.color},var(--accent3))`;
     setTimeout(()=>t.style.display="none",2200);
   }
 
-  // Enter handled by settings.js (capture phase)
-  // Fallback if settings.js not loaded:
   textarea.addEventListener("keydown", e => {
     if (e.key==="Enter" && !e.shiftKey) {
-      if (window._SH_enter_enabled === false) return; // disabled in settings
+      if (window._SH_enter_enabled === false) return;
       e.preventDefault(); askTutor();
     }
   });
@@ -492,25 +779,10 @@
   });
 
   // ══════════════════════════════════════════════
-  //  КОНТЕКСТ РАЗГОВОРА (последние 6 пар)
-  // ══════════════════════════════════════════════
-  const chatHistory = [];
-  function pushHistory(q, a) {
-    chatHistory.push({q, a});
-    if (chatHistory.length > 6) chatHistory.shift();
-  }
-  function buildContext() {
-    if (!chatHistory.length) return "";
-    return chatHistory.map((h,i) =>
-      `[${i+1}] Ученик: ${h.q.substring(0,200)}\nАссистент: ${h.a.substring(0,300)}`
-    ).join("\n---\n");
-  }
-
-  // ══════════════════════════════════════════════
   //  ОТПРАВКА
   // ══════════════════════════════════════════════
   async function askTutor(overrideText, submode) {
-    const q = overrideText || textarea.value.trim();
+    const q       = overrideText || textarea.value.trim();
     const hasFile = !!attachedFile;
     if (!q && !hasFile) return;
     if (!USER_ID) { location.href="/login"; return; }
@@ -541,9 +813,24 @@
       removeTyping(); sendBtn.disabled=false;
       if (window.Fairik) Fairik.doneThinking();
       if (data.error) { addAiMsg("⚠️ "+esc(data.error),null,false,false); return; }
-      showXP();
+
+      // Обновляем XP/стрик
+      if (data.xp    !== undefined) userSettings.xp    = data.xp;
+      if (data.level !== undefined) userSettings.level = data.level;
+      if (data.streak!== undefined) userSettings.streak= data.streak;
+
+      // Обновляем баннер пути если сервер вернул данные
+      if (data.learning_path) {
+        window._activePath = data.learning_path;
+        renderPathBanner(data.learning_path);
+        applyLearningPathChrome(data.learning_path);
+      }
+
+      showXP(10);
       if (window.Fairik) Fairik.addXP(10);
-      if (data.answer && lastQ) pushHistory(lastQ, data.answer);
+
+      sessionQuestions++;
+      updateDailyGoalBar();
 
       if      (MODE==="explain") renderExplain(data);
       else if (MODE==="step")    renderStep(data);
@@ -558,12 +845,17 @@
   }
 
   async function sendQ(text, submode="") {
-    const ctx = buildContext();
-    const fullQ = ctx ? `КОНТЕКСТ ПРЕДЫДУЩЕГО РАЗГОВОРА:\n${ctx}\n\nНОВЫЙ ВОПРОС: ${text}` : text;
-    const fd=new FormData(); fd.append("question",fullQ); fd.append("submode",submode);
-    const res=await fetch("/ask",{method:"POST",credentials:"include",body:fd});
-    const data=await res.json();
-    if (data.answer) pushHistory(text, data.answer);
+    const fd=new FormData();
+    fd.append("question", text);
+    fd.append("submode",  submode);
+    const res  = await fetch("/ask",{method:"POST",credentials:"include",body:fd});
+    const data = await res.json();
+    // Обновляем путь если пришёл
+    if (data.learning_path) {
+      window._activePath = data.learning_path;
+      renderPathBanner(data.learning_path);
+      applyLearningPathChrome(data.learning_path);
+    }
     return data;
   }
 
@@ -591,7 +883,6 @@
       };
       btns.appendChild(b);
     });
-    // Кнопка озвучки через единый TTS
     btns.appendChild(TTS.makeBtn(data.answer));
     wrap.appendChild(btns);
     if (data.question_id) wrap.appendChild(makeStars(data.question_id));
@@ -681,7 +972,6 @@
       ].forEach(a=>{ const b=document.createElement("button"); b.className="action-btn step-btn"; b.innerHTML=`${a.icon} <span>${a.label}</span>`; b.onclick=a.fn; btns.appendChild(b); });
     }
 
-    // Озвучка шага
     btns.appendChild(TTS.makeBtn(data.answer, 'action-btn step-btn'));
     wrap.appendChild(btns);
     if(data.question_id) wrap.appendChild(makeStars(data.question_id));
@@ -700,10 +990,16 @@
   }
 
   function renderQuiz(data, originalQ) {
-    if(originalQ&&!originalQ.startsWith("__NEXT__")) { quizState.topic=originalQ; if(window.Fairik && quizState.num===1) Fairik.quizStart(); }
+    if(originalQ&&!originalQ.startsWith("__NEXT__")) {
+      quizState.topic=originalQ;
+      quizState.askedQuestions=[];
+      if(window.Fairik && quizState.num===1) Fairik.quizStart();
+    }
     let parsed=null;
     try{ const m=data.answer.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch(e){}
     if(!parsed||!parsed.question||!parsed.options){ addAiMsg(data.answer,data.question_id,false,true); return; }
+
+    quizState.askedQuestions.push(parsed.question.substring(0, 80));
 
     const wrap=document.createElement("div"); wrap.className="message ai mode-quiz";
     const card=document.createElement("div"); card.className="quiz-card";
@@ -724,14 +1020,13 @@
         } else {
           quizState.wrong++;
           if(window.Fairik) Fairik.sad();
-          // Записываем ошибку в долгосрочную память
           fetch('/api/memory/add_error',{
             method:'POST',credentials:'include',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
               subject: SUBJECT,
               topic:   quizState.topic || lastQ,
-              details: `Неверный ответ: ${esc(parsed.options[idx])}. Верно: ${esc(parsed.options[parsed.correct_index])}`
+              details: `Неверный ответ: ${parsed.options[idx]}. Верно: ${parsed.options[parsed.correct_index]}`
             })
           }).catch(()=>{});
         }
@@ -741,7 +1036,6 @@
         expl.innerHTML=isOk?`<b>✅ Правильно!</b> ${esc(parsed.explanation||"")}`:`<b>❌ Неверно.</b> Правильно: <b>${esc(parsed.options[parsed.correct_index])}</b>. ${esc(parsed.explanation||"")}`;
         card.appendChild(expl);
 
-        // Озвучка объяснения
         const ttsBtn=TTS.makeBtn(parsed.explanation||parsed.question,'action-btn quiz-action-btn');
         ttsBtn.style.marginTop="8px"; card.appendChild(ttsBtn);
 
@@ -751,9 +1045,14 @@
         } else {
           quizState.num++;
           const nb=document.createElement("button"); nb.className="quiz-next-btn"; nb.textContent="➡ Следующий вопрос";
-          nb.onclick=()=>{ nb.remove(); sendBtn.disabled=true; addTyping();
-            sendQ(`__NEXT__ Задай новый вопрос по теме "${quizState.topic}". Не повторяй. Только JSON.`)
-              .then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); renderQuiz(d2,null); }); };
+          nb.onclick=()=>{
+            nb.remove(); sendBtn.disabled=true; addTyping();
+            const askedStr = quizState.askedQuestions.length
+              ? `\nУЖЕ СПРОШЕНО (не повторяй): ${quizState.askedQuestions.join(" | ")}`
+              : "";
+            sendQ(`__NEXT__ Задай новый вопрос по теме "${quizState.topic}". Только JSON.${askedStr}`)
+              .then(d2=>{ removeTyping(); sendBtn.disabled=false; if(window.Fairik) Fairik.doneThinking(); renderQuiz(d2,null); });
+          };
           card.appendChild(nb);
         }
       };
@@ -770,10 +1069,13 @@
     wrap.innerHTML=`<div class="quiz-result"><div class="qr-icon">${g.icon}</div><div class="qr-score" style="color:${g.color}">${quizState.correct}/${total}</div><div class="qr-pct">${pct}% · ${g.text}</div><div class="qr-bar-wrap"><div class="qr-bar-fill" style="width:${pct}%;background:${g.color}"></div></div><div class="qr-detail">Правильных: ${quizState.correct} · Ошибок: ${quizState.wrong}</div><div class="action-row" style="justify-content:center;margin-top:16px;"><button class="action-btn quiz-action-btn" onclick="restartQuiz()">🔄 Новая тема</button><button class="action-btn quiz-action-btn" onclick="retryQuiz()">🔁 Та же тема</button></div></div>`;
     chatEl.appendChild(wrap); scrollDown();
     document.getElementById("qs-progress").style.width="100%";
-  if(window.Fairik && pct>=80) Fairik.celebrate();
+    if(window.Fairik && pct>=80) Fairik.celebrate();
+    if(pct < 60) {
+      fetch('/api/memory/analyze', {method:'POST', credentials:'include'}).catch(()=>{});
+    }
   }
-  function restartQuiz(){ quizState={correct:0,wrong:0,num:1,topic:"",total:5}; updateQuizScore(); addAiMsg("Напиши новую тему 🎯",null,false,false); }
-  function retryQuiz(){ const t=quizState.topic; quizState={correct:0,wrong:0,num:1,topic:t,total:5}; updateQuizScore();
+  function restartQuiz(){ quizState={correct:0,wrong:0,num:1,topic:"",total:5,askedQuestions:[]}; updateQuizScore(); addAiMsg("Напиши новую тему 🎯",null,false,false); }
+  function retryQuiz(){ const t=quizState.topic; quizState={correct:0,wrong:0,num:1,topic:t,total:5,askedQuestions:[]}; updateQuizScore();
     addUserMsg(`Повторить: ${t}`); sendBtn.disabled=true; addTyping();
     sendQ(`Задай вопрос по теме "${t}". Только JSON.`).then(d=>{ removeTyping(); sendBtn.disabled=false; renderQuiz(d,t); }); }
 
@@ -850,10 +1152,17 @@
         res.appendChild(rDiv); ansBlock.appendChild(res);
         animateText(rDiv,mdToHtml(d2.answer),()=>{ rDiv.innerHTML=mdToHtml(d2.answer); scrollDown(); });
 
-        // Озвучка результата проверки
         const ttsRow=document.createElement("div"); ttsRow.className="action-row"; ttsRow.style.marginTop="8px";
         ttsRow.appendChild(TTS.makeBtn(d2.answer,'action-btn exam-btn'));
         ansBlock.appendChild(ttsRow);
+
+        if(!good && examState.topic) {
+          fetch('/api/memory/add_error',{
+            method:'POST',credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({subject:SUBJECT, topic:examState.topic, details:`Экзаменационное задание: неверный ответ`})
+          }).catch(()=>{});
+        }
 
         const btnRow=document.createElement("div"); btnRow.className="action-row";
         if(examState.taskNum<examState.maxTasks){
@@ -921,16 +1230,18 @@
     }
     return stars;
   }
-  async function rateAnswer(hid,rating){
+
+  async function rateAnswer(hid, rating){
     try{ await fetch("/rate",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({history_id:hid,rating})}); }catch(e){}
-    // Если низкая оценка — записываем в память ошибок
-    if(rating <= 2) { if(window.Fairik) Fairik.encourage(); }
-    if(rating <= 2 && lastQ){
-      fetch('/api/memory/add_error',{
-        method:'POST',credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({subject:SUBJECT, topic:lastQ.substring(0,120), details:'Низкая оценка ответа: '+rating+'/5'})
-      }).catch(()=>{});
+    if(rating <= 2) {
+      if(window.Fairik) Fairik.encourage();
+      if(lastQ){
+        fetch('/api/memory/add_error',{
+          method:'POST',credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({subject:SUBJECT, topic:lastQ.substring(0,120), details:'Низкая оценка ответа: '+rating+'/5'})
+        }).catch(()=>{});
+      }
     }
   }
 
@@ -947,29 +1258,201 @@
   </script>
 
   <style>
-    /* Спиннер на кнопке пока грузится ElevenLabs */
-    .tts-spinner {
-      display: inline-block;
-      width: 10px; height: 10px;
-      border: 2px solid currentColor;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: tts-spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 2px;
-    }
-    @keyframes tts-spin { to { transform: rotate(360deg); } }
-    /* Кнопка озвучки на обычных AI-сообщениях */
-    .tts-inline {
-      margin-top: 8px;
-      font-size: 0.75rem !important;
-      padding: 4px 10px !important;
-      opacity: 0.7;
-    }
-    .tts-inline:hover { opacity: 1 !important; }
+  /* ══ TTS ══ */
+  .tts-inline {
+    margin-top: 8px;
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+    opacity: 0.7;
+  }
+  .tts-inline:hover { opacity: 1 !important; }
+  .tts-spin {
+    display: inline-block; width: 10px; height: 10px;
+    border: 2px solid currentColor; border-top-color: transparent;
+    border-radius: 50%; animation: tts-spin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 2px;
+  }
+  @keyframes tts-spin { to { transform: rotate(360deg); } }
+
+  /* ══ ДНЕВНАЯ ЦЕЛЬ ══ */
+  .daily-goal-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 16px;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.78rem; color: var(--text3);
+  }
+  .dg-track {
+    flex: 1; height: 5px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px; overflow: hidden;
+  }
+  .dg-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 3px; transition: width 0.4s ease;
+  }
+  #dg-streak { white-space: nowrap; }
+
+  /* ══ PATH BANNER ══ */
+  #path-banner { padding: 0; }
+
+  .path-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; margin: 6px 12px 0;
+    border-radius: 14px; font-size: 0.78rem;
+    animation: fadeUp 0.3s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Sprint — оранжевый */
+  .sprint-banner {
+    background: rgba(255,107,53,0.07);
+    border: 1px solid rgba(255,107,53,0.22);
+  }
+  /* Journey — синий */
+  .journey-banner {
+    background: rgba(77,159,255,0.07);
+    border: 1px solid rgba(77,159,255,0.20);
+  }
+
+  .pb-badge {
+    display: inline-block;
+    font-weight: 800; font-size: 0.66rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 8px;
+    white-space: nowrap;
+  }
+  .sprint-badge  { background: rgba(255,107,53,0.15); color: #ff6b35; }
+  .journey-badge { background: rgba(77,159,255,0.15);  color: var(--blue); }
+
+  .pb-subject { font-weight: 700; color: var(--text); font-size: 0.82rem; }
+  .pb-goal {
+    color: var(--text3); font-family: var(--font-mono);
+    font-size: 0.68rem; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+  }
+  .pb-headline {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 4px 6px; line-height: 1.35;
+  }
+  .pb-sep {
+    color: var(--text3); font-weight: 600; user-select: none;
+    opacity: 0.85;
+  }
+  .pb-goal-line {
+    font-weight: 600; color: var(--text2); font-size: 0.78rem;
+    max-width: min(100%, 320px);
+  }
+  .pb-meta-row {
+    font-size: 0.66rem; color: var(--text3);
+    font-family: var(--font-mono); margin-top: 4px;
+  }
+  .pb-left  {
+    display: flex; flex-direction: column; gap: 2px;
+    flex-shrink: 0; min-width: 100px; max-width: 42%;
+  }
+  .pb-center {
+    flex: 1; min-width: 0;
+  }
+  .pb-right {
+    display: flex; flex-direction: column;
+    align-items: flex-end; gap: 3px; flex-shrink: 0;
+  }
+
+  /* Прогресс-трек */
+  .pb-track {
+    height: 4px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden; margin-bottom: 7px;
+  }
+  .pb-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .sprint-fill  { background: linear-gradient(90deg, #ff6b35, #ff9a60); }
+  .journey-fill { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+
+  /* Темы Sprint */
+  .pb-topics { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pb-topic {
+    padding: 2px 8px; border-radius: 6px;
+    background: var(--surface2); color: var(--text3);
+    font-size: 0.68rem; cursor: pointer;
+    transition: all 0.18s; user-select: none;
+    white-space: nowrap;
+  }
+  .pb-topic:hover { background: rgba(255,107,53,0.12); color: #ff6b35; }
+  .pb-topic.done  {
+    background: rgba(0,255,136,0.1); color: var(--accent);
+    text-decoration: line-through; cursor: default;
+  }
+  .pb-topic.active {
+    background: rgba(255,107,53,0.15); color: #ff6b35;
+    font-weight: 700; border: 1px solid rgba(255,107,53,0.3);
+  }
+
+  /* Юниты Journey */
+  .pb-units { display: flex; gap: 4px; flex-wrap: wrap; }
+  .pb-unit {
+    width: 22px; height: 22px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; font-weight: 700; cursor: default;
+    transition: all 0.18s;
+  }
+  .pb-unit.done   { background: rgba(0,255,136,0.15); color: var(--accent); }
+  .pb-unit.active {
+    background: rgba(77,159,255,0.2); color: var(--blue);
+    border: 1px solid rgba(77,159,255,0.4);
+    box-shadow: 0 0 8px rgba(77,159,255,0.25);
+  }
+  .pb-unit.locked { background: var(--surface2); color: var(--text3); }
+
+  /* Правая часть */
+  .pb-days {
+    font-weight: 700; color: #ff6b35; font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .pb-days.urgent {
+    color: var(--danger);
+    animation: pulse 1.5s ease infinite;
+  }
+  .pb-progress, .pb-unit-label {
+    font-size: 0.68rem; color: var(--text3);
+    font-family: var(--font-mono); white-space: nowrap;
+  }
+  .pb-unit-title {
+    font-size: 0.75rem; color: var(--text2);
+    font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    max-width: 110px;
+  }
+
+  /* Кнопка остановить путь */
+  .pb-stop-btn {
+    background: none; border: none;
+    color: var(--text3); cursor: pointer;
+    font-size: 0.75rem; padding: 2px 5px;
+    border-radius: 4px; transition: all 0.15s;
+    line-height: 1;
+  }
+  .pb-stop-btn:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .pb-goal { display: none; }
+    .pb-left { max-width: 100%; }
+    .pb-goal-line { max-width: 100%; }
+    .pb-unit-title { max-width: 70px; }
+    .path-banner { gap: 8px; padding: 8px 12px; }
+  }
   </style>
+
   <script src="{{ url_for('static', filename='themes.js') }}"></script>
   <script src="{{ url_for('static', filename='fairik.js') }}"></script>
-<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+  <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
 </body>
 </html>

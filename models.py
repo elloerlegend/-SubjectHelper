@@ -1,5 +1,5 @@
-import json
-from datetime import datetime, date
+import json as _json
+from datetime import datetime, date, timedelta
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
@@ -24,19 +24,26 @@ class User(db.Model, UserMixin):
     badges     = db.Column(db.String(255), default='', nullable=True)
 
     # Персонализация
-    interests      = db.Column(db.String(200), default='', nullable=True)  # "games,sport,music"
+    interests      = db.Column(db.String(200), default='', nullable=True)
     class_number   = db.Column(db.Integer, default=8, nullable=True)
 
-    # Онбордин
+    # Онбординг
     is_onboarded   = db.Column(db.Boolean,   default=False, nullable=False)
-    learning_style = db.Column(db.String(30), default='', nullable=True)  # read/practice/examples/mixed
-    goal           = db.Column(db.String(30), default='', nullable=True)  # exams/grades/homework/curious
-    hard_subjects  = db.Column(db.String(200), default='', nullable=True) # "Математика"
-    referral       = db.Column(db.String(30), default='', nullable=True)  # friend/social/teacher/search
+    learning_style = db.Column(db.String(30), default='', nullable=True)
+    goal           = db.Column(db.String(30), default='', nullable=True)
+    hard_subjects  = db.Column(db.String(200), default='', nullable=True)
+    referral       = db.Column(db.String(30), default='', nullable=True)
 
-    # Магазин и кастомизация (скины)
-    owned_skins = db.Column(db.Text, default='default', nullable=True)
+    # Магазин и кастомизация
+    owned_skins   = db.Column(db.Text, default='default', nullable=True)
     equipped_skin = db.Column(db.String(50), default='default', nullable=True)
+
+    # Настройки интерфейса
+    theme        = db.Column(db.String(20), default='dark',  nullable=True)
+    tts_enabled  = db.Column(db.Boolean,   default=False,   nullable=False)
+    anim_enabled = db.Column(db.Boolean,   default=True,    nullable=False)
+    enter_send   = db.Column(db.Boolean,   default=True,    nullable=False)
+    daily_goal   = db.Column(db.Integer,   default=5,       nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -83,26 +90,25 @@ class WeakTopic(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    subject    = db.Column(db.String(100), nullable=False)   # "Математика"
-    topic      = db.Column(db.String(200), nullable=False)   # "Квадратные уравнения"
-    details    = db.Column(db.Text, nullable=True)           # Что именно было неправильно
+    subject    = db.Column(db.String(100), nullable=False)
+    topic      = db.Column(db.String(200), nullable=False)
+    details    = db.Column(db.Text, nullable=True)
 
-    # Счётчики
-    error_count   = db.Column(db.Integer, default=1)   # Сколько раз ошибался
-    review_count  = db.Column(db.Integer, default=0)   # Сколько раз повторял
-    mastery_score = db.Column(db.Float,   default=0.0) # 0.0–1.0, рост при успешных повторениях
+    error_count   = db.Column(db.Integer, default=1)
+    review_count  = db.Column(db.Integer, default=0)
+    mastery_score = db.Column(db.Float,   default=0.0)
 
-    # Интервальное повторение (алгоритм SM-2)
-    easiness     = db.Column(db.Float, default=2.5)  # E-фактор
-    interval     = db.Column(db.Integer, default=1)  # Дней до следующего повторения
-    repetitions  = db.Column(db.Integer, default=0)  # Успешныe повторения подряд
+    # SM-2
+    easiness    = db.Column(db.Float,   default=2.5)
+    interval    = db.Column(db.Integer, default=1)
+    repetitions = db.Column(db.Integer, default=0)
 
-    first_seen   = db.Column(db.DateTime, default=datetime.utcnow)
-    last_seen    = db.Column(db.DateTime, default=datetime.utcnow)
-    next_review  = db.Column(db.DateTime, default=datetime.utcnow)  # Когда повторить
-    last_review  = db.Column(db.DateTime, nullable=True)
+    first_seen  = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen   = db.Column(db.DateTime, default=datetime.utcnow)
+    next_review = db.Column(db.DateTime, default=datetime.utcnow)
+    last_review = db.Column(db.DateTime, nullable=True)
 
-    is_mastered  = db.Column(db.Boolean, default=False)  # True если mastery_score >= 0.85
+    is_mastered = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', backref=db.backref('weak_topics', lazy=True))
 
@@ -123,30 +129,28 @@ class WeakTopic(db.Model):
 
 
 class ReviewSession(db.Model):
-    """Сессия повторения — когда ученик прошёл мини-повторение по слабой теме."""
     __tablename__ = 'review_session'
 
     id            = db.Column(db.Integer, primary_key=True)
     user_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     weak_topic_id = db.Column(db.Integer, db.ForeignKey('weak_topic.id'), nullable=False)
 
-    started_at    = db.Column(db.DateTime, default=datetime.utcnow)
-    completed     = db.Column(db.Boolean, default=False)
-    score         = db.Column(db.Integer, nullable=True)   # 1–5, оценка от ученика
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed  = db.Column(db.Boolean, default=False)
+    score      = db.Column(db.Integer, nullable=True)
 
     user       = db.relationship('User', backref=db.backref('review_sessions', lazy=True))
     weak_topic = db.relationship('WeakTopic', backref=db.backref('sessions', lazy=True))
 
 
 class MemoryNote(db.Model):
-    """Личные заметки ИИ о конкретном ученике — накапливаются со временем."""
     __tablename__ = 'memory_note'
 
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    note_type  = db.Column(db.String(50))    # 'learning_style', 'strength', 'struggle', 'personality'
-    content    = db.Column(db.Text)          # Сам текст заметки
+    note_type  = db.Column(db.String(50))
+    content    = db.Column(db.Text)
     subject    = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -155,37 +159,160 @@ class MemoryNote(db.Model):
 
 
 # ════════════════════════════════════════════════════════
-#  АЛГОРИТМ SM-2 (интервальное повторение как в Anki)
+#  LEARNING PATHS — три режима обучения
+# ════════════════════════════════════════════════════════
+
+class LearningPath(db.Model):
+    """
+    Активный учебный путь пользователя для конкретного предмета.
+    mode = 'sprint' | 'journey'
+    Casual = нет записи (path is None) — это намеренно, не создаём мусор в БД.
+    """
+    __tablename__ = 'learning_path'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subject     = db.Column(db.String(100), nullable=False)
+    mode        = db.Column(db.String(20),  nullable=False)   # 'sprint' | 'journey'
+    is_active   = db.Column(db.Boolean, default=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    last_active = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # ── Sprint ────────────────────────────────────────
+    sprint_goal        = db.Column(db.String(300), nullable=True)
+    sprint_confidence  = db.Column(db.String(20), nullable=True)  # weak|medium|strong
+    sprint_topics      = db.Column(db.Text, default='[]')      # JSON list of strings
+    sprint_deadline    = db.Column(db.Date, nullable=True)
+    sprint_done        = db.Column(db.Boolean, default=False)
+    sprint_topics_done = db.Column(db.Text, default='[]')      # JSON list of completed topics
+
+    # ── Journey ───────────────────────────────────────
+    journey_goal     = db.Column(db.String(300), nullable=True)
+    journey_level    = db.Column(db.String(30),  nullable=True)  # beginner|intermediate|advanced
+    journey_roadmap  = db.Column(db.Text, default='[]')           # JSON [{unit, title, topics[], sessions_needed}]
+    current_unit     = db.Column(db.Integer, default=1)
+    sessions_done    = db.Column(db.Integer, default=0)
+    minutes_per_week = db.Column(db.Integer, default=120)
+    # Результаты мини-пробника для персонализации промпта
+    probe_strong     = db.Column(db.Text, default='[]')   # JSON: темы которые знает хорошо
+    probe_weak       = db.Column(db.Text, default='[]')   # JSON: темы-пробелы
+
+    user = db.relationship('User', backref=db.backref('learning_paths', lazy=True))
+
+    # ── Хелперы ───────────────────────────────────────
+
+    def get_sprint_topics(self):
+        try:
+            return _json.loads(self.sprint_topics or '[]')
+        except Exception:
+            return []
+
+    def get_sprint_done(self):
+        try:
+            return _json.loads(self.sprint_topics_done or '[]')
+        except Exception:
+            return []
+
+    def get_roadmap(self):
+        try:
+            return _json.loads(self.journey_roadmap or '[]')
+        except Exception:
+            return []
+
+    def get_probe_strong(self):
+        try:
+            return _json.loads(self.probe_strong or '[]')
+        except Exception:
+            return []
+
+    def get_probe_weak(self):
+        try:
+            return _json.loads(self.probe_weak or '[]')
+        except Exception:
+            return []
+
+    def get_current_unit_data(self):
+        roadmap = self.get_roadmap()
+        return next((u for u in roadmap if u.get('unit') == self.current_unit), {})
+
+    def days_left(self):
+        if not self.sprint_deadline:
+            return None
+        return max(0, (self.sprint_deadline - date.today()).days)
+
+    def sprint_progress_pct(self):
+        topics = self.get_sprint_topics()
+        done   = self.get_sprint_done()
+        if not topics:
+            return 0
+        return round(len(done) / len(topics) * 100)
+
+    def journey_progress_pct(self):
+        roadmap = self.get_roadmap()
+        if not roadmap:
+            return 0
+        return round((self.current_unit - 1) / len(roadmap) * 100)
+
+    def to_dict(self):
+        d = {
+            'id':        self.id,
+            'subject':   self.subject,
+            'mode':      self.mode,
+            'is_active': self.is_active,
+        }
+        if self.mode == 'sprint':
+            topics     = self.get_sprint_topics()
+            done       = self.get_sprint_done()
+            topics_left = [t for t in topics if t not in done]
+            d.update({
+                'sprint_goal':        self.sprint_goal,
+                'sprint_confidence':  self.sprint_confidence,
+                'sprint_topics':      topics,
+                'sprint_topics_done': done,
+                'sprint_topics_left': topics_left,
+                'sprint_deadline':    self.sprint_deadline.isoformat() if self.sprint_deadline else None,
+                'days_left':          self.days_left(),
+                'progress_pct':       self.sprint_progress_pct(),
+                'sprint_done':        self.sprint_done,
+            })
+        if self.mode == 'journey':
+            roadmap = self.get_roadmap()
+            d.update({
+                'journey_goal':      self.journey_goal,
+                'journey_level':     self.journey_level,
+                'current_unit':      self.current_unit,
+                'sessions_done':     self.sessions_done,
+                'roadmap':           roadmap,
+                'current_unit_data': self.get_current_unit_data(),
+                'progress_pct':      self.journey_progress_pct(),
+                'probe_strong':      self.get_probe_strong(),
+                'probe_weak':        self.get_probe_weak(),
+            })
+        return d
+
+
+# ════════════════════════════════════════════════════════
+#  АЛГОРИТМ SM-2
 # ════════════════════════════════════════════════════════
 
 def sm2_update(topic: WeakTopic, quality: int) -> WeakTopic:
-    """
-    Обновляет интервал повторения по алгоритму SM-2.
-    quality: 0–5 (0=полный провал, 5=идеально)
-    """
-    from datetime import timedelta
-
     q = max(0, min(5, quality))
 
     if q >= 3:
-        # Успешное повторение
         if topic.repetitions == 0:
             topic.interval = 1
         elif topic.repetitions == 1:
             topic.interval = 6
         else:
             topic.interval = round(topic.interval * topic.easiness)
-        topic.repetitions += 1
+        topic.repetitions  += 1
         topic.mastery_score = min(1.0, topic.mastery_score + 0.15 * (q - 2) / 3)
     else:
-        # Провал — сброс
-        topic.repetitions = 0
-        topic.interval = 1
+        topic.repetitions   = 0
+        topic.interval      = 1
         topic.mastery_score = max(0.0, topic.mastery_score - 0.2)
 
-    # Обновляем E-фактор
-    topic.easiness = max(1.3, topic.easiness + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
-
+    topic.easiness     = max(1.3, topic.easiness + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
     topic.last_review  = datetime.utcnow()
     topic.next_review  = datetime.utcnow() + timedelta(days=max(1, topic.interval))
     topic.review_count += 1
@@ -195,20 +322,18 @@ def sm2_update(topic: WeakTopic, quality: int) -> WeakTopic:
 
 
 def get_topics_due(user_id: int, limit: int = 5) -> list:
-    """Возвращает темы которые пора повторить прямо сейчас."""
     now = datetime.utcnow()
     return WeakTopic.query.filter(
-        WeakTopic.user_id    == user_id,
+        WeakTopic.user_id     == user_id,
         WeakTopic.is_mastered == False,
         WeakTopic.next_review <= now,
     ).order_by(
-        WeakTopic.mastery_score.asc(),   # сначала самые слабые
+        WeakTopic.mastery_score.asc(),
         WeakTopic.next_review.asc(),
     ).limit(limit).all()
 
 
 def add_weak_topic(user_id: int, subject: str, topic: str, details: str = '') -> WeakTopic:
-    """Добавляет или обновляет слабую тему."""
     existing = WeakTopic.query.filter_by(
         user_id=user_id, subject=subject, topic=topic
     ).first()
@@ -216,32 +341,20 @@ def add_weak_topic(user_id: int, subject: str, topic: str, details: str = '') ->
     if existing:
         existing.error_count += 1
         existing.last_seen    = datetime.utcnow()
-        # Если долго не повторял — сдвигаем next_review на сейчас
         if existing.next_review > datetime.utcnow():
-            from datetime import timedelta
             existing.next_review = datetime.utcnow() + timedelta(days=1)
         db.session.commit()
         return existing
     else:
-        wt = WeakTopic(
-            user_id = user_id,
-            subject = subject,
-            topic   = topic,
-            details = details,
-        )
+        wt = WeakTopic(user_id=user_id, subject=subject, topic=topic, details=details)
         db.session.add(wt)
         db.session.commit()
         return wt
 
 
 def get_user_memory_context(user_id: int) -> str:
-    """
-    Строит текстовый контекст из памяти для передачи в промпт.
-    Используется в build_cluster_profile() чтобы ИИ знал историю ученика.
-    """
     lines = []
 
-    # Слабые темы
     weak = WeakTopic.query.filter_by(
         user_id=user_id, is_mastered=False
     ).order_by(WeakTopic.mastery_score.asc()).limit(8).all()
@@ -250,21 +363,21 @@ def get_user_memory_context(user_id: int) -> str:
         lines.append("СЛАБЫЕ ТЕМЫ УЧЕНИКА (из долгосрочной памяти):")
         for w in weak:
             days_ago = (datetime.utcnow() - w.first_seen).days
-            lines.append(f"  • {w.subject}: «{w.topic}» — ошибок: {w.error_count}, "
-                         f"изучена {days_ago} дн. назад, освоение: {int(w.mastery_score*100)}%")
+            lines.append(
+                f"  • {w.subject}: «{w.topic}» — ошибок: {w.error_count}, "
+                f"изучена {days_ago} дн. назад, освоение: {int(w.mastery_score*100)}%"
+            )
         lines.append("")
 
-    # Освоенные темы (чтобы не повторять)
     mastered = WeakTopic.query.filter_by(
         user_id=user_id, is_mastered=True
-    ).order_by(WeakTopic.updated_at.desc()).limit(5).all()
+    ).order_by(WeakTopic.last_seen.desc()).limit(5).all()
 
     if mastered:
         topics_str = ', '.join(f'«{m.topic}»' for m in mastered)
         lines.append(f"ОСВОЕННЫЕ ТЕМЫ (не повторяй): {topics_str}")
         lines.append("")
 
-    # Заметки ИИ о характере обучения
     notes = MemoryNote.query.filter_by(user_id=user_id).order_by(
         MemoryNote.updated_at.desc()
     ).limit(5).all()
@@ -278,7 +391,7 @@ def get_user_memory_context(user_id: int) -> str:
 
 
 # ════════════════════════════════════════════════════════
-#  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (оригинальные)
+#  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ════════════════════════════════════════════════════════
 
 def save_history(chat_id, subject, mode, question, answer):
