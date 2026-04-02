@@ -2,213 +2,1495 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SubjectHelper — Главная</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
   <link rel="stylesheet" href="/static/back.css">
   <link rel="stylesheet" href="/static/welcome.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="{{ url_for('static', filename='themes.js') }}"></script>
 </head>
-<script src="{{ url_for('static', filename='themes.js') }}"></script>
-<script src="{{ url_for('static', filename='fairik.js') }}"></script>
 
-<body>
+<body class="has-bottom-nav">
 
+<!-- ══ НИЖНЯЯ НАВИГАЦИЯ ══ -->
+<nav class="app-nav">
+  <a href="/" class="nav-item active">
+    <span class="nav-icon material-icons">home</span>
+    <span class="nav-label">Главная</span>
+  </a>
+  <a href="/chats" class="nav-item">
+    <span class="nav-icon material-icons">chat_bubble_outline</span>
+    <span class="nav-label">Чаты</span>
+  </a>
+  <a href="/leaderboard" class="nav-item">
+    <span class="nav-icon material-icons">leaderboard</span>
+    <span class="nav-label">Рейтинг</span>
+  </a>
+  <a href="/profile" class="nav-item">
+    {% if current_user and current_user.avatar %}
+      <img src="{{ current_user.avatar }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid var(--accent2);">
+    {% else %}
+      <span class="nav-icon material-icons">person_outline</span>
+    {% endif %}
+    <span class="nav-label">Профиль</span>
+  </a>
+</nav>
+
+<!-- ══ ХЕДЕР ══ -->
 <header>
-  <img class="logo" src="/static/img/logo.png" alt="Логотип">
+  <a href="/"><img class="logo" src="/static/img/logo.png" alt="Логотип"></a>
   {{ menu | safe }}
 </header>
-
 {{ menu_js | safe }}
 
 <section class="welcome">
-  <h1>SubjectHelper</h1>
-  <p class="subtitle">Твой личный AI-репетитор для подготовки к урокам и экзаменам</p>
 
-  <!-- ── Класс ── -->
-  <h2 class="section-title">Выбери класс</h2>
-  <div class="class-grid">
-    <div class="class-card" data-class="1-4" data-num="3">1–4 класс</div>
-    <div class="class-card" data-class="5-7" data-num="6">5–7 класс</div>
-    <div class="class-card" data-class="8-9" data-num="8">8–9 класс</div>
-    <div class="class-card" data-class="10-11" data-num="10">10–11 класс</div>
+{% if current_user %}
+<!-- ══════════════════════════════════════════
+     ЭКРАН ЗАЛОГИНЕННОГО ПОЛЬЗОВАТЕЛЯ
+══════════════════════════════════════════ -->
+
+  <!-- Приветствие -->
+  <div class="w-greeting">
+    <div class="w-greeting-text">
+      <h1 class="w-hello">Привет, {{ current_user.name or 'Ученик' }}! 👋</h1>
+      <p class="w-hello-sub">Выбери режим — начнём прямо сейчас</p>
+    </div>
+    {% if current_user.xp %}
+    <div class="w-xp-badge">
+      <div class="w-xp-num">{{ current_user.xp }}</div>
+      <div class="w-xp-lbl">XP</div>
+    </div>
+    {% endif %}
   </div>
 
-  <!-- ── Интересы (появляются после выбора класса) ── -->
-  <div id="interests-block" style="display:none;">
-    <h2 class="section-title">Что тебя интересует?</h2>
-    <div class="modes">
-      <div class="interest-card" data-interest="games">🎮 Игры</div>
-      <div class="interest-card" data-interest="sport">⚽ Спорт</div>
-      <div class="interest-card" data-interest="music">🎵 Музыка</div>
-      <div class="interest-card" data-interest="tech">💻 Технологии</div>
-      <div class="interest-card" data-interest="nature">🌿 Природа</div>
-      <div class="interest-card" data-interest="art">🎨 Искусство</div>
-    </div>
-    <p class="interests-hint">Можно выбрать несколько — буду объяснять на примерах которые тебе близки</p>
-  </div>
-
-  <!-- ── Предмет ── -->
-  <h2 class="section-title">Выбери предмет</h2>
-  <div class="modes" id="subjects">
-    <div class="subject-card" data-subject="Математика">📐 Математика</div>
-    <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
-    <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
-    <div class="subject-card" data-subject="Физика">🔬 Физика</div>
-    <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
-    <div class="subject-card" data-subject="Биология">🧬 Биология</div>
-    <div class="subject-card" data-subject="История">📜 История</div>
-    <div class="subject-card" data-subject="Обществознание">⚖️ Обществознание</div>
-    <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
-  </div>
-
-  <!-- ── Режим ── -->
-  <h2 class="section-title">Выбери режим</h2>
-  <div class="modes">
-    <div class="mode-card" data-mode="explain">
-      <h2>🧠 Объяснение темы</h2>
-      <p>Простой разбор любой темы с примерами из жизни.</p>
-    </div>
-    <div class="mode-card" data-mode="step">
-      <h2>📚 Решение по шагам</h2>
-      <p>Решаем задачи пошагово, объясняя каждое действие.</p>
-    </div>
-    <div class="mode-card" data-mode="quiz">
-      <h2>🎯 Проверка знаний</h2>
-      <p>Вопросы с вариантами ответов и мгновенной проверкой.</p>
-    </div>
-    <div class="mode-card" data-mode="exam">
-      <h2>💯 Подготовка к ЕГЭ/ОГЭ</h2>
-      <p>Задания в формате экзамена с оценкой по критериям.</p>
+  <!-- Активные пути (Sprint / Journey в процессе) -->
+  {% if active_paths %}
+  <div class="w-active-section">
+    <div class="w-section-label">В процессе</div>
+    <div class="w-active-list">
+      {% for path in active_paths %}
+      <div class="w-active-card {{ path.mode }}-card" onclick="continuePath('{{ path.subject }}', '{{ path.mode }}')">
+        <div class="wac-icon">{{ '⚡' if path.mode == 'sprint' else '🗺' }}</div>
+        <div class="wac-body">
+          <div class="wac-title">{{ path.subject }}</div>
+          <div class="wac-meta">
+            {% if path.mode == 'sprint' %}
+              {% set days = path.days_left() %}
+              {% set done = path.get_sprint_done()|length %}
+              {% set total = path.get_sprint_topics()|length %}
+              Sprint · {{ done }}/{{ total }} тем · {% if days == 0 %}сегодня!{% elif days == 1 %}завтра{% else %}{{ days }} дн.{% endif %}
+            {% else %}
+              Journey · Юнит {{ path.current_unit }}/{{ path.get_roadmap()|length }} · {{ path.sessions_done }} сессий
+            {% endif %}
+          </div>
+          <div class="wac-bar">
+            <div class="wac-fill" style="width:{{ path.sprint_progress_pct() if path.mode == 'sprint' else path.journey_progress_pct() }}%"></div>
+          </div>
+        </div>
+        <span class="material-icons wac-arrow">arrow_forward_ios</span>
+      </div>
+      {% endfor %}
     </div>
   </div>
+  {% endif %}
 
-  <!-- ── Форма ── -->
-  <form method="POST" action="/new_chat" id="new-chat-form">
-    <input type="hidden" name="subject"      id="form-subject"   value="">
-    <input type="hidden" name="class_number" id="form-class"     value="">
-    <input type="hidden" name="mode"         id="form-mode"      value="">
-    <input type="hidden" name="interests"    id="form-interests" value="">
-    <div id="validation-hint" class="validation-hint" style="display:none;">
-      ☝️ Выбери класс, предмет и режим
+  <!-- Последний чат — продолжить -->
+  {% if last_chat %}
+  <a href="{{ url_for('open_chat', chat_id=last_chat.id) }}" class="w-continue-card">
+    <span class="material-icons w-continue-icon">bolt</span>
+    <div class="w-continue-info">
+      <div class="w-continue-label">Продолжить</div>
+      <div class="w-continue-title">{{ last_chat.title }}</div>
     </div>
-    <button type="submit" class="start-button" id="start-button" disabled>
-      Начать обучение →
-    </button>
-  </form>
+    <span class="material-icons w-continue-arrow">arrow_forward_ios</span>
+  </a>
+  {% endif %}
+
+{% else %}
+<!-- ══════════════════════════════════════════
+     ГОСТЕВОЙ ЭКРАН
+══════════════════════════════════════════ -->
+  <div class="w-hero">
+    <div class="w-hero-icon">🐉</div>
+    <h1 class="w-hero-title">SubjectHelper</h1>
+    <p class="w-hero-sub">Твой личный AI‑репетитор.<br>Три режима под любую задачу.</p>
+    <div class="w-auth-cta">
+      <a href="/register" class="w-auth-btn w-auth-primary">
+        <span class="material-icons">rocket_launch</span> Начать бесплатно
+      </a>
+      <a href="/login" class="w-auth-btn w-auth-secondary">
+        <span class="material-icons">login</span> Войти
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════
+     ТРИ РЕЖИМА — ЦЕНТРАЛЬНЫЙ ЭЛЕМЕНТ СТРАНИЦЫ
+══════════════════════════════════════════ -->
+<div class="w-modes-section">
+  <h2 class="w-section-title">Выбери режим</h2>
+
+  <div class="w-mode-grid">
+
+     <!-- ── CASUAL ── -->
+    <div class="w-mode-card casual-mode" id="cardCasual" onclick="openCasual()">
+      <div class="wmc-accent casual-accent"></div>
+      <div class="wmc-header">
+        <span class="wmc-emoji">💬</span>
+        <div class="wmc-badge casual-badge">Быстро</div>
+      </div>
+      <h3 class="wmc-title">Быстрый вопрос</h3>
+      <p class="wmc-desc">Делаешь домашку и что-то непонятно? Задай вопрос — получишь ответ за 2 минуты.</p>
+      <div class="wmc-examples">
+        <span>«Что такое синус?»</span>
+        <span>«Помоги с задачей»</span>
+        <span>«Объясни правило»</span>
+      </div>
+      <button class="wmc-btn casual-btn">Начать →</button>
+    </div>
+
+    <!-- ── SPRINT ── -->
+    <div class="w-mode-card sprint-mode" id="cardSprint" onclick="openSprint()">
+      <div class="wmc-accent sprint-accent"></div>
+      <div class="wmc-header">
+        <span class="wmc-emoji">⚡</span>
+        <div class="wmc-badge sprint-badge">Дедлайн</div>
+      </div>
+      <h3 class="wmc-title">Sprint</h3>
+      <p class="wmc-desc">Контрольная через 3 дня? ОГЭ через неделю? ИИ строит план до дедлайна. Спросим, насколько ты уже в теме — подстроим глубину и темп.</p>
+      <div class="wmc-examples">
+        <span>«Контрольная завтра»</span>
+        <span>«ОГЭ через неделю»</span>
+        <span>«Разобрать тему»</span>
+      </div>
+      <button class="wmc-btn sprint-btn">Создать Sprint →</button>
+    </div>
+
+    <!-- ── JOURNEY ── -->
+    <div class="w-mode-card journey-mode" id="cardJourney" onclick="openJourney()">
+      <div class="wmc-accent journey-accent"></div>
+      <div class="wmc-header">
+        <span class="wmc-emoji">🗺</span>
+        <div class="wmc-badge journey-badge">Системно</div>
+      </div>
+      <h3 class="wmc-title">Journey</h3>
+      <p class="wmc-desc">Хочешь знать предмет по-настоящему? Роадмап на недели вперёд. По желанию — короткая проверка уровня, чтобы точнее подобрать темы и сложность.</p>
+      <div class="wmc-examples">
+        <span>«Выучить английский»</span>
+        <span>«ЕГЭ через 5 месяцев»</span>
+        <span>«Изучить физику»</span>
+      </div>
+      <button class="wmc-btn journey-btn">Начать Journey →</button>
+    </div>
+
+  </div>
+</div>
+
 </section>
 
+<!-- ════════════════════════════════════════════════════
+     МОДАЛ: CASUAL — выбор предмета и режима чата
+════════════════════════════════════════════════════ -->
+<div class="w-modal-overlay" id="casualModal">
+  <div class="w-modal">
+    <div class="wm-header">
+      <div>
+        <div class="wm-title">💬 Быстрый вопрос</div>
+        <div class="wm-sub">Выбери предмет — и сразу задавай вопрос</div>
+      </div>
+      <button class="wm-close" onclick="closeModal('casualModal')">✕</button>
+    </div>
+
+    <div class="wm-section-label">Предмет</div>
+    <div class="wm-chips" id="casualSubjects">
+      <div class="wm-chip" data-val="Математика">📐 Математика</div>
+      <div class="wm-chip" data-val="Русский язык">📝 Русский язык</div>
+      <div class="wm-chip" data-val="Физика">🔬 Физика</div>
+      <div class="wm-chip" data-val="Химия">⚗️ Химия</div>
+      <div class="wm-chip" data-val="Биология">🧬 Биология</div>
+      <div class="wm-chip" data-val="История">📜 История</div>
+      <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
+      <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
+      <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+      <div class="wm-chip" data-val="Литература">📖 Литература</div>
+      <div class="wm-chip" data-val="География">🌐 География</div>
+    </div>
+
+    <div class="wm-section-label">Что делать</div>
+    <div class="wm-chat-modes" id="casualModes">
+      <div class="wm-mode-item" data-mode="explain">
+        <span class="wm-mode-icon">🧠</span>
+        <div class="wm-mode-body">
+          <div class="wm-mode-title">Объяснение темы</div>
+          <div class="wm-mode-desc">Простой разбор с примерами</div>
+        </div>
+        <div class="wm-mode-check"></div>
+      </div>
+      <div class="wm-mode-item" data-mode="step">
+        <span class="wm-mode-icon">🪜</span>
+        <div class="wm-mode-body">
+          <div class="wm-mode-title">Решение по шагам</div>
+          <div class="wm-mode-desc">Решаем задачу шаг за шагом</div>
+        </div>
+        <div class="wm-mode-check"></div>
+      </div>
+      <div class="wm-mode-item" data-mode="quiz">
+        <span class="wm-mode-icon">🎯</span>
+        <div class="wm-mode-body">
+          <div class="wm-mode-title">Проверка знаний</div>
+          <div class="wm-mode-desc">Вопросы с вариантами ответов</div>
+        </div>
+        <div class="wm-mode-check"></div>
+      </div>
+      <div class="wm-mode-item" data-mode="exam">
+        <span class="wm-mode-icon">📋</span>
+        <div class="wm-mode-body">
+          <div class="wm-mode-title">Формат ЕГЭ / ОГЭ</div>
+          <div class="wm-mode-desc">Задания как на экзамене</div>
+        </div>
+        <div class="wm-mode-check"></div>
+      </div>
+    </div>
+
+    {% if not current_user or not current_user.class_number %}
+    <div class="wm-section-label">Твой класс</div>
+    <div class="wm-chips" id="casualClasses">
+      <div class="wm-chip" data-val="3">1–4 кл.</div>
+      <div class="wm-chip" data-val="6">5–7 кл.</div>
+      <div class="wm-chip" data-val="8">8–9 кл.</div>
+      <div class="wm-chip" data-val="10">10–11 кл.</div>
+    </div>
+    {% endif %}
+
+    <div id="casualHint" class="wm-hint" style="display:none;">☝️ Выбери предмет и режим</div>
+
+    <form method="POST" action="/new_chat" id="casualForm">
+      <input type="hidden" name="subject"      id="c-subject"   value="">
+      <input type="hidden" name="mode"         id="c-mode"      value="">
+      <input type="hidden" name="class_number" id="c-class"     value="{{ current_user.class_number if current_user else '' }}">
+      <input type="hidden" name="interests"    id="c-interests" value="{{ current_user.interests if current_user else '' }}">
+    </form>
+    <button class="wm-submit casual-submit" id="casualSubmit" onclick="submitCasual()">
+      Начать чат →
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     МОДАЛ: SPRINT
+════════════════════════════════════════════════════ -->
+<div class="w-modal-overlay" id="sprintModal">
+  <div class="w-modal">
+    <div class="wm-header">
+      <div>
+        <div class="wm-title">⚡ Sprint</div>
+        <div class="wm-sub">Интенсивная подготовка с дедлайном</div>
+      </div>
+      <button class="wm-close" onclick="closeModal('sprintModal')">✕</button>
+    </div>
+
+    <!-- Шаг 1: Предмет -->
+    <div class="sprint-step" id="sstep1">
+      <div class="wm-section-label">Шаг 1/4 · Что готовим?</div>
+      <div class="wm-chips" id="sprintSubjects">
+        <div class="wm-chip" data-val="Математика">📐 Математика</div>
+        <div class="wm-chip" data-val="Русский язык">📝 Русский язык</div>
+        <div class="wm-chip" data-val="Физика">🔬 Физика</div>
+        <div class="wm-chip" data-val="Химия">⚗️ Химия</div>
+        <div class="wm-chip" data-val="Биология">🧬 Биология</div>
+        <div class="wm-chip" data-val="История">📜 История</div>
+        <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
+        <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
+        <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+        <div class="wm-chip" data-val="Литература">📖 Литература</div>
+        <div class="wm-chip" data-val="География">🌐 География</div>
+      </div>
+      <button class="wm-submit sprint-submit" onclick="sprintNext(2)" disabled id="sstep1btn">Дальше →</button>
+    </div>
+
+    <!-- Шаг 2: Цель и дедлайн -->
+    <div class="sprint-step" id="sstep2" style="display:none;">
+      <div class="wm-section-label">Шаг 2/4 · Цель и дедлайн</div>
+
+      <div class="wm-label-sm">Что нужно сделать?</div>
+      <div class="wm-chips" id="sprintGoalChips">
+        <div class="wm-chip" data-val="Контрольная работа">📋 Контрольная</div>
+        <div class="wm-chip" data-val="ОГЭ">📝 ОГЭ</div>
+        <div class="wm-chip" data-val="ЕГЭ">🎓 ЕГЭ</div>
+        <div class="wm-chip" data-val="Зачёт">✅ Зачёт</div>
+        <div class="wm-chip" data-val="Разобрать тему">🧠 Разобрать тему</div>
+      </div>
+      <input class="wm-input" id="sprintGoalInput" placeholder="или напиши свою цель..." maxlength="120">
+
+      <div class="wm-label-sm" style="margin-top:14px;">Когда дедлайн?</div>
+      <div class="wm-deadline-grid" id="sprintDeadlines">
+        <div class="wm-chip" data-days="1">Завтра</div>
+        <div class="wm-chip" data-days="3">Через 3 дня</div>
+        <div class="wm-chip" data-days="7">Через неделю</div>
+        <div class="wm-chip" data-days="14">Через 2 недели</div>
+      </div>
+      <input type="date" class="wm-input" id="sprintDateInput" style="margin-top:8px;">
+
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="sprintNext(1)">← Назад</button>
+        <button class="wm-submit sprint-submit" onclick="sprintNext(3)" id="sstep2btn" disabled>Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 3: Самооценка по теме -->
+    <div class="sprint-step" id="sstep3" style="display:none;">
+      <div class="wm-section-label">Шаг 3/4 · Насколько разбираешься в теме?</div>
+      <p class="wm-hint-optional">Подстроим глубину объяснений и темп под твой старт.</p>
+      <div class="wm-chat-modes" id="sprintConfidence">
+        <div class="wm-mode-item" data-confidence="weak">
+          <span class="wm-mode-icon">🌱</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Слабо</div>
+            <div class="wm-mode-desc">Почти с нуля — нужны простые объяснения и база</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-confidence="medium">
+          <span class="wm-mode-icon">📘</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Средне</div>
+            <div class="wm-mode-desc">База есть — хочу структуру, задачи и уверенность</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-confidence="strong">
+          <span class="wm-mode-icon">🎯</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Дотянуть до идеала</div>
+            <div class="wm-mode-desc">Уже неплохо — шлифовка, формат экзамена, типовые ловушки</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+      </div>
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="sprintNext(2)">← Назад</button>
+        <button class="wm-submit sprint-submit" onclick="sprintNext(4)" id="sstep3btn" disabled>Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 4: Темы + запуск -->
+    <div class="sprint-step" id="sstep4" style="display:none;">
+      <div class="wm-section-label">Шаг 4/4 · Темы (необязательно)</div>
+      <p style="font-size:0.8rem;color:var(--text3);margin-bottom:10px;">
+        Напиши темы через запятую — ИИ сам предложит план если пропустишь
+      </p>
+      <textarea class="wm-textarea" id="sprintTopicsInput" placeholder="Например: Кинематика, Динамика, Законы Ньютона" rows="3"></textarea>
+
+      <div class="wm-sprint-preview" id="sprintPreview" style="display:none;">
+        <div class="sp-row"><span class="sp-lbl">📚 Предмет:</span><span id="spv-subject">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">🎯 Цель:</span><span id="spv-goal">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">📅 Дедлайн:</span><span id="spv-deadline">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">💡 В теме:</span><span id="spv-confidence">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">📋 Темы:</span><span id="spv-topics">ИИ составит план</span></div>
+      </div>
+
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="sprintNext(3)">← Назад</button>
+        <button class="wm-submit sprint-submit" id="sprintLaunchBtn" onclick="launchSprint()">
+          ⚡ Запустить Sprint →
+        </button>
+      </div>
+    </div>
+
+    <!-- Загрузка -->
+    <div class="sprint-step wm-loading" id="ssprintLoading" style="display:none;">
+      <div class="wm-spinner"></div>
+      <div class="wm-loading-txt">Файрик строит план Sprint...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     МОДАЛ: JOURNEY
+════════════════════════════════════════════════════ -->
+<div class="w-modal-overlay" id="journeyModal">
+  <div class="w-modal">
+    <div class="wm-header">
+      <div>
+        <div class="wm-title">🗺 Journey</div>
+        <div class="wm-sub">Системное изучение с персональным роадмапом</div>
+      </div>
+      <button class="wm-close" onclick="closeModal('journeyModal')">✕</button>
+    </div>
+
+    <!-- Шаг 1: Предмет -->
+    <div class="journey-step" id="jstep1">
+      <div class="wm-section-label">Шаг 1/4 · Что изучаем?</div>
+      <div class="wm-chips" id="journeySubjects">
+        <div class="wm-chip" data-val="Математика">📐 Математика</div>
+        <div class="wm-chip" data-val="Русский язык">📝 Русский язык</div>
+        <div class="wm-chip" data-val="Физика">🔬 Физика</div>
+        <div class="wm-chip" data-val="Химия">⚗️ Химия</div>
+        <div class="wm-chip" data-val="Биология">🧬 Биология</div>
+        <div class="wm-chip" data-val="История">📜 История</div>
+        <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
+        <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
+        <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+        <div class="wm-chip" data-val="Литература">📖 Литература</div>
+        <div class="wm-chip" data-val="География">🌐 География</div>
+      </div>
+      <button class="wm-submit journey-submit" onclick="journeyNext(2)" disabled id="jstep1btn">Дальше →</button>
+    </div>
+
+    <!-- Шаг 2: Цель -->
+    <div class="journey-step" id="jstep2" style="display:none;">
+      <div class="wm-section-label">Шаг 2/4 · Твоя цель</div>
+      <div class="wm-chips" id="journeyGoalChips">
+        <div class="wm-chip" data-val="Сдать ЕГЭ на 80+">🎓 ЕГЭ на высокий балл</div>
+        <div class="wm-chip" data-val="Подготовиться к ОГЭ">📝 Сдать ОГЭ</div>
+        <div class="wm-chip" data-val="Улучшить оценки в школе">📈 Лучше учиться</div>
+        <div class="wm-chip" data-val="Понять предмет глубоко">🔬 Понять глубоко</div>
+        <div class="wm-chip" data-val="Подготовиться к олимпиаде">🏆 Олимпиада</div>
+      </div>
+      <input class="wm-input" id="journeyGoalInput" placeholder="или напиши свою цель..." maxlength="150">
+
+      <div class="wm-label-sm" style="margin-top:14px;">Сколько времени в неделю?</div>
+      <div class="wm-time-grid" id="journeyTime">
+        <div class="wm-chip wm-time-chip" data-mins="60">~1 час</div>
+        <div class="wm-chip wm-time-chip" data-mins="120">~2 часа</div>
+        <div class="wm-chip wm-time-chip" data-mins="180">~3 часа</div>
+        <div class="wm-chip wm-time-chip" data-mins="300">~5 часов</div>
+      </div>
+
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="journeyNext(1)">← Назад</button>
+        <button class="wm-submit journey-submit" onclick="journeyNext(3)" id="jstep2btn" disabled>Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 3: Уровень -->
+    <div class="journey-step" id="jstep3" style="display:none;">
+      <div class="wm-section-label">Шаг 3/4 · Твой уровень сейчас</div>
+
+      <div class="wm-probe-suggest">
+        <div class="wm-probe-suggest-icon" aria-hidden="true">📊</div>
+        <div class="wm-probe-suggest-body">
+          <div class="wm-probe-suggest-title">Проверить уровень перед стартом?</div>
+          <p class="wm-probe-suggest-text">Короткий мини‑пробник из 8 вопросов поможет точнее подобрать темы и сложность роадмапа. По желанию — можно сразу указать уровень ниже.</p>
+          <button type="button" class="wm-probe-suggest-btn" onclick="startJourneyProbe()">Пройти проверку</button>
+        </div>
+      </div>
+
+      <div class="wm-sub-divider">Или выбери уровень сам:</div>
+
+      <div class="wm-chat-modes" id="journeyLevels">
+        <div class="wm-mode-item" data-level="beginner">
+          <span class="wm-mode-icon">🌱</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Начинаю с нуля</div>
+            <div class="wm-mode-desc">Почти ничего не знаю или забыл всё</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-level="intermediate">
+          <span class="wm-mode-icon">📘</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Знаю основы</div>
+            <div class="wm-mode-desc">Базу знаю, но есть пробелы</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-level="advanced">
+          <span class="wm-mode-icon">🔥</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Знаю неплохо</div>
+            <div class="wm-mode-desc">Хочу закрыть пробелы и углубиться</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+      </div>
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="journeyNext(2)">← Назад</button>
+        <button class="wm-submit journey-submit" onclick="journeyNext(4)" id="jstep3btn" disabled>Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 4: Запуск -->
+    <div class="journey-step" id="jstep4" style="display:none;">
+      <div class="wm-section-label">Шаг 4/4 · Готово!</div>
+      <div class="wm-journey-preview" id="journeyPreview">
+        <div class="sp-row"><span class="sp-lbl">📚 Предмет:</span><span id="jpv-subject">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">🎯 Цель:</span><span id="jpv-goal">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">📊 Уровень:</span><span id="jpv-level">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">⏱ В неделю:</span><span id="jpv-time">—</span></div>
+      </div>
+      <p class="wm-journey-note">
+        🐉 Файрик построит персональный роадмап и подберёт темы специально для тебя.
+        Это займёт около 10 секунд.
+      </p>
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="journeyNext(3)">← Назад</button>
+        <button class="wm-submit journey-submit" id="journeyLaunchBtn" onclick="launchJourney()">
+          🗺 Начать Journey →
+        </button>
+      </div>
+    </div>
+
+    <!-- Загрузка -->
+    <div class="journey-step wm-loading" id="sjourneyLoading" style="display:none;">
+      <div class="wm-spinner journey-spinner"></div>
+      <div class="wm-loading-txt">Файрик строит твой персональный роадмап...</div>
+      <div class="wm-loading-sub">Генерирую план на основе твоей цели и уровня</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- МОДАЛ: Journey — мини-проверка уровня -->
+<div class="w-modal-overlay" id="journeyProbeModal">
+  <div class="w-modal w-modal-probe">
+    <div class="wm-header">
+      <div>
+        <div class="wm-title">📊 Мини‑проверка</div>
+        <div class="wm-sub">8 вопросов — чтобы лучше подстроить Journey</div>
+      </div>
+      <button class="wm-close" type="button" onclick="closeJourneyProbe()">✕</button>
+    </div>
+    <div id="journeyProbeLoading" class="wm-probe-loading">
+      <div class="wm-spinner journey-spinner"></div>
+      <div class="wm-loading-txt">Готовим вопросы…</div>
+    </div>
+    <div id="journeyProbeQuiz" style="display:none;"></div>
+    <div id="journeyProbeActions" class="wm-btns-row wm-probe-actions" style="display:none;">
+      <button type="button" class="wm-back-btn" onclick="closeJourneyProbe()">Отмена</button>
+      <button type="button" class="wm-submit journey-submit" id="journeyProbeSubmitBtn" onclick="finishJourneyProbe()">Готово — посчитать</button>
+    </div>
+  </div>
+</div>
+
+<!-- НУЖЕН ЛОГИН — подсказка для гостей -->
+<div class="w-modal-overlay" id="authNeedModal">
+  <div class="w-modal" style="max-width:380px;">
+    <div class="wm-header">
+      <div class="wm-title">🐉 Нужен аккаунт</div>
+      <button class="wm-close" onclick="closeModal('authNeedModal')">✕</button>
+    </div>
+    <p style="font-size:0.9rem;color:var(--text2);margin-bottom:20px;line-height:1.6;">
+      Чтобы сохранять прогресс, историю и личные настройки — войди или зарегистрируйся. Это бесплатно!
+    </p>
+    <div style="display:flex;gap:10px;">
+      <a href="/register" class="wm-submit casual-submit" style="flex:1;text-align:center;text-decoration:none;">
+        Регистрация
+      </a>
+      <a href="/login" class="wm-submit" style="flex:1;text-align:center;text-decoration:none;background:var(--surface2);color:var(--text);">
+        Войти
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ══════════════════════════════════
+   ПРИВЕТСТВИЕ
+══════════════════════════════════ */
+.w-greeting {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px;
+  margin-bottom: 16px;
+  animation: fadeUp 0.4s ease both;
+}
+.w-hello { font-size: clamp(1.3rem,3.5vw,1.9rem); margin-bottom: 4px; }
+.w-hello-sub { font-size: 0.85rem; color: var(--text2); font-family: var(--font-mono); }
+.w-xp-badge {
+  flex-shrink: 0;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.25);
+  border-radius: 14px; padding: 8px 14px;
+  text-align: center; min-width: 58px;
+}
+.w-xp-num { font-size: 1.2rem; font-weight: 800; color: var(--accent); font-family: var(--font-mono); line-height: 1; }
+.w-xp-lbl { font-size: 0.6rem; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.1em; }
+
+/* ══ HERO (гость) ══ */
+.w-hero { text-align: center; padding: 24px 0 28px; animation: fadeUp 0.4s ease both; }
+.w-hero-icon { font-size: 3.5rem; display: block; margin-bottom: 10px; }
+.w-hero-title { font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 800; margin-bottom: 8px; }
+.w-hero-sub { font-size: 0.95rem; color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
+.w-auth-cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.w-auth-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 12px 26px; border-radius: 50px;
+  font-size: 0.92rem; font-weight: 700;
+  text-decoration: none; transition: all 0.2s;
+  font-family: var(--font-main);
+}
+.w-auth-primary  { background: var(--accent); color: var(--bg); box-shadow: 0 6px 20px rgba(0,255,136,0.3); }
+.w-auth-primary:hover  { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,255,136,0.45); color: var(--bg); }
+.w-auth-secondary { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border2); }
+.w-auth-secondary:hover { background: rgba(255,255,255,0.1); color: var(--accent); transform: translateY(-2px); }
+
+/* ══ АКТИВНЫЕ ПУТИ ══ */
+.w-active-section { margin-bottom: 20px; animation: fadeUp 0.3s ease both; }
+.w-section-label {
+  font-size: 0.68rem; font-family: var(--font-mono);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 10px;
+}
+.w-active-list { display: flex; flex-direction: column; gap: 8px; }
+.w-active-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 14px;
+  cursor: pointer; transition: all 0.2s; text-decoration: none;
+}
+.sprint-card { background: rgba(255,107,53,0.06); border: 1px solid rgba(255,107,53,0.22); }
+.journey-card{ background: rgba(77,159,255,0.06); border: 1px solid rgba(77,159,255,0.20); }
+.w-active-card:hover { transform: translateX(3px); }
+.sprint-card:hover  { border-color: rgba(255,107,53,0.4); }
+.journey-card:hover { border-color: rgba(77,159,255,0.4); }
+.wac-icon { font-size: 1.5rem; flex-shrink: 0; }
+.wac-body  { flex: 1; min-width: 0; }
+.wac-title { font-size: 0.88rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.wac-meta  { font-size: 0.72rem; color: var(--text3); font-family: var(--font-mono); margin-bottom: 5px; }
+.wac-bar   { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.wac-fill  { height: 100%; border-radius: 2px; transition: width 0.6s; }
+.sprint-card  .wac-fill { background: #ff6b35; }
+.journey-card .wac-fill { background: var(--blue); }
+.wac-arrow { font-size: 14px; color: var(--text3); flex-shrink: 0; }
+
+/* ══ Продолжить чат ══ */
+.w-continue-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(0,255,136,0.05);
+  border: 1px solid rgba(0,255,136,0.18);
+  border-radius: 14px; padding: 12px 16px;
+  margin-bottom: 20px; text-decoration: none;
+  transition: all 0.2s; animation: fadeUp 0.4s 0.1s ease both;
+}
+.w-continue-card:hover { background: rgba(0,255,136,0.09); transform: translateY(-2px); }
+.w-continue-icon  { color: var(--accent); font-size: 20px; flex-shrink: 0; }
+.w-continue-info  { flex: 1; min-width: 0; }
+.w-continue-label { font-size: 0.62rem; color: var(--accent); font-family: var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+.w-continue-title { font-size: 0.88rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-continue-arrow { color: var(--accent); font-size: 13px; flex-shrink: 0; }
+
+/* ══════════════════════════════════
+   ТРИ РЕЖИМА — главный блок
+══════════════════════════════════ */
+.w-modes-section { margin-top: 8px; }
+.w-section-title {
+  font-family: var(--font-mono); font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 14px;
+  opacity: 0.8; text-align: center;
+}
+
+.w-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .w-mode-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.w-mode-card {
+  position: relative; overflow: hidden;
+  border-radius: 20px; padding: 22px 20px 20px;
+  cursor: pointer; transition: all 0.22s;
+  border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  display: flex; flex-direction: column; gap: 10px;
+  animation: fadeUp 0.4s ease both;
+}
+.w-mode-card:nth-child(1) { animation-delay: 0.05s; }
+.w-mode-card:nth-child(2) { animation-delay: 0.10s; }
+.w-mode-card:nth-child(3) { animation-delay: 0.15s; }
+
+.w-mode-card:hover { transform: translateY(-4px); }
+.casual-mode:hover  { border-color: rgba(0,255,136,0.4); box-shadow: 0 12px 32px rgba(0,255,136,0.12); }
+.sprint-mode:hover  { border-color: rgba(255,107,53,0.4); box-shadow: 0 12px 32px rgba(255,107,53,0.12); }
+.journey-mode:hover { border-color: rgba(77,159,255,0.4); box-shadow: 0 12px 32px rgba(77,159,255,0.12); }
+
+/* Цветная полоска снизу */
+.wmc-accent {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; transform: scaleX(0); transition: transform 0.28s ease;
+  transform-origin: left; border-radius: 0 0 20px 20px;
+}
+.casual-accent  { background: var(--accent); }
+.sprint-accent  { background: #ff6b35; }
+.journey-accent { background: var(--blue); }
+.w-mode-card:hover .wmc-accent { transform: scaleX(1); }
+
+.wmc-header { display: flex; align-items: center; justify-content: space-between; }
+.wmc-emoji  { font-size: 1.8rem; line-height: 1; }
+
+.wmc-badge {
+  font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 10px;
+}
+.casual-badge  { background: rgba(0,255,136,0.12);  color: var(--accent); }
+.sprint-badge  { background: rgba(255,107,53,0.12); color: #ff6b35; }
+.journey-badge { background: rgba(77,159,255,0.12); color: var(--blue); }
+
+.wmc-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0; }
+.wmc-desc  { font-size: 0.8rem; color: var(--text2); line-height: 1.55; margin: 0; flex: 1; }
+
+.wmc-examples {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.wmc-examples span {
+  font-size: 0.7rem; color: var(--text3);
+  font-family: var(--font-mono);
+}
+.wmc-examples span::before { content: '→ '; opacity: 0.5; }
+
+.wmc-btn {
+  padding: 10px 18px; border-radius: 30px;
+  border: none; font-weight: 700; font-size: 0.82rem;
+  cursor: pointer; transition: all 0.18s;
+  font-family: var(--font-main); width: 100%;
+  margin-top: 4px;
+}
+.casual-btn  { background: var(--accent); color: var(--bg); box-shadow: 0 4px 14px rgba(0,255,136,0.3); }
+.sprint-btn  { background: #ff6b35; color: #fff; box-shadow: 0 4px 14px rgba(255,107,53,0.3); }
+.journey-btn { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(77,159,255,0.3); }
+.wmc-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+/* ══════════════════════════════════
+   МОДАЛЬНЫЕ ОКНА
+══════════════════════════════════ */
+#journeyProbeModal { z-index: 600; }
+
+.w-modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
+  display: none; align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+.w-modal-overlay.open { display: flex; }
+
+@media (min-width: 640px) {
+  .w-modal-overlay { align-items: center; padding: 20px; }
+}
+
+.w-modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; padding: 24px 20px 32px;
+  width: 100%; max-width: 560px;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 -16px 60px rgba(0,0,0,0.5);
+  animation: slideUp 0.32s cubic-bezier(.34,1.56,.64,1);
+}
+@media (min-width: 640px) {
+  .w-modal { border-radius: 24px; animation: popIn 0.3s cubic-bezier(.34,1.56,.64,1); }
+}
+@keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes popIn   { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.wm-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; gap: 12px; }
+.wm-title  { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+.wm-sub    { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); margin-top: 3px; }
+.wm-close  {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 1.1rem; padding: 0;
+  transition: color 0.18s; flex-shrink: 0;
+}
+.wm-close:hover { color: var(--danger); }
+
+.wm-section-label {
+  font-size: 0.66rem; font-family: var(--font-mono);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 10px;
+}
+.wm-label-sm { font-size: 0.8rem; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
+
+/* Чипы */
+.wm-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.wm-chip {
+  padding: 8px 14px; border-radius: 20px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  font-size: 0.8rem; color: var(--text2); cursor: pointer;
+  transition: all 0.16s; user-select: none;
+  font-family: var(--font-main);
+}
+.wm-chip:hover { border-color: var(--border2); color: var(--text); }
+.wm-chip.sel {
+  border-color: var(--accent); background: rgba(0,255,136,0.09);
+  color: var(--accent); font-weight: 600;
+}
+.wm-chip.sel-sprint  { border-color: #ff6b35; background: rgba(255,107,53,0.09); color: #ff6b35; font-weight: 600; }
+.wm-chip.sel-journey { border-color: var(--blue); background: rgba(77,159,255,0.09); color: var(--blue); font-weight: 600; }
+.wm-deadline-grid, .wm-time-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+
+/* Режимы чата */
+.wm-chat-modes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.wm-mode-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--surface);
+  transition: all 0.16s;
+}
+.wm-mode-item:hover { background: var(--surface2); border-color: var(--border2); }
+.wm-mode-item.sel { border-color: var(--accent); background: rgba(0,255,136,0.06); }
+.wm-mode-item.sel-sprint  { border-color: #ff6b35; background: rgba(255,107,53,0.06); }
+.wm-mode-item.sel-journey { border-color: var(--blue); background: rgba(77,159,255,0.06); }
+.wm-mode-icon { font-size: 1.4rem; flex-shrink: 0; }
+.wm-mode-body { flex: 1; }
+.wm-mode-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.wm-mode-desc  { font-size: 0.74rem; color: var(--text3); }
+.wm-mode-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.wm-mode-item.sel .wm-mode-check,
+.wm-mode-item.sel-sprint .wm-mode-check,
+.wm-mode-item.sel-journey .wm-mode-check {
+  background: var(--accent); border-color: var(--accent); color: var(--bg);
+  font-size: 0.65rem;
+}
+.wm-mode-item.sel .wm-mode-check::after,
+.wm-mode-item.sel-sprint .wm-mode-check::after,
+.wm-mode-item.sel-journey .wm-mode-check::after { content: '✓'; }
+.wm-mode-item.sel-sprint  .wm-mode-check { background: #ff6b35; border-color: #ff6b35; }
+.wm-mode-item.sel-journey .wm-mode-check { background: var(--blue); border-color: var(--blue); }
+
+/* Инпуты */
+.wm-input {
+  width: 100%; padding: 11px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.88rem; outline: none;
+  transition: border-color 0.18s; font-family: var(--font-main);
+  margin-bottom: 12px; box-sizing: border-box;
+}
+.wm-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+.wm-textarea {
+  width: 100%; padding: 11px 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 0.88rem; outline: none; resize: vertical;
+  transition: border-color 0.18s; font-family: var(--font-main);
+  margin-bottom: 14px; box-sizing: border-box;
+}
+.wm-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+
+/* Кнопки */
+.wm-hint { font-size: 0.78rem; color: var(--warning); font-family: var(--font-mono); margin-bottom: 10px; text-align: center; }
+.wm-submit {
+  width: 100%; padding: 13px; border-radius: 14px;
+  border: none; font-weight: 700; font-size: 0.92rem;
+  cursor: pointer; transition: all 0.2s; font-family: var(--font-main);
+  margin-top: 6px;
+}
+.wm-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+.wm-submit:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.08); }
+.casual-submit  { background: var(--accent); color: var(--bg); box-shadow: 0 4px 16px rgba(0,255,136,0.3); }
+.sprint-submit  { background: #ff6b35; color: #fff; box-shadow: 0 4px 16px rgba(255,107,53,0.3); }
+.journey-submit { background: var(--blue); color: #fff; box-shadow: 0 4px 16px rgba(77,159,255,0.3); }
+.wm-btns-row { display: flex; gap: 10px; margin-top: 8px; }
+.wm-btns-row .wm-submit { flex: 1; margin-top: 0; }
+.wm-back-btn {
+  padding: 13px 18px; border-radius: 14px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text3); cursor: pointer; font-size: 0.85rem;
+  transition: all 0.18s; font-family: var(--font-main); white-space: nowrap;
+}
+.wm-back-btn:hover { border-color: var(--border2); color: var(--text); }
+
+/* Превью */
+.wm-sprint-preview, .wm-journey-preview {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sp-row { display: flex; gap: 8px; align-items: baseline; font-size: 0.84rem; }
+.sp-lbl { color: var(--text3); font-family: var(--font-mono); font-size: 0.72rem; flex-shrink: 0; }
+
+.wm-journey-note {
+  font-size: 0.8rem; color: var(--text3); line-height: 1.6;
+  text-align: center; margin-bottom: 14px;
+}
+
+.wm-hint-optional {
+  font-size: 0.8rem; color: var(--text3); line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.wm-sub-divider {
+  font-size: 0.66rem; font-family: var(--font-mono);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text3); text-align: center; margin: 18px 0 12px;
+}
+
+.wm-probe-suggest {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 16px;
+  background: rgba(77,159,255,0.08);
+  border: 1px solid rgba(77,159,255,0.22);
+  margin-bottom: 6px;
+}
+.wm-probe-suggest-icon { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+.wm-probe-suggest-body { flex: 1; min-width: 0; }
+.wm-probe-suggest-title {
+  font-size: 0.9rem; font-weight: 700; color: var(--text);
+  margin-bottom: 6px;
+}
+.wm-probe-suggest-text {
+  font-size: 0.78rem; color: var(--text2); line-height: 1.55;
+  margin: 0 0 12px;
+}
+.wm-probe-suggest-btn {
+  display: inline-block; padding: 9px 16px; border-radius: 12px;
+  border: none; cursor: pointer; font-weight: 700; font-size: 0.82rem;
+  font-family: var(--font-main);
+  background: var(--blue); color: #fff;
+  box-shadow: 0 3px 12px rgba(77,159,255,0.35);
+  transition: transform 0.15s, filter 0.15s;
+}
+.wm-probe-suggest-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+
+.w-modal-probe { max-width: 520px; }
+.wm-probe-loading { text-align: center; padding: 24px 8px; }
+.wm-probe-actions { margin-top: 16px; }
+
+.wm-probe-q {
+  margin-bottom: 16px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.wm-probe-q:last-child { border-bottom: none; }
+.wm-probe-qtext { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 10px; line-height: 1.45; }
+.wm-probe-topic { font-size: 0.65rem; color: var(--text3); font-family: var(--font-mono); margin-bottom: 8px; }
+.wm-probe-opt {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  font-size: 0.82rem; color: var(--text2); cursor: pointer;
+}
+.wm-probe-opt input { accent-color: var(--blue); }
+
+/* Загрузка */
+.wm-loading { text-align: center; padding: 32px 16px; }
+.wm-spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid rgba(0,255,136,0.2);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+.journey-spinner {
+  border: 3px solid rgba(77,159,255,0.2);
+  border-top-color: var(--blue);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.wm-loading-txt { font-size: 0.92rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.wm-loading-sub { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='fairik.js') }}"></script>
+
 <script>
-  let selectedSubject   = localStorage.getItem('subject')         || null;
-  let selectedMode      = localStorage.getItem('mode')            || null;
-  let selectedClass     = localStorage.getItem('user_class')      || null;
-  let selectedNum       = localStorage.getItem('user_class_num')  || null;
-  let selectedInterests = JSON.parse(localStorage.getItem('interests') || '[]');
+const IS_LOGGED_IN   = {{ 'true' if current_user else 'false' }};
+const USER_CLASS_NUM = {{ current_user.class_number if current_user and current_user.class_number else 'null' }};
+const USER_INTERESTS = {{ (current_user.interests or '') | tojson }};
 
-  const subjectCards  = document.querySelectorAll('.subject-card');
-  const modeCards     = document.querySelectorAll('.mode-card');
-  const classCards    = document.querySelectorAll('.class-card');
-  const interestCards = document.querySelectorAll('.interest-card');
-  const startBtn      = document.getElementById('start-button');
-  const hint          = document.getElementById('validation-hint');
+// ════════════════════════════════
+//  СОСТОЯНИЕ МОДАЛОК
+// ════════════════════════════════
+const casual  = { subject: null, mode: null, classNum: USER_CLASS_NUM ? String(USER_CLASS_NUM) : null };
+const sprint  = { step: 1, subject: null, goal: null, deadline: null, topics: [], confidence: null };
+const journey = { step: 1, subject: null, goal: null, level: null, minutes: null, probe_weak: [], probe_strong: [] };
+let journeyProbeQuestions = [];
 
-  function checkReady() {
-    const ready = !!(selectedClass && selectedSubject && selectedMode);
-    startBtn.disabled      = !ready;
-    startBtn.style.opacity = ready ? '1' : '0.5';
+// ════════════════════════════════
+//  УТИЛИТЫ
+// ════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+
+// Закрытие кликом по оверлею
+document.querySelectorAll('.w-modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+});
+
+function requireLogin(then) {
+  if (!IS_LOGGED_IN) { openModal('authNeedModal'); return false; }
+  then();
+  return true;
+}
+
+function chipGroup(containerId, onSelect, selClass = 'sel') {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.wm-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      container.querySelectorAll('.wm-chip').forEach(c => c.classList.remove('sel','sel-sprint','sel-journey'));
+      chip.classList.add(selClass);
+      onSelect(chip.dataset.val || chip.dataset.days || chip.dataset.mins);
+    });
+  });
+}
+
+function modeGroup(containerId, onSelect, selClass = 'sel') {
+  document.querySelectorAll(`#${containerId} .wm-mode-item`).forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll(`#${containerId} .wm-mode-item`).forEach(i => {
+        i.classList.remove('sel','sel-sprint','sel-journey');
+      });
+      item.classList.add(selClass);
+      onSelect(item.dataset.level || item.dataset.mode || item.dataset.confidence);
+    });
+  });
+}
+
+// ════════════════════════════════
+//  CASUAL
+// ════════════════════════════════
+function openCasual() {
+  openModal('casualModal');
+  chipGroup('casualSubjects', val => { casual.subject = val; checkCasualReady(); });
+  modeGroup('casualModes', val => { casual.mode = val; checkCasualReady(); });
+  if (document.getElementById('casualClasses')) {
+    chipGroup('casualClasses', val => { casual.classNum = val; checkCasualReady(); });
   }
+}
 
-  classCards.forEach(card => {
-    card.addEventListener('click', () => {
-      classCards.forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedClass = card.dataset.class;
-      selectedNum   = card.dataset.num;
-      localStorage.setItem('user_class',     selectedClass);
-      localStorage.setItem('user_class_num', selectedNum);
-      document.getElementById('interests-block').style.display = 'block';
-      checkReady();
-    });
-  });
+function checkCasualReady() {
+  const needClass = !USER_CLASS_NUM;
+  const ready = !!(casual.subject && casual.mode && (!needClass || casual.classNum));
+  document.getElementById('casualSubmit').disabled = !ready;
+  document.getElementById('casualHint').style.display = ready ? 'none' : '';
+}
 
-  interestCards.forEach(card => {
-    card.addEventListener('click', () => {
-      card.classList.toggle('selected');
-      const val = card.dataset.interest;
-      if (card.classList.contains('selected')) {
-        if (!selectedInterests.includes(val)) selectedInterests.push(val);
-      } else {
-        selectedInterests = selectedInterests.filter(i => i !== val);
-      }
-      localStorage.setItem('interests', JSON.stringify(selectedInterests));
-    });
-  });
-
-  subjectCards.forEach(card => {
-    card.addEventListener('click', () => {
-      subjectCards.forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedSubject = card.dataset.subject;
-      localStorage.setItem('subject', selectedSubject);
-      checkReady();
-    });
-  });
-
-  modeCards.forEach(card => {
-    card.addEventListener('click', () => {
-      modeCards.forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedMode = card.dataset.mode;
-      localStorage.setItem('mode', selectedMode);
-      checkReady();
-    });
-  });
-
-  // Восстановление сохранённого выбора
-  if (selectedClass) {
-    document.querySelector(`.class-card[data-class="${selectedClass}"]`)?.classList.add('selected');
-    document.getElementById('interests-block').style.display = 'block';
+function submitCasual() {
+  if (!IS_LOGGED_IN) { closeModal('casualModal'); openModal('authNeedModal'); return; }
+  const needClass = !USER_CLASS_NUM;
+  if (!casual.subject || !casual.mode || (needClass && !casual.classNum)) {
+    document.getElementById('casualHint').style.display = '';
+    return;
   }
-  if (selectedSubject)
-    document.querySelector(`.subject-card[data-subject="${selectedSubject}"]`)?.classList.add('selected');
-  if (selectedMode)
-    document.querySelector(`.mode-card[data-mode="${selectedMode}"]`)?.classList.add('selected');
-  selectedInterests.forEach(v =>
-    document.querySelector(`.interest-card[data-interest="${v}"]`)?.classList.add('selected')
-  );
+  document.getElementById('c-subject').value   = casual.subject;
+  document.getElementById('c-mode').value      = casual.mode;
+  document.getElementById('c-class').value     = USER_CLASS_NUM || casual.classNum || '8';
+  document.getElementById('c-interests').value = USER_INTERESTS || '';
+  document.getElementById('casualForm').submit();
+}
 
-  document.getElementById('new-chat-form').addEventListener('submit', function(e) {
-    if (!selectedClass || !selectedSubject || !selectedMode) {
-      e.preventDefault();
-      hint.style.display = 'block';
+// ════════════════════════════════
+//  SPRINT
+// ════════════════════════════════
+function openSprint() {
+  requireLogin(() => {
+    sprint.step = 1; sprint.subject = null; sprint.goal = null;
+    sprint.deadline = null; sprint.topics = []; sprint.confidence = null;
+    const sm = document.getElementById('sprintModal');
+    if (sm) delete sm.dataset.confidenceWired;
+    openModal('sprintModal');
+    showSprintStep(1);
+    chipGroup('sprintSubjects', val => {
+      sprint.subject = val;
+      document.getElementById('sstep1btn').disabled = false;
+    }, 'sel-sprint');
+  });
+}
+
+function sprintNext(step) {
+  if (step === 2) {
+    // Валидация шага 1
+    if (!sprint.subject) return;
+    chipGroup('sprintGoalChips', val => {
+      sprint.goal = val;
+      document.getElementById('sprintGoalInput').value = val;
+      checkSprintStep2();
+    }, 'sel-sprint');
+
+    // Дедлайн по дням
+    document.querySelectorAll('#sprintDeadlines .wm-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#sprintDeadlines .wm-chip').forEach(c => c.classList.remove('sel-sprint'));
+        chip.classList.add('sel-sprint');
+        const d = new Date();
+        d.setDate(d.getDate() + parseInt(chip.dataset.days));
+        sprint.deadline = d.toISOString().split('T')[0];
+        document.getElementById('sprintDateInput').value = sprint.deadline;
+        checkSprintStep2();
+      });
+    });
+    document.getElementById('sprintDateInput').addEventListener('input', e => {
+      sprint.deadline = e.target.value;
+      checkSprintStep2();
+    });
+    document.getElementById('sprintGoalInput').addEventListener('input', e => {
+      sprint.goal = e.target.value.trim() || sprint.goal;
+      checkSprintStep2();
+    });
+  }
+  if (step === 3) {
+    const b3 = document.getElementById('sstep3btn');
+    if (b3) b3.disabled = !sprint.confidence;
+    const sm = document.getElementById('sprintModal');
+    if (sm && !sm.dataset.confidenceWired) {
+      sm.dataset.confidenceWired = '1';
+      modeGroup('sprintConfidence', val => {
+        sprint.confidence = val;
+        document.getElementById('sstep3btn').disabled = false;
+      }, 'sel-sprint');
+    }
+  }
+  if (step === 4) {
+    updateSprintPreview();
+  }
+  showSprintStep(step);
+}
+
+function checkSprintStep2() {
+  const ready = !!(sprint.goal || document.getElementById('sprintGoalInput').value.trim()) && !!sprint.deadline;
+  document.getElementById('sstep2btn').disabled = !ready;
+  if (document.getElementById('sprintGoalInput').value.trim()) {
+    sprint.goal = document.getElementById('sprintGoalInput').value.trim();
+  }
+}
+
+function showSprintStep(n) {
+  sprint.step = n;
+  document.querySelectorAll('.sprint-step').forEach(el => el.style.display = 'none');
+  const stepEl = document.getElementById(n === 'loading' ? 'ssprintLoading' : `sstep${n}`);
+  if (stepEl) stepEl.style.display = '';
+}
+
+const SPRINT_CONFIDENCE_LABELS = {
+  weak: 'Слабо — от базы',
+  medium: 'Средне — структура и задачи',
+  strong: 'До идеала — шлифовка',
+};
+
+function updateSprintPreview() {
+  const topics = document.getElementById('sprintTopicsInput').value.trim();
+  sprint.topics = topics ? topics.split(',').map(t => t.trim()).filter(Boolean) : [];
+  document.getElementById('spv-subject').textContent  = sprint.subject || '—';
+  document.getElementById('spv-goal').textContent     = sprint.goal || '—';
+  document.getElementById('spv-deadline').textContent = sprint.deadline
+    ? new Date(sprint.deadline + 'T12:00:00').toLocaleDateString('ru-RU', {day:'numeric',month:'long'})
+    : '—';
+  document.getElementById('spv-confidence').textContent = SPRINT_CONFIDENCE_LABELS[sprint.confidence] || '—';
+  document.getElementById('spv-topics').textContent   = sprint.topics.length
+    ? sprint.topics.join(', ')
+    : 'ИИ составит план автоматически';
+  document.getElementById('sprintPreview').style.display = '';
+}
+
+async function launchSprint() {
+  const goal = document.getElementById('sprintGoalInput').value.trim() || sprint.goal;
+  if (!sprint.subject || !sprint.deadline || !goal || !sprint.confidence) return;
+
+  sprint.goal   = goal;
+  const topics  = document.getElementById('sprintTopicsInput').value.trim();
+  sprint.topics = topics ? topics.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+  showSprintStep('loading');
+
+  try {
+    const res = await fetch('/api/learning_path/create', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        subject:          sprint.subject,
+        mode:             'sprint',
+        goal:             sprint.goal,
+        topics:           sprint.topics,
+        deadline:         sprint.deadline,
+        topic_confidence: sprint.confidence,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // Создаём чат и переходим
+      const form = document.createElement('form');
+      form.method = 'POST'; form.action = '/new_chat';
+      const fields = {
+        subject:      sprint.subject,
+        mode:         'explain',
+        class_number: USER_CLASS_NUM || '8',
+        interests:    USER_INTERESTS || '',
+      };
+      Object.entries(fields).forEach(([k, v]) => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = v;
+        form.appendChild(inp);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      showSprintStep(4);
+      alert('Ошибка: ' + (data.error || 'неизвестная ошибка'));
+    }
+  } catch(e) {
+    showSprintStep(4);
+    alert('Ошибка соединения');
+  }
+}
+
+// ════════════════════════════════
+//  JOURNEY
+// ════════════════════════════════
+function openJourney() {
+  requireLogin(() => {
+    journey.step = 1; journey.subject = null; journey.goal = null;
+    journey.level = null; journey.minutes = null;
+    journey.probe_weak = []; journey.probe_strong = [];
+    openModal('journeyModal');
+    showJourneyStep(1);
+    chipGroup('journeySubjects', val => {
+      journey.subject = val;
+      document.getElementById('jstep1btn').disabled = false;
+    }, 'sel-journey');
+  });
+}
+
+function journeyNext(step) {
+  if (step === 2) {
+    chipGroup('journeyGoalChips', val => {
+      journey.goal = val;
+      document.getElementById('journeyGoalInput').value = val;
+      checkJourneyStep2();
+    }, 'sel-journey');
+    document.querySelectorAll('#journeyTime .wm-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#journeyTime .wm-chip').forEach(c => c.classList.remove('sel-journey'));
+        chip.classList.add('sel-journey');
+        journey.minutes = parseInt(chip.dataset.mins);
+        checkJourneyStep2();
+      });
+    });
+    document.getElementById('journeyGoalInput').addEventListener('input', e => {
+      if (e.target.value.trim()) { journey.goal = e.target.value.trim(); checkJourneyStep2(); }
+    });
+  }
+  if (step === 3) {
+    modeGroup('journeyLevels', val => {
+      journey.level = val;
+      document.getElementById('jstep3btn').disabled = false;
+    }, 'sel-journey');
+  }
+  if (step === 4) {
+    updateJourneyPreview();
+  }
+  showJourneyStep(step);
+}
+
+function checkJourneyStep2() {
+  const goal = document.getElementById('journeyGoalInput').value.trim() || journey.goal;
+  const ready = !!(goal && journey.minutes);
+  document.getElementById('jstep2btn').disabled = !ready;
+  if (goal) journey.goal = goal;
+}
+
+function showJourneyStep(n) {
+  journey.step = n;
+  document.querySelectorAll('.journey-step').forEach(el => el.style.display = 'none');
+  const stepEl = document.getElementById(n === 'loading' ? 'sjourneyLoading' : `jstep${n}`);
+  if (stepEl) stepEl.style.display = '';
+}
+
+const LEVEL_LABELS = { beginner: 'Начинаю с нуля', intermediate: 'Знаю основы', advanced: 'Знаю неплохо' };
+
+async function startJourneyProbe() {
+  const goal = document.getElementById('journeyGoalInput').value.trim() || journey.goal;
+  if (!journey.subject || !goal) {
+    alert('Сначала заполни шаги 1–2: предмет и цель.');
+    return;
+  }
+  journey.goal = goal;
+  openModal('journeyProbeModal');
+  document.getElementById('journeyProbeLoading').style.display = '';
+  document.getElementById('journeyProbeLoading').innerHTML =
+    '<div class="wm-spinner journey-spinner"></div><div class="wm-loading-txt">Готовим вопросы…</div>';
+  document.getElementById('journeyProbeQuiz').style.display = 'none';
+  document.getElementById('journeyProbeQuiz').innerHTML = '';
+  document.getElementById('journeyProbeActions').style.display = 'none';
+  journeyProbeQuestions = [];
+  try {
+    const res = await fetch('/api/learning_path/generate_probe', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subject: journey.subject,
+        goal:    goal,
+        level:   journey.level || 'intermediate',
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok || !data.questions || !data.questions.length) {
+      document.getElementById('journeyProbeLoading').innerHTML =
+        '<p class="wm-hint" style="padding:12px;">Не удалось сгенерировать пробник. Укажи уровень ниже или попробуй ещё раз.</p>';
+      document.getElementById('journeyProbeActions').style.display = 'flex';
       return;
     }
-    hint.style.display = 'none';
-    document.getElementById('form-subject').value   = selectedSubject;
-    document.getElementById('form-class').value     = selectedNum || selectedClass.split('-')[0];
-    document.getElementById('form-mode').value      = selectedMode;
-    document.getElementById('form-interests').value = selectedInterests.join(',');
-  });
+    journeyProbeQuestions = data.questions;
+    renderJourneyProbeQuiz();
+    document.getElementById('journeyProbeLoading').style.display = 'none';
+    document.getElementById('journeyProbeQuiz').style.display = 'block';
+    document.getElementById('journeyProbeActions').style.display = 'flex';
+  } catch (e) {
+    document.getElementById('journeyProbeLoading').innerHTML =
+      '<p class="wm-hint" style="padding:12px;">Ошибка соединения. Проверь интернет и попробуй снова.</p>';
+    document.getElementById('journeyProbeActions').style.display = 'flex';
+  }
+}
 
-  // Эффект свечения под курсором на карточках
-  document.querySelectorAll('.mode-card, .class-card, .subject-card, .interest-card').forEach(card => {
-    card.addEventListener('mousemove', e => {
-      const r = card.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width  * 100).toFixed(1);
-      const y = ((e.clientY - r.top)  / r.height * 100).toFixed(1);
-      card.style.setProperty('--mx', x + '%');
-      card.style.setProperty('--my', y + '%');
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.setProperty('--mx', '50%');
-      card.style.setProperty('--my', '50%');
-    });
-  });
+function renderJourneyProbeQuiz() {
+  const el = document.getElementById('journeyProbeQuiz');
+  el.innerHTML = journeyProbeQuestions.map((q, i) => {
+    const opts = (q.options || []).map(
+      (o, j) => `<label class="wm-probe-opt"><input type="radio" name="probe_${i}" value="${j}"> <span>${o}</span></label>`
+    ).join('');
+    const topic = q.topic ? `<div class="wm-probe-topic">${q.topic}</div>` : '';
+    return `<div class="wm-probe-q">${topic}<div class="wm-probe-qtext">${i + 1}. ${q.question || ''}</div>${opts}</div>`;
+  }).join('');
+}
 
-  checkReady();
+function finishJourneyProbe() {
+  const weak = new Set();
+  const strong = new Set();
+  let correct = 0;
+  for (let i = 0; i < journeyProbeQuestions.length; i++) {
+    const q = journeyProbeQuestions[i];
+    const sel = document.querySelector(`input[name="probe_${i}"]:checked`);
+    if (!sel) {
+      alert('Ответь на все вопросы.');
+      return;
+    }
+    const idx = parseInt(sel.value, 10);
+    const ok = idx === (parseInt(q.correct_index, 10) || 0);
+    const topic = ((q.topic || 'Общее').trim()) || 'Общее';
+    if (ok) {
+      correct++;
+      strong.add(topic);
+    } else {
+      weak.add(topic);
+    }
+  }
+  journey.probe_weak = [...weak];
+  journey.probe_strong = [...strong];
+  let lvl = 'intermediate';
+  if (correct <= 2) lvl = 'beginner';
+  else if (correct >= 6) lvl = 'advanced';
+  journey.level = lvl;
+  document.querySelectorAll('#journeyLevels .wm-mode-item').forEach(item => {
+    item.classList.toggle('sel-journey', item.dataset.level === lvl);
+  });
+  document.getElementById('jstep3btn').disabled = false;
+  closeJourneyProbe();
+}
+
+function closeJourneyProbe() {
+  closeModal('journeyProbeModal');
+  document.getElementById('journeyProbeLoading').innerHTML =
+    '<div class="wm-spinner journey-spinner"></div><div class="wm-loading-txt">Готовим вопросы…</div>';
+  document.getElementById('journeyProbeQuiz').innerHTML = '';
+  document.getElementById('journeyProbeQuiz').style.display = 'none';
+  document.getElementById('journeyProbeActions').style.display = 'none';
+  journeyProbeQuestions = [];
+}
+
+function updateJourneyPreview() {
+  document.getElementById('jpv-subject').textContent = journey.subject || '—';
+  document.getElementById('jpv-goal').textContent    = journey.goal    || '—';
+  document.getElementById('jpv-level').textContent   = LEVEL_LABELS[journey.level] || '—';
+  document.getElementById('jpv-time').textContent    = journey.minutes ? `${journey.minutes} мин/нед` : '—';
+}
+
+async function launchJourney() {
+  const goal = document.getElementById('journeyGoalInput').value.trim() || journey.goal;
+  if (!journey.subject || !goal || !journey.level || !journey.minutes) return;
+  journey.goal = goal;
+
+  showJourneyStep('loading');
+
+  try {
+    const res = await fetch('/api/learning_path/create', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        subject:          journey.subject,
+        mode:             'journey',
+        goal:             journey.goal,
+        level:            journey.level,
+        minutes_per_week: journey.minutes,
+        probe_strong:     journey.probe_strong || [],
+        probe_weak:       journey.probe_weak || [],
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const form = document.createElement('form');
+      form.method = 'POST'; form.action = '/new_chat';
+      const fields = {
+        subject:      journey.subject,
+        mode:         'explain',
+        class_number: USER_CLASS_NUM || '8',
+        interests:    USER_INTERESTS || '',
+      };
+      Object.entries(fields).forEach(([k, v]) => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = v;
+        form.appendChild(inp);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      showJourneyStep(4);
+      alert('Ошибка: ' + (data.error || 'неизвестная ошибка'));
+    }
+  } catch(e) {
+    showJourneyStep(4);
+    alert('Ошибка соединения');
+  }
+}
+
+// ════════════════════════════════
+//  ПРОДОЛЖИТЬ АКТИВНЫЙ ПУТЬ
+// ════════════════════════════════
+function continuePath(subject, mode) {
+  // Просто открываем новый чат по предмету (путь уже активен)
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/new_chat';
+  const fields = {
+    subject:      subject,
+    mode:         'explain',
+    class_number: USER_CLASS_NUM || '8',
+    interests:    USER_INTERESTS || '',
+  };
+  Object.entries(fields).forEach(([k, v]) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = k; inp.value = v;
+    form.appendChild(inp);
+  });
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// ════════════════════════════════
+//  ФАЙРИК — приветствие
+// ════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.Fairik && IS_LOGGED_IN) {
+    const greets = [
+      'Выбери режим — начнём! 🐉',
+      'Готов помочь! Что изучаем? 📚',
+      'С возвращением! 🌟',
+    ];
+    setTimeout(() => Fairik.say(greets[Math.floor(Math.random() * greets.length)], 'nod'), 1800);
+  }
+});
 </script>
 
-
 <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
-
 </body>
 </html>
