@@ -665,13 +665,25 @@ def get_user_history(user_id):
 # ====================== МЕНЮ ======================
 @app.context_processor
 def inject_menu():
-    # Гостевое меню (без изменений)
+    # --- ГОСТЕВОЙ ХЕДЕР ---
     if 'user_id' not in session:
         return dict(menu='''
-            <div class="auth-menu">
-                <a href="/login" class="auth-btn login-btn"><span class="material-icons">login</span> Войти</a>
-                <a href="/register" class="auth-btn register-btn"><span class="material-icons">person_add</span> Регистрация</a>
-            </div>''', menu_js='')
+            <header class="lp-header" id="mainHeader">
+              <a href="/" class="lp-logo">SubjectHelper<div class="lp-logo-dot"></div></a>
+              <nav class="lp-nav">
+                <a href="/#modes">Режимы</a>
+                <a href="/#subjects">Предметы</a>
+                <a href="/#features">Возможности</a>
+              </nav>
+              <div class="lp-nav-cta">
+                <a href="/login"><button class="btn-ghost">Войти</button></a>
+                <a href="/register"><button class="btn-primary">Начать</button></a>
+              </div>
+              <div class="lp-mob-menu">
+                <a href="/login"><button class="btn-ghost" style="padding:6px 14px;font-size:0.8rem;">Войти</button></a>
+                <a href="/register"><button class="btn-primary" style="padding:6px 16px;font-size:0.8rem;">Начать</button></a>
+              </div>
+            </header>''', menu_js='')
 
     user = db.session.get(User, session['user_id'])
     if not user:
@@ -679,40 +691,28 @@ def inject_menu():
         return dict(menu='', menu_js='')
 
     current_ep = request.endpoint or ''
+
     def is_active(ep):
         return 'active' if (ep and (ep == current_ep or current_ep.startswith(ep))) else ''
 
+    # --- ХЕДЕР + САЙДБАР ДЛЯ АВТОРИЗОВАННЫХ ---
     menu = f'''
-    <aside class="sidebar" id="mainSidebar">
+    <header class="lp-header" id="mainHeader">
+      <a href="/" class="lp-logo">SubjectHelper<div class="lp-logo-dot"></div></a>
       <button class="sidebar-toggle" id="sidebarToggle" aria-label="Меню">☰</button>
+    </header>
+
+    <aside class="sidebar" id="mainSidebar">
       <nav class="sidebar-nav">
-        <a href="{url_for('welcome')}" class="sidebar-link {is_active('welcome')}">
-          <span class="sidebar-icon">🏠</span><span>Обучение</span>
-        </a>
-        <a href="{url_for('chats_list')}" class="sidebar-link {is_active('chats_list') or is_active('chat')}">
-          <span class="sidebar-icon">📚</span><span>Мои чаты</span>
-        </a>
-        <a href="{url_for('history_page')}" class="sidebar-link {is_active('history_page')}">
-          <span class="sidebar-icon">📖</span><span>История</span>
-        </a>
-        <a href="{url_for('duel_page')}" class="sidebar-link {is_active('duel_page')}">
-          <span class="sidebar-icon">⚔️</span><span>Дуэли</span>
-        </a>
-        <a href="{url_for('shop_page')}" class="sidebar-link {is_active('shop_page')}">
-          <span class="sidebar-icon">🛍️</span><span>Магазин</span>
-        </a>
-        <a href="{url_for('profile')}" class="sidebar-link {is_active('profile')}">
-         <span class="sidebar-icon">🙍‍♂️</span><span>Профиль</span>
-        <a href="{url_for('leaderboard')}" class="sidebar-link {is_active('leaderboard')}">
-          <span class="sidebar-icon">🏆</span><span>Лидерборд</span>
-        </a>
-        <a href="{url_for('settings_page')}" class="sidebar-link {is_active('settings_page')}">
-          <span class="sidebar-icon">⚙️</span><span>Настройки</span>
-        </a>
+        <a href="{url_for('welcome')}" class="sidebar-link {is_active('welcome')}"><span class="sidebar-icon">🏡</span><span>Обучение</span></a>
+        <a href="{url_for('chats_list')}" class="sidebar-link {is_active('chats_list') or is_active('chat')}"><span class="sidebar-icon">💬</span><span>Мои чаты</span></a>
+        <a href="{url_for('history_page')}" class="sidebar-link {is_active('history_page')}"><span class="sidebar-icon">📜</span><span>История</span></a>
+        <a href="{url_for('duel_page')}" class="sidebar-link {is_active('duel_page')}"><span class="sidebar-icon">⚡</span><span>Дуэли</span></a>
+        <a href="{url_for('shop_page')}" class="sidebar-link {is_active('shop_page')}"><span class="sidebar-icon">🎁</span><span>Магазин</span></a>
+        <a href="{url_for('leaderboard')}" class="sidebar-link {is_active('leaderboard')}"><span class="sidebar-icon">🏆</span><span>Лидерборд</span></a>
+        <a href="{url_for('settings_page')}" class="sidebar-link {is_active('settings_page')}"><span class="sidebar-icon">⚙️</span><span>Настройки</span></a>
         <div class="sidebar-divider"></div>
-        <a href="{url_for('logout')}" class="sidebar-link logout">
-          <span class="sidebar-icon">🚪</span><span>Выйти</span>
-        </a>
+        <a href="{url_for('logout')}" class="sidebar-link logout"><span class="sidebar-icon">🌙</span><span>Выйти</span></a>
       </nav>
     </aside>
     '''
@@ -728,7 +728,8 @@ def inject_menu():
       tog.onclick = () => { sb.classList.toggle("open"); overlay.classList.toggle("active"); };
       overlay.onclick = () => { sb.classList.remove("open"); overlay.classList.remove("active"); };
       document.addEventListener("keydown", e => { if (e.key === "Escape" && sb.classList.contains("open")) { sb.classList.remove("open"); overlay.classList.remove("active"); } });
-      // Fallback active state (если Jinja не сработал)
+
+      // Подсветка активного пункта
       const path = window.location.pathname;
       document.querySelectorAll(".sidebar-link").forEach(l => {
         const h = l.getAttribute("href");
@@ -1831,7 +1832,7 @@ def api_daily_reminder():
         return jsonify({'has_reminder': False})
 
     top  = due[0]
-    days = (datetime.utcnow() - top.first_seen).days
+    days = (datetime.now(datetime.UTC) - top.first_seen).days
 
     messages = [
         f"Помнишь, {days} дней назад ты разбирал «{top.topic}» по {top.subject}? Давай повторим за 2 минуты! 🧠",

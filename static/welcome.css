@@ -313,3 +313,158 @@
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* ═══════════════════════════════════════════════════════
+   🟢 ПРИВЕТСТВИЕ + XP BADGE (центрованное, стеклянное)
+   ═══════════════════════════════════════════════════════ */
+.w-greeting {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 24px 20px 32px;
+  position: relative;
+  z-index: 2;
+}
+
+.w-greeting-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  max-width: 700px;
+  width: 100%;
+}
+
+.w-greeting-text {
+  text-align: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.w-hello {
+  font-family: var(--font-mono);
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 6px;
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 50%, var(--blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.01em;
+  animation: fadeUp 0.5s ease both;
+}
+
+.w-hello-sub {
+  font-size: 0.95rem;
+  color: var(--text2);
+  margin: 0;
+  opacity: 0.9;
+  animation: fadeUp 0.5s 0.1s ease both;
+}
+
+/* ── XP BADGE: стеклянный, с градиентом и свечением ── */
+.w-xp-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px 10px 14px;
+  background: linear-gradient(135deg, rgba(0,255,136,0.12), rgba(77,159,255,0.08));
+  border: 1px solid rgba(0,255,136,0.35);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: default;
+  transition: all 0.25s ease;
+  animation: fadeUp 0.5s 0.15s ease both;
+  overflow: hidden;
+}
+
+.w-xp-badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    80px circle at 30% 20%,
+    rgba(0,255,136,0.25),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.w-xp-badge:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0,255,136,0.18);
+}
+
+.w-xp-badge:hover::before { opacity: 1; }
+
+/* Искра-анимация */
+.w-xp-sparkle {
+  font-size: 1rem;
+  animation: sparkle 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px var(--accent));
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50%      { transform: scale(1.2) rotate(10deg); opacity: 0.8; }
+}
+
+/* Цифры XP */
+.w-xp-num {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(0,255,136,0.4);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Метка "XP" */
+.w-xp-lbl {
+  font-family: var(--font-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* Мягкое внутреннее свечение */
+.w-xp-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    60% 80% at 50% 0%,
+    rgba(0,255,136,0.15),
+    transparent 70%
+  );
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Адаптив: на мобильных — вертикальное расположение */
+@media (max-width: 480px) {
+  .w-greeting-content {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .w-greeting-text {
+    text-align: center;
+  }
+  .w-xp-badge {
+    padding: 12px 22px;
+  }
+  .w-xp-num {
+    font-size: 1.25rem;
+  }
+}

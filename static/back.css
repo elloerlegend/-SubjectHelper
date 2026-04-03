@@ -416,3 +416,86 @@ button:active { transform: translateY(0); }
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ═══════════════════════════════════════════════════════
+   🟢 НОВАЯ ШАПКА (стиль лендинга, глобальная)
+   ═══════════════════════════════════════════════════════ */
+header, .lp-header {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  height: 70px;
+  background: rgba(10, 13, 18, 0.85);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s;
+}
+
+/* Логотип */
+.lp-logo, .logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 1rem; font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+.lp-logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.7; }
+}
+
+/* Навигация & CTA (только для гостей) */
+.lp-nav { display: flex; align-items: center; gap: 24px; }
+.lp-nav a { font-size: 0.85rem; font-weight: 500; color: var(--text2); transition: color 0.2s; }
+.lp-nav a:hover { color: var(--text); }
+.lp-nav-cta { display: flex; gap: 10px; align-items: center; }
+
+.btn-ghost {
+  padding: 8px 20px; border-radius: 30px;
+  border: 1px solid var(--border);
+  color: var(--text2); font-size: 0.85rem;
+  font-weight: 600; cursor: pointer;
+  transition: all 0.2s; background: transparent;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,255,136,0.05); }
+
+.btn-primary {
+  padding: 9px 22px; border-radius: 30px;
+  background: var(--accent); color: var(--bg);
+  font-size: 0.85rem; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: all 0.22s;
+  box-shadow: 0 4px 20px rgba(0,255,136,0.35);
+}
+.btn-primary:hover { background: var(--accent3); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(0,255,136,0.5); }
+
+/* Бургер (мобильный) */
+.sidebar-toggle {
+  display: none; position: relative;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text); width: 36px; height: 36px; border-radius: 8px;
+  cursor: pointer; font-size: 18px;
+  align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.sidebar-toggle:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+
+/* Мобильная адаптация шапки */
+.lp-mob-menu { display: none; }
+@media (max-width: 768px) {
+  header, .lp-header { padding: 0 20px; }
+  .lp-nav { display: none; }
+  .lp-mob-menu { display: flex; gap: 8px; }
+  .sidebar-toggle { display: flex; }
+}
+
+/* Отступ контента под шапку */
+body { padding-top: 70px; }

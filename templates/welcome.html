@@ -13,29 +13,7 @@
 
 <body class="has-bottom-nav">
 
-<!-- ══ НИЖНЯЯ НАВИГАЦИЯ ══ -->
-<nav class="app-nav">
-  <a href="/" class="nav-item active">
-    <span class="nav-icon material-icons">home</span>
-    <span class="nav-label">Главная</span>
-  </a>
-  <a href="/chats" class="nav-item">
-    <span class="nav-icon material-icons">chat_bubble_outline</span>
-    <span class="nav-label">Чаты</span>
-  </a>
-  <a href="/leaderboard" class="nav-item">
-    <span class="nav-icon material-icons">leaderboard</span>
-    <span class="nav-label">Рейтинг</span>
-  </a>
-  <a href="/profile" class="nav-item">
-    {% if current_user and current_user.avatar %}
-      <img src="{{ current_user.avatar }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid var(--accent2);">
-    {% else %}
-      <span class="nav-icon material-icons">person_outline</span>
-    {% endif %}
-    <span class="nav-label">Профиль</span>
-  </a>
-</nav>
+
 
 <!-- ══ ХЕДЕР ══ -->
 <header>
@@ -51,20 +29,23 @@
      ЭКРАН ЗАЛОГИНЕННОГО ПОЛЬЗОВАТЕЛЯ
 ══════════════════════════════════════════ -->
 
-  <!-- Приветствие -->
-  <div class="w-greeting">
+ <!-- Приветствие -->
+<div class="w-greeting">
+  <div class="w-greeting-content">
     <div class="w-greeting-text">
       <h1 class="w-hello">Привет, {{ current_user.name or 'Ученик' }}! 👋</h1>
       <p class="w-hello-sub">Выбери режим — начнём прямо сейчас</p>
     </div>
     {% if current_user.xp %}
-    <div class="w-xp-badge">
-      <div class="w-xp-num">{{ current_user.xp }}</div>
-      <div class="w-xp-lbl">XP</div>
+    <div class="w-xp-badge" title="Ваш опыт">
+      <span class="w-xp-sparkle">✨</span>
+      <span class="w-xp-num">{{ current_user.xp }}</span>
+      <span class="w-xp-lbl">XP</span>
+      <span class="w-xp-glow"></span>
     </div>
     {% endif %}
   </div>
-
+</div>
   <!-- Активные пути (Sprint / Journey в процессе) -->
   {% if active_paths %}
   <div class="w-active-section">
@@ -1489,6 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => Fairik.say(greets[Math.floor(Math.random() * greets.length)], 'nod'), 1800);
   }
 });
+
 </script>
 
 <script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
