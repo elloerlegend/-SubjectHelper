@@ -309,30 +309,110 @@ button:active { transform: translateY(0); }
 .rating-stars span:hover { color: var(--warning); transform: scale(1.2); }
 .rating-stars span.rated { color: var(--warning); }
 
-/* ── Инфо-бар ── */
-.info-bar { margin-bottom: 8px; }
-.info-bar p {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 5px 14px;
-  border-radius: 30px;
-  letter-spacing: 0.05em;
-  display: inline-block;
-  text-shadow: none;
-  opacity: 1;
+//* ═══════════════════════════════════════════════════════
+   🟢 СТАТИЧНЫЙ САЙДБАР (правая панель, не ломает центрирование)
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --sidebar-w: 280px;
+  --sidebar-bg: rgba(15, 19, 24, 0.85);
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
 }
 
-/* ── Утилиты ── */
-.text-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+/* Сайдбар — фиксированный, не влияет на поток документа */
+.sidebar {
+  position: fixed; top: 70px; right: 0;
+  width: var(--sidebar-w); height: calc(100vh - 70px);
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 24px 16px; z-index: 900;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  /* Скроллбар внутри сайдбара */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent2) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--accent2); border-radius: 2px; }
 
-/* ── Скроллбар ── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: rgba(0,255,136,0.2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+.sidebar-nav {
+  display: flex; flex-direction: column; gap: 6px; flex: 1;
+}
 
-::selection { background: rgba(0,255,136,0.25); color: var(--text); }
+.sidebar-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 12px;
+  text-decoration: none; color: var(--text2);
+  font-weight: 500; font-size: 15px;
+  transition: all 0.2s ease; position: relative;
+}
+.sidebar-link:hover {
+  background: var(--sidebar-hover);
+  color: var(--text);
+  transform: translateX(-2px);
+}
+.sidebar-link.active {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--accent);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
+}
+.sidebar-link.active::before {
+  content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 22px; background: var(--accent); border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.sidebar-icon {
+  font-size: 20px; min-width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  filter: saturate(1.2); transition: transform 0.2s ease;
+}
+.sidebar-link:hover .sidebar-icon { transform: scale(1.1) rotate(-5deg); }
+.sidebar-link.active .sidebar-icon { filter: drop-shadow(0 0 6px var(--accent)); }
+
+.sidebar-divider {
+  height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 16px 0;
+}
+
+.sidebar-link.logout { color: var(--danger); }
+.sidebar-link.logout:hover { background: rgba(255, 77, 106, 0.1); color: #ff7a93; }
+
+/* Кнопка-бургер (только мобильные) */
+.sidebar-toggle {
+  display: none; position: fixed; top: 84px; right: 16px; z-index: 901;
+  background: var(--surface); backdrop-filter: blur(10px);
+  border: 1px solid var(--border); color: var(--text);
+  width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+  align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+}
+.sidebar-toggle:hover { background: var(--surface2); transform: scale(1.05); }
+
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; top: 70px;
+  background: rgba(0,0,0,0.6); z-index: 899;
+  backdrop-filter: blur(4px);
+}
+.sidebar-overlay.active { display: block; animation: fadeIn 0.2s ease; }
+
+/* Desktop: отступ ВНУТРИ контейнера — центрирование не ломается */
+@media (min-width: 769px) {
+  .container {
+    padding-right: var(--sidebar-w);
+  }
+}
+
+/* Мобильный адаптив */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(100%);
+    width: 85vw; max-width: 300px;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.5);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-toggle { display: flex; }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

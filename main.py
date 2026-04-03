@@ -665,80 +665,114 @@ def get_user_history(user_id):
 # ====================== МЕНЮ ======================
 @app.context_processor
 def inject_menu():
-    if 'user_id' in session:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            session.clear()
-            return dict(menu='', menu_js='')
+    # Гостевое меню (без изменений)
+    if 'user_id' not in session:
+        return dict(menu='''
+            <div class="auth-menu">
+                <a href="/login" class="auth-btn login-btn"><span class="material-icons">login</span> Войти</a>
+                <a href="/register" class="auth-btn register-btn"><span class="material-icons">person_add</span> Регистрация</a>
+            </div>''', menu_js='')
 
-        avatar_html = (
-            f'<img src="{user.avatar}" class="menu-avatar" id="userCircle">'
-            if user.avatar else
-            f'<div class="user-circle" id="userCircle">{(user.name or "U")[0].upper()}</div>'
-        )
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        session.clear()
+        return dict(menu='', menu_js='')
 
-        menu = f'''
-        <div class="user-menu">
-          {avatar_html}
-          <div class="dropdown-menu" id="dropdownMenu">
-            <a href="{url_for('profile')}">Профиль</a>
-            <a href="{url_for('chats_list')}">Мои чаты</a>
-            <a href="{url_for('history_page')}">История</a>
-            <a href="{url_for('duel_page')}">⚔️ Дуэли</a>
-            <a href="{url_for('shop_page')}">🛍️ Магазин</a>
-            <a href="{url_for('leaderboard')}">🏆 Лидерборд</a>
-            <a href="{url_for('settings_page')}">⚙️ Настройки</a>
-            <a href="{url_for('logout')}">Выйти</a>
-          </div>
-        </div>
-        '''
-        js = '''<script>document.addEventListener("DOMContentLoaded", () => {
-            const c = document.getElementById("userCircle"), m = document.getElementById("dropdownMenu");
-            if (c && m) {
-              c.onclick = e => { e.stopPropagation(); m.classList.toggle("show"); };
-              document.onclick = () => m.classList.remove("show");
-            }
-        });</script>'''
-    else:
-        menu = '''<div class="auth-menu">
-            <a href="/login" class="auth-btn login-btn"><span class="material-icons">login</span> Войти</a>
-            <a href="/register" class="auth-btn register-btn"><span class="material-icons">person_add</span> Регистрация</a>
-        </div>'''
-        js = ''
-    return dict(menu=menu, menu_js=js)
+    current_ep = request.endpoint or ''
+    def is_active(ep):
+        return 'active' if (ep and (ep == current_ep or current_ep.startswith(ep))) else ''
 
+    menu = f'''
+    <aside class="sidebar" id="mainSidebar">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Меню">☰</button>
+      <nav class="sidebar-nav">
+        <a href="{url_for('welcome')}" class="sidebar-link {is_active('welcome')}">
+          <span class="sidebar-icon">🏠</span><span>Обучение</span>
+        </a>
+        <a href="{url_for('chats_list')}" class="sidebar-link {is_active('chats_list') or is_active('chat')}">
+          <span class="sidebar-icon">📚</span><span>Мои чаты</span>
+        </a>
+        <a href="{url_for('history_page')}" class="sidebar-link {is_active('history_page')}">
+          <span class="sidebar-icon">📖</span><span>История</span>
+        </a>
+        <a href="{url_for('duel_page')}" class="sidebar-link {is_active('duel_page')}">
+          <span class="sidebar-icon">⚔️</span><span>Дуэли</span>
+        </a>
+        <a href="{url_for('shop_page')}" class="sidebar-link {is_active('shop_page')}">
+          <span class="sidebar-icon">🛍️</span><span>Магазин</span>
+        </a>
+        <a href="{url_for('profile')}" class="sidebar-link {is_active('profile')}">
+         <span class="sidebar-icon">🙍‍♂️</span><span>Профиль</span>
+        <a href="{url_for('leaderboard')}" class="sidebar-link {is_active('leaderboard')}">
+          <span class="sidebar-icon">🏆</span><span>Лидерборд</span>
+        </a>
+        <a href="{url_for('settings_page')}" class="sidebar-link {is_active('settings_page')}">
+          <span class="sidebar-icon">⚙️</span><span>Настройки</span>
+        </a>
+        <div class="sidebar-divider"></div>
+        <a href="{url_for('logout')}" class="sidebar-link logout">
+          <span class="sidebar-icon">🚪</span><span>Выйти</span>
+        </a>
+      </nav>
+    </aside>
+    '''
+
+    menu_js = '''<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const sb = document.getElementById("mainSidebar");
+      const tog = document.getElementById("sidebarToggle");
+      if (!sb || !tog) return;
+      const overlay = document.createElement("div");
+      overlay.className = "sidebar-overlay";
+      document.body.appendChild(overlay);
+      tog.onclick = () => { sb.classList.toggle("open"); overlay.classList.toggle("active"); };
+      overlay.onclick = () => { sb.classList.remove("open"); overlay.classList.remove("active"); };
+      document.addEventListener("keydown", e => { if (e.key === "Escape" && sb.classList.contains("open")) { sb.classList.remove("open"); overlay.classList.remove("active"); } });
+      // Fallback active state (если Jinja не сработал)
+      const path = window.location.pathname;
+      document.querySelectorAll(".sidebar-link").forEach(l => {
+        const h = l.getAttribute("href");
+        if (h && (path === h || path.startsWith(h + "/"))) l.classList.add("active");
+      });
+    });
+    </script>'''
+    return dict(menu=menu, menu_js=menu_js)
 
 # ====================== ГЛАВНАЯ ======================
 @app.route("/")
 def welcome():
-    current_user  = None
-    user_goal     = None
-    last_chat     = None
-    active_paths  = []   # активные Sprint/Journey для баннеров
+    """
+    Главная страница.
+    - Гость → landing.html (маркетинговый лендинг)
+    - Залогиненный → welcome.html (дашборд с 3 режимами)
+    """
+    if 'user_id' not in session:
+        # Гостевой лендинг — без данных пользователя
+        return render_template("landing.html")
 
-    if 'user_id' in session:
-        current_user = db.session.get(User, session['user_id'])
-        if current_user:
-            # Онбординг — перехватываем если не прошёл
-            if not getattr(current_user, 'is_onboarded', True):
-                return redirect(url_for('onboarding'))
+    # Залогиненный пользователь
+    user = db.session.get(User, session['user_id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('welcome'))
 
-            user_goal = getattr(current_user, 'goal', None) or ''
-            last_chat = Chat.query.filter_by(
-                user_id=current_user.id, has_messages=True
-            ).order_by(Chat.updated_at.desc()).first()
+    # Онбординг не пройден → отправляем на онбординг
+    if hasattr(user, 'is_onboarded') and not user.is_onboarded:
+        return redirect(url_for('onboarding'))
 
-            # Активные пути (Sprint/Journey) для отображения карточек прогресса
-            active_paths = LearningPath.query.filter_by(
-                user_id=current_user.id, is_active=True
-            ).order_by(LearningPath.last_active.desc()).limit(5).all()
+    # Последний чат (для карточки "Продолжить")
+    last_chat = Chat.query.filter_by(
+        user_id=user.id, has_messages=True
+    ).order_by(Chat.updated_at.desc()).first()
+
+    # Цель пользователя из онбординга
+    user_goal = getattr(user, 'goal', None) or ''
 
     return render_template(
         "welcome.html",
-        current_user=current_user,
-        user_goal=user_goal,
+        current_user=user,
         last_chat=last_chat,
-        active_paths=active_paths,
+        user_goal=user_goal,
     )
 
 

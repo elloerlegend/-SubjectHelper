@@ -1,0 +1,2271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SubjectHelper — Твой AI-репетитор</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='avatar.ico') }}">
+  <link rel="stylesheet" href="/static/back.css">
+  <link rel="stylesheet" href="/static/welcome.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Unbounded:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <style>
+    /* ══════════════════════════════════════════════
+       CSS VARIABLES & RESET
+    ══════════════════════════════════════════════ */
+    :root {
+      --accent:   #00ff88;
+      --accent2:  #00cc6a;
+      --accent3:  #00ffaa;
+      --blue:     #4fc3f7;
+      --purple:   #a78bfa;
+      --pink:     #f472b6;
+      --warning:  #fbbf24;
+      --danger:   #f87171;
+      --bg:       #080812;
+      --bg2:      #0d0d1a;
+      --surface:  #12121f;
+      --surface2: #1a1a2e;
+      --border:   rgba(255,255,255,0.06);
+      --border2:  rgba(255,255,255,0.12);
+      --text:     #f0f0f8;
+      --text2:    #b0b0c8;
+      --text3:    #60607a;
+      --font-display: 'Unbounded', sans-serif;
+      --font-main:    'Space Grotesk', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+      --glow-green:   0 0 40px rgba(0,255,136,0.25), 0 0 80px rgba(0,255,136,0.08);
+      --glow-purple:  0 0 40px rgba(167,139,250,0.25);
+      --glow-blue:    0 0 40px rgba(79,195,247,0.25);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    /* ══ SCROLLBAR ══ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+
+    /* ══════════════════════════════════════════════
+       CANVAS BACKGROUND
+    ══════════════════════════════════════════════ */
+    #landing-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none; opacity: 0.5;
+    }
+
+    /* ══════════════════════════════════════════════
+       HEADER / NAV
+    ══════════════════════════════════════════════ */
+    .lp-header {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(8,8,18,0.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    .lp-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display);
+      font-size: 0.95rem; font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+    .lp-logo img { height: 30px; }
+    .lp-logo-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+      animation: dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.7; }
+    }
+    .lp-nav {
+      display: flex; align-items: center; gap: 32px;
+    }
+    .lp-nav a {
+      font-size: 0.85rem; font-weight: 500;
+      color: var(--text3);
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+    .lp-nav a:hover { color: var(--text); }
+    .lp-nav-cta {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .btn-ghost {
+      padding: 8px 20px; border-radius: 30px;
+      border: 1px solid var(--border2);
+      color: var(--text2); font-size: 0.85rem;
+      font-weight: 600; cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-main);
+      background: transparent;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.25);
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+    .btn-primary {
+      padding: 9px 22px; border-radius: 30px;
+      background: var(--accent); color: var(--bg);
+      font-size: 0.85rem; font-weight: 700;
+      border: none; cursor: pointer;
+      transition: all 0.22s;
+      font-family: var(--font-main);
+      box-shadow: 0 4px 20px rgba(0,255,136,0.35);
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover {
+      background: var(--accent3);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(0,255,136,0.5);
+    }
+
+    /* Mobile nav */
+    .lp-mob-menu { display: none; }
+    @media (max-width: 768px) {
+      .lp-header { padding: 0 20px; }
+      .lp-nav { display: none; }
+      .lp-mob-menu {
+        display: flex; align-items: center; gap: 10px;
+      }
+    }
+
+    /* ══════════════════════════════════════════════
+       HERO SECTION
+    ══════════════════════════════════════════════ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 40px 80px;
+      text-align: center;
+      z-index: 1;
+    }
+
+    /* Neon grid lines */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0; z-index: -1;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+    }
+
+    /* Big glow behind hero */
+    .hero-glow {
+      position: absolute;
+      top: 10%; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, rgba(0,255,136,0.08) 0%, rgba(167,139,250,0.04) 40%, transparent 70%);
+      pointer-events: none; z-index: -1;
+      filter: blur(40px);
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 30px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      animation: fadeUpEl 0.6s ease both;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: dotPulse 1.5s ease-in-out infinite;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+      animation: fadeUpEl 0.6s 0.1s ease both;
+    }
+    .hero-title .line1 { display: block; color: var(--text); }
+    .hero-title .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--blue) 50%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-title .accent-word {
+      position: relative;
+      display: inline-block;
+    }
+    .hero-title .accent-word::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--blue));
+      border-radius: 2px;
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underlineIn 0.8s 0.8s ease forwards;
+    }
+    @keyframes underlineIn { to { transform: scaleX(1); } }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--text2);
+      max-width: 620px;
+      margin: 0 auto 44px;
+      line-height: 1.7;
+      font-weight: 400;
+      animation: fadeUpEl 0.6s 0.2s ease both;
+    }
+
+    .hero-cta {
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px; flex-wrap: wrap;
+      animation: fadeUpEl 0.6s 0.3s ease both;
+      margin-bottom: 60px;
+    }
+    .btn-hero {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 36px; border-radius: 50px;
+      font-size: 1.05rem; font-weight: 700;
+      transition: all 0.24s;
+      font-family: var(--font-main);
+      letter-spacing: 0.01em;
+      cursor: pointer; border: none;
+    }
+    .btn-hero-primary {
+      background: var(--accent);
+      color: var(--bg);
+      box-shadow: 0 8px 32px rgba(0,255,136,0.4), 0 0 0 0 rgba(0,255,136,0.4);
+      animation: heroGlowPulse 3s 1s ease-in-out infinite;
+    }
+    @keyframes heroGlowPulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(0,255,136,0.4), 0 0 0 0 rgba(0,255,136,0.3); }
+      50% { box-shadow: 0 12px 40px rgba(0,255,136,0.55), 0 0 0 8px rgba(0,255,136,0.05); }
+    }
+    .btn-hero-primary:hover {
+      background: var(--accent3);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 48px rgba(0,255,136,0.6);
+    }
+    .btn-hero-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text2);
+      border: 1px solid var(--border2) !important;
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--text);
+      transform: translateY(-2px);
+    }
+
+    /* ── Hero Stats ── */
+    .hero-stats {
+      display: flex; align-items: center; justify-content: center; gap: 48px;
+      flex-wrap: wrap;
+      animation: fadeUpEl 0.6s 0.4s ease both;
+    }
+    .hero-stat {
+      text-align: center;
+    }
+    .hero-stat-num {
+      font-family: var(--font-display);
+      font-size: 1.8rem; font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .hero-stat-num span {
+      background: linear-gradient(135deg, var(--accent), var(--blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-stat-lbl {
+      font-size: 0.75rem; color: var(--text3);
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .hero-stat-divider {
+      width: 1px; height: 40px;
+      background: var(--border);
+    }
+
+    /* ── Scroll indicator ── */
+    .scroll-hint {
+      position: absolute; bottom: 32px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      font-size: 0.68rem; letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: fadeUpEl 1s 1s ease both;
+    }
+    .scroll-arrow {
+      width: 24px; height: 40px; border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 6px;
+    }
+    .scroll-dot {
+      width: 4px; height: 8px; border-radius: 2px;
+      background: var(--accent);
+      animation: scrollDot 1.8s ease-in-out infinite;
+    }
+    @keyframes scrollDot {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(18px); opacity: 0; }
+    }
+
+    @keyframes fadeUpEl {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════════════════════════════════════
+       TICKER / MARQUEE (две одинаковые группы → ровный -50%)
+    ══════════════════════════════════════════════ */
+    .ticker-wrap {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,255,136,0.02);
+      overflow: hidden;
+      padding: 40px 0;
+    }
+    .ticker-viewport {
+      width: 100%;
+      overflow: hidden;
+    }
+    .ticker-track {
+      display: flex;
+      width: max-content;
+      align-items: center;
+      flex-direction: row;
+      flex-wrap: nowrap;
+
+
+      max-width: none;
+      animation: ticker-marquee 28s linear infinite;
+      will-change: transform;
+      backface-visibility: hidden;
+    }
+    @keyframes ticker-marquee {
+      from { transform: translate3d(0, 0, 0); }
+      to   { transform: translate3d(-50%, 0, 0); }
+    }
+    .ticker-group {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+      align-items: center;
+      gap: clamp(1.25rem, 3.5vw, 3.75rem);
+      padding-right: clamp(1.25rem, 3.5vw, 3.75rem);
+      box-sizing: content-box;
+    }
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: clamp(0.65rem, 1.6vw, 0.78rem);
+      color: var(--text3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    .ticker-item b {
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .ticker-sep {
+      flex: 0 0 auto;
+      color: var(--border2);
+      font-size: 1rem;
+      line-height: 1;
+      user-select: none;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ticker-track { animation: none; transform: none !important; }
+    }
+
+    /* ══════════════════════════════════════════════
+       SECTION COMMON
+    ══════════════════════════════════════════════ */
+    section {
+      position: relative; z-index: 1;
+    }
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    .section-pad { padding: 100px 0; }
+
+    .section-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem; color: var(--accent);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-eyebrow::before {
+      content: '';
+      width: 20px; height: 1.5px;
+      background: var(--accent);
+      opacity: 0.7;
+    }
+    .section-title-large {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800; line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .section-title-large .grad {
+      background: linear-gradient(135deg, var(--accent), var(--blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .section-desc {
+      font-size: 1.05rem; color: var(--text2);
+      max-width: 540px; line-height: 1.7;
+    }
+
+    /* Reveal animation */
+    .reveal {
+      opacity: 0; transform: translateY(32px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1; transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* ══════════════════════════════════════════════
+       THREE MODES SECTION
+    ══════════════════════════════════════════════ */
+    .modes-section { padding: 100px 0; }
+
+    .modes-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .mode-feature-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 32px 36px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex; flex-direction: column;
+    }
+    .mode-feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--accent));
+      opacity: 0.6;
+      transition: opacity 0.3s, height 0.3s;
+    }
+    .mode-feature-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        ellipse 60% 40% at 50% 0%,
+        var(--card-glow, rgba(0,255,136,0.08)),
+        transparent 70%
+      );
+      opacity: 0;
+      transition: opacity 0.35s;
+      pointer-events: none;
+    }
+    .mode-feature-card:hover {
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .mode-feature-card:hover::before { height: 4px; opacity: 1; }
+    .mode-feature-card:hover::after  { opacity: 1; }
+
+    /* Mode-specific accents */
+    .mode-casual {
+      --card-accent: #00ff88;
+      --card-glow: rgba(0,255,136,0.1);
+    }
+    .mode-sprint {
+      --card-accent: #f59e0b;
+      --card-glow: rgba(245,158,11,0.1);
+    }
+    .mode-journey {
+      --card-accent: #a78bfa;
+      --card-glow: rgba(167,139,250,0.1);
+    }
+
+    .mode-num {
+      font-family: var(--font-mono);
+      font-size: 0.65rem; letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 20px;
+    }
+
+    .mode-icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      background: var(--icon-bg, rgba(0,255,136,0.08));
+      border: 1px solid var(--icon-border, rgba(0,255,136,0.15));
+      transition: all 0.3s;
+    }
+    .mode-casual .mode-icon-wrap {
+      --icon-bg: rgba(0,255,136,0.08);
+      --icon-border: rgba(0,255,136,0.15);
+    }
+    .mode-sprint .mode-icon-wrap {
+      --icon-bg: rgba(245,158,11,0.08);
+      --icon-border: rgba(245,158,11,0.15);
+    }
+    .mode-journey .mode-icon-wrap {
+      --icon-bg: rgba(167,139,250,0.08);
+      --icon-border: rgba(167,139,250,0.15);
+    }
+    .mode-feature-card:hover .mode-icon-wrap {
+      transform: scale(1.1) rotate(-4deg);
+    }
+
+    .mode-card-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem; font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .mode-card-en {
+      font-family: var(--font-mono);
+      font-size: 0.7rem; color: var(--text3);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .mode-card-desc {
+      font-size: 0.9rem; color: var(--text2);
+      line-height: 1.65; flex: 1;
+      margin-bottom: 28px;
+    }
+
+    .mode-card-tags {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 28px;
+    }
+    .mode-tag {
+      padding: 4px 10px; border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem; letter-spacing: 0.04em;
+      background: var(--tag-bg, rgba(0,255,136,0.07));
+      color: var(--tag-color, #00ff88);
+      border: 1px solid var(--tag-border, rgba(0,255,136,0.15));
+    }
+    .mode-casual .mode-tag {
+      --tag-bg: rgba(0,255,136,0.07);
+      --tag-color: #00ff88;
+      --tag-border: rgba(0,255,136,0.15);
+    }
+    .mode-sprint .mode-tag {
+      --tag-bg: rgba(245,158,11,0.07);
+      --tag-color: #f59e0b;
+      --tag-border: rgba(245,158,11,0.15);
+    }
+    .mode-journey .mode-tag {
+      --tag-bg: rgba(167,139,250,0.07);
+      --tag-color: #a78bfa;
+      --tag-border: rgba(167,139,250,0.15);
+    }
+
+    .mode-card-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--cta-color, var(--accent));
+      transition: gap 0.2s;
+      margin-top: auto;
+    }
+    .mode-casual .mode-card-cta  { --cta-color: #00ff88; }
+    .mode-sprint .mode-card-cta  { --cta-color: #f59e0b; }
+    .mode-journey .mode-card-cta { --cta-color: #a78bfa; }
+    .mode-feature-card:hover .mode-card-cta { gap: 14px; }
+
+    /* ══════════════════════════════════════════════
+       SUBJECTS SECTION
+    ══════════════════════════════════════════════ */
+    .subjects-section {
+      padding: 80px 0;
+      background: rgba(255,255,255,0.01);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .subjects-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      margin-bottom: 48px; gap: 24px; flex-wrap: wrap;
+    }
+
+    .subjects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .subject-lp-card {
+      position: relative; overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 18px;
+      cursor: pointer;
+      transition: all 0.22s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .subject-lp-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(
+        circle at var(--mx, 50%) var(--my, 50%),
+        rgba(0,255,136,0.07), transparent 60%
+      );
+      opacity: 0; transition: opacity 0.22s;
+      pointer-events: none;
+    }
+    .subject-lp-card:hover {
+      border-color: rgba(0,255,136,0.25);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .subject-lp-card:hover::after { opacity: 1; }
+    .subj-emoji { font-size: 1.8rem; display: block; }
+    .subj-name {
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--text2); line-height: 1.3;
+    }
+    .subj-count {
+      font-family: var(--font-mono);
+      font-size: 0.65rem; color: var(--text3);
+    }
+
+    /* ══════════════════════════════════════════════
+       HOW IT WORKS
+    ══════════════════════════════════════════════ */
+    .how-section { padding: 100px 0; }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .how-steps {
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .how-step {
+      display: flex; gap: 38px;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .how-step:first-child { border-top: 1px solid var(--border); }
+    .how-step.active { border-bottom-color: transparent; }
+    .how-step-num {
+      font-family: var(--font-display);
+      font-size: 2rem; font-weight: 900;
+      color: var(--text3);
+      min-width: 48px; line-height: 1;
+      transition: color 0.3s;
+    }
+    .how-step.active .how-step-num { color: var(--accent); }
+    .how-step-content {}
+    .how-step-title {
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--text2);
+      margin-bottom: 6px;
+      transition: color 0.3s;
+    }
+    .how-step.active .how-step-title { color: var(--text); }
+    .how-step-desc {
+      font-size: 0.88rem; color: var(--text3);
+      line-height: 1.6; max-height: 0;
+      overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s;
+      opacity: 0;
+    }
+    .how-step.active .how-step-desc {
+      max-height: 120px; opacity: 1;
+    }
+
+    /* Right side: feature visual */
+    .how-visual {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      min-height: 400px;
+      display: flex; flex-direction: column;
+      gap: 16px;
+      position: relative; overflow: hidden;
+    }
+    .how-visual::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--blue), var(--purple));
+    }
+    .visual-panel {
+      display: none;
+      animation: panelIn 0.4s ease;
+    }
+    .visual-panel.active { display: flex; flex-direction: column; gap: 12px; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .visual-chat-row {
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .visual-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--blue));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .visual-bubble {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 14px 14px 14px 4px;
+      padding: 12px 16px;
+      font-size: 0.84rem; color: var(--text2);
+      line-height: 1.6; max-width: 320px;
+    }
+    .visual-bubble b { color: var(--accent); font-weight: 600; }
+    .visual-bubble.user {
+      background: rgba(0,255,136,0.06);
+      border-color: rgba(0,255,136,0.15);
+      border-radius: 14px 14px 4px 14px;
+      color: var(--text);
+      margin-left: auto;
+    }
+    .visual-stat-row {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+    }
+    .v-stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .v-stat-num {
+      font-family: var(--font-display);
+      font-size: 1.4rem; font-weight: 800;
+      color: var(--accent); line-height: 1;
+      margin-bottom: 4px;
+    }
+    .v-stat-lbl {
+      font-family: var(--font-mono);
+      font-size: 0.62rem; color: var(--text3);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .visual-progress-item {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .vp-emoji { font-size: 1.1rem; width: 28px; text-align: center; }
+    .vp-info { flex: 1; }
+    .vp-name { font-size: 0.8rem; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+    .vp-bar { height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+    .vp-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .vp-pct { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text3); min-width: 32px; text-align: right; }
+
+    /* ══════════════════════════════════════════════
+       FEATURES GRID
+    ══════════════════════════════════════════════ */
+    .features-section { padding: 100px 0; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      transition: all 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .feat-card.large {
+      grid-column: span 2;
+    }
+    .feat-card:hover {
+      border-color: rgba(255,255,255,0.1);
+      transform: translateY(-3px);
+    }
+    .feat-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin-bottom: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+    }
+    .feat-title {
+      font-size: 1rem; font-weight: 700;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .feat-desc {
+      font-size: 0.84rem; color: var(--text3);
+      line-height: 1.65;
+    }
+    .feat-card .feat-tag {
+      display: inline-block; margin-top: 14px;
+      padding: 3px 9px; border-radius: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem; color: var(--accent);
+      background: rgba(0,255,136,0.07);
+      border: 1px solid rgba(0,255,136,0.15);
+    }
+
+    /* Memory visualization */
+    .feat-memory-chart {
+      display: flex; align-items: flex-end; gap: 6px;
+      height: 64px; margin-top: 16px;
+    }
+    .mem-bar {
+      flex: 1; border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, var(--accent), rgba(0,255,136,0.2));
+      transition: height 1s ease;
+      min-height: 4px;
+    }
+
+    /* Fairik mini preview */
+    .feat-fairik-preview {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 14px;
+    }
+    .fairik-bubble-mini {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 16px 4px;
+      padding: 8px 12px;
+      font-size: 0.8rem; color: var(--text2);
+    }
+
+    /* XP bar */
+    .feat-xp-row {
+      display: flex; align-items: center; gap: 10px; margin-top: 16px;
+    }
+    .xp-bar-track {
+      flex: 1; height: 8px; background: rgba(255,255,255,0.06);
+      border-radius: 4px; overflow: hidden;
+    }
+    .xp-bar-fill {
+      height: 100%; width: 68%;
+      background: linear-gradient(90deg, var(--accent), var(--blue));
+      border-radius: 4px;
+      animation: xpFill 2s 0.5s ease both;
+    }
+    @keyframes xpFill {
+      from { width: 0; }
+      to   { width: 68%; }
+    }
+
+    /* ══════════════════════════════════════════════
+       TESTIMONIALS
+    ══════════════════════════════════════════════ */
+    .reviews-section { padding: 80px 0; }
+
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .review-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      transition: all 0.22s;
+    }
+    .review-card:hover {
+      border-color: rgba(255,255,255,0.1);
+      transform: translateY(-3px);
+    }
+    .review-stars {
+      color: #fbbf24; font-size: 1rem;
+      margin-bottom: 14px; letter-spacing: 1px;
+    }
+    .review-text {
+      font-size: 0.88rem; color: var(--text2);
+      line-height: 1.7; margin-bottom: 20px;
+    }
+    .review-author {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .review-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: var(--bg);
+      flex-shrink: 0;
+    }
+    .review-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .review-sub  { font-size: 0.73rem; color: var(--text3); font-family: var(--font-mono); }
+
+    /* ══════════════════════════════════════════════
+       FINAL CTA
+    ══════════════════════════════════════════════ */
+    .cta-section {
+      padding: 120px 0;
+      text-align: center;
+      position: relative;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, rgba(167,139,250,0.04) 40%, transparent 70%);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+    .cta-emoji {
+      font-size: 4rem; display: block;
+      margin-bottom: 24px;
+      animation: cta-bob 3s ease-in-out infinite;
+    }
+    @keyframes cta-bob {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+    .cta-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900; line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+    }
+    .cta-sub {
+      font-size: 1.05rem; color: var(--text2);
+      max-width: 480px; margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .cta-note {
+      margin-top: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem; color: var(--text3);
+      letter-spacing: 0.06em;
+    }
+
+    /* ══════════════════════════════════════════════
+       FOOTER
+    ══════════════════════════════════════════════ */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 40px;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+      position: relative; z-index: 1;
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-display);
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--text2);
+    }
+    .footer-links {
+      display: flex; gap: 28px; flex-wrap: wrap;
+    }
+    .footer-links a {
+      font-size: 0.8rem; color: var(--text3);
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text2); }
+    .footer-copy {
+      font-family: var(--font-mono);
+      font-size: 0.7rem; color: var(--text3);
+    }
+
+    /* ══════════════════════════════════════════════
+       LOGGED-IN SELECTOR PANEL
+    ══════════════════════════════════════════════ */
+    .lp-user-panel {
+      position: relative; z-index: 2;
+    }
+
+    /* ══════════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .modes-grid { grid-template-columns: 1fr 1fr; }
+      .how-grid   { grid-template-columns: 1fr; }
+      .how-visual { min-height: 280px; }
+      .features-grid { grid-template-columns: repeat(2,1fr); }
+      .feat-card.large { grid-column: span 1; }
+    }
+    @media (max-width: 768px) {
+      .container { padding: 0 20px; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-stats .hero-stat-divider { display: none; }
+      .hero-stats { gap: 24px; }
+      .modes-grid { grid-template-columns: 1fr; }
+      .subjects-grid { grid-template-columns: repeat(3,1fr); }
+      .features-grid { grid-template-columns: 1fr; }
+      .reviews-grid  { grid-template-columns: 1fr; }
+      .subjects-header { flex-direction: column; align-items: flex-start; }
+      footer { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+      .hero-cta .btn-hero { padding: 13px 24px; font-size: 0.95rem; }
+      .subjects-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+
+<script src="{{ url_for('static', filename='themes.js') }}"></script>
+<script src="{{ url_for('static', filename='fairik.js') }}"></script>
+
+<body>
+
+<!-- ═══════════════════════════════════════
+     CANVAS BG
+════════════════════════════════════════ -->
+<canvas id="landing-canvas"></canvas>
+
+{% if current_user %}
+<!-- ═══════════════════════════════════════════════════════════════
+     LOGGED-IN: персонализированная страница выбора
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Нижняя навигация -->
+<nav class="app-nav" style="display:flex; position:fixed; bottom:0; left:0; right:0; z-index:50;
+  background:rgba(8,8,18,0.85); backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  justify-content:space-around; padding:6px 0;">
+  <a href="/" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;color:var(--accent);text-decoration:none;">
+    <span class="material-icons" style="font-size:20px">home</span>
+    <span style="font-size:0.6rem;font-family:var(--font-mono);letter-spacing:0.04em;">Главная</span>
+  </a>
+  <a href="/chats" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;color:var(--text3);text-decoration:none;">
+    <span class="material-icons" style="font-size:20px">chat_bubble_outline</span>
+    <span style="font-size:0.6rem;font-family:var(--font-mono);letter-spacing:0.04em;">Чаты</span>
+  </a>
+  <a href="/leaderboard" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;color:var(--text3);text-decoration:none;">
+    <span class="material-icons" style="font-size:20px">leaderboard</span>
+    <span style="font-size:0.6rem;font-family:var(--font-mono);letter-spacing:0.04em;">Рейтинг</span>
+  </a>
+  <a href="/profile" style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;color:var(--text3);text-decoration:none;">
+    {% if current_user.avatar %}
+      <img src="{{ current_user.avatar }}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;border:1.5px solid var(--accent);">
+    {% else %}
+      <span class="material-icons" style="font-size:20px">person_outline</span>
+    {% endif %}
+    <span style="font-size:0.6rem;font-family:var(--font-mono);letter-spacing:0.04em;">Профиль</span>
+  </a>
+</nav>
+
+<header class="lp-header">
+  <a href="/" class="lp-logo">
+    <img src="/static/img/logo.png" alt="logo">
+    <div class="lp-logo-dot"></div>
+  </a>
+  <nav class="lp-nav">
+    <a href="/chats">Мои чаты</a>
+    <a href="/memory">Память</a>
+    <a href="/leaderboard">Рейтинг</a>
+    <a href="/shop">Магазин</a>
+  </nav>
+  <div class="lp-nav-cta">
+    {{ menu | safe }}
+  </div>
+</header>
+{{ menu_js | safe }}
+
+<div class="lp-user-panel" style="padding-top: 64px;">
+  <section class="welcome" style="max-width:1080px;margin:0 auto;padding:40px 20px 100px;position:relative;z-index:1;">
+
+    <!-- Приветствие -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;animation:fadeUpEl 0.4s ease both;">
+      <div>
+        <h1 style="font-family:var(--font-display);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;margin-bottom:6px;letter-spacing:-0.01em;">
+          Привет, {{ current_user.name or 'Ученик' }}! 👋
+        </h1>
+        <p style="font-size:0.9rem;color:var(--text2);font-family:var(--font-mono);">
+          {% if user_goal and 'ЕГЭ' in user_goal or user_goal and 'ОГЭ' in user_goal %}
+            Готовимся к экзамену — выбери предмет и начнём
+          {% elif user_goal and 'оценк' in user_goal %}
+            Разберём сложные темы и подтянем оценки
+          {% elif user_goal and 'домашк' in user_goal %}
+            Поможем с домашним заданием — быстро и понятно
+          {% elif user_goal and 'интерес' in user_goal %}
+            Изучаем что интересно — без давления и оценок
+          {% else %}
+            Выбери предмет и режим — начнём прямо сейчас
+          {% endif %}
+        </p>
+      </div>
+      {% if current_user.xp %}
+      <div style="flex-shrink:0;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:16px;padding:12px 18px;text-align:center;min-width:72px;">
+        <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:900;color:var(--accent);line-height:1;">{{ current_user.xp }}</div>
+        <div style="font-size:0.65rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;">XP</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Стрик + цель -->
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;animation:fadeUpEl 0.4s 0.05s ease both;">
+      {% if current_user.streak %}
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.18);border-radius:12px;padding:10px 16px;">
+        <span style="font-size:1.2rem;">🔥</span>
+        <div>
+          <div style="font-size:0.82rem;font-weight:700;color:var(--text);">{{ current_user.streak }} дней подряд</div>
+          <div style="font-size:0.68rem;color:var(--text3);font-family:var(--font-mono);">стрик не сломан</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if user_goal %}
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:10px 16px;flex:1;">
+        <span style="font-size:1.2rem;">
+          {% if 'ЕГЭ' in user_goal or 'ОГЭ' in user_goal %}📋{% elif 'оценк' in user_goal %}📈{% elif 'домашк' in user_goal %}📝{% else %}🔬{% endif %}
+        </span>
+        <div style="flex:1;">
+          <div style="font-size:0.68rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">Твоя цель</div>
+          <div style="font-size:0.88rem;font-weight:600;color:var(--text);">
+            {% if 'ЕГЭ' in user_goal %}Подготовка к ЕГЭ
+            {% elif 'ОГЭ' in user_goal %}Подготовка к ОГЭ
+            {% elif 'оценк' in user_goal %}Улучшить оценки
+            {% elif 'домашк' in user_goal %}Помощь с домашкой
+            {% elif 'интерес' in user_goal %}Просто интересно
+            {% else %}Учёба{% endif %}
+          </div>
+        </div>
+        <a href="/settings" style="font-size:0.72rem;color:var(--text3);font-family:var(--font-mono);transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">изменить</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Последний чат -->
+    {% if last_chat %}
+    <a href="{{ url_for('open_chat', chat_id=last_chat.id) }}" style="display:flex;align-items:center;gap:14px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.18);border-radius:18px;padding:16px 20px;margin-bottom:28px;text-decoration:none;transition:all 0.22s;animation:fadeUpEl 0.4s 0.1s ease both;"
+      onmouseover="this.style.background='rgba(0,255,136,0.08)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.background='rgba(0,255,136,0.04)';this.style.transform='translateY(0)'">
+      <span class="material-icons" style="color:var(--accent);font-size:22px;flex-shrink:0;">bolt</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.65rem;color:var(--accent);font-family:var(--font-mono);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">Продолжить</div>
+        <div style="font-size:0.92rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ last_chat.title }}</div>
+      </div>
+      <span class="material-icons" style="color:var(--accent);font-size:16px;flex-shrink:0;">arrow_forward_ios</span>
+    </a>
+    {% endif %}
+
+    <!-- Быстрый старт по цели -->
+    {% if user_goal %}
+    <div style="margin-bottom:40px;animation:fadeUpEl 0.4s 0.12s ease both;">
+      <div class="section-eyebrow" style="margin-bottom:16px;">Быстрый старт</div>
+      <div id="quickGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;"></div>
+    </div>
+    {% endif %}
+
+    <!-- Выбор предмета -->
+    <div class="section-eyebrow" style="margin-bottom:14px;">Выбери предмет</div>
+    <div class="modes" id="subjects" style="margin-bottom:32px;">
+      <div class="subject-card" data-subject="Математика">📐 Математика</div>
+      <div class="subject-card" data-subject="Русский язык">📝 Русский язык</div>
+      <div class="subject-card" data-subject="Информатика">💻 Информатика</div>
+      <div class="subject-card" data-subject="Физика">🔬 Физика</div>
+      <div class="subject-card" data-subject="Химия">⚗️ Химия</div>
+      <div class="subject-card" data-subject="Биология">🧬 Биология</div>
+      <div class="subject-card" data-subject="История">📜 История</div>
+      <div class="subject-card" data-subject="Обществознание">⚖️ Общество</div>
+      <div class="subject-card" data-subject="Английский язык">🌍 Английский</div>
+      <div class="subject-card" data-subject="Литература">📖 Литература</div>
+      <div class="subject-card" data-subject="География">🌐 География</div>
+    </div>
+
+    <!-- Режим -->
+    <div class="section-eyebrow" style="margin-bottom:14px;">Режим обучения</div>
+    <div class="modes" id="modes" style="margin-bottom:32px;">
+      <div class="mode-card" data-mode="explain">
+        <h2>🧠 Объяснение темы</h2>
+        <p>Простой разбор любой темы с примерами из жизни.</p>
+      </div>
+      <div class="mode-card" data-mode="step">
+        <h2>🪜 Решение по шагам</h2>
+        <p>Решаем задачи пошагово, объясняя каждое действие.</p>
+      </div>
+      <div class="mode-card" data-mode="quiz">
+        <h2>🎯 Проверка знаний</h2>
+        <p>Вопросы с вариантами ответов и мгновенной проверкой.</p>
+      </div>
+      <div class="mode-card" data-mode="exam">
+        <h2>📋 ЕГЭ / ОГЭ</h2>
+        <p>Задания в формате экзамена с оценкой по критериям.</p>
+      </div>
+    </div>
+
+    {% if not current_user.class_number %}
+    <div class="section-eyebrow" style="margin-bottom:14px;">Твой класс</div>
+    <div class="class-grid" style="margin-bottom:32px;">
+      <div class="class-card" data-class="1-4" data-num="3">1–4</div>
+      <div class="class-card" data-class="5-7" data-num="6">5–7</div>
+      <div class="class-card" data-class="8-9" data-num="8">8–9</div>
+      <div class="class-card" data-class="10-11" data-num="10">10–11</div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/new_chat" id="new-chat-form">
+      <input type="hidden" name="subject"      id="form-subject"   value="">
+      <input type="hidden" name="class_number" id="form-class"     value="{{ current_user.class_number if current_user else '' }}">
+      <input type="hidden" name="mode"         id="form-mode"      value="">
+      <input type="hidden" name="interests"    id="form-interests" value="{{ current_user.interests if current_user else '' }}">
+    </form>
+
+    <div id="validation-hint" class="validation-hint" style="display:none;">☝️ Выбери предмет и режим</div>
+    <button class="start-button" id="start-button" disabled onclick="doStart()">
+      Начать обучение →
+    </button>
+
+  </section>
+</div>
+
+{% else %}
+<!-- ═══════════════════════════════════════════════════════════════
+     GUEST: полная лендинг-страница
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- HEADER -->
+<header class="lp-header" id="lpHeader">
+  <a href="/" class="lp-logo">
+
+    SubjectHelper
+    <div class="lp-logo-dot"></div>
+  </a>
+  <nav class="lp-nav">
+    <a href="#modes">Режимы</a>
+    <a href="#subjects">Предметы</a>
+    <a href="#how">Как работает</a>
+    <a href="#features">Возможности</a>
+  </nav>
+  <div class="lp-nav-cta">
+    <a href="/login"><button class="btn-ghost">Войти</button></a>
+    <a href="/register"><button class="btn-primary">Начать бесплатно</button></a>
+  </div>
+  <div class="lp-mob-menu">
+    <a href="/login"><button class="btn-ghost" style="padding:7px 14px;font-size:0.8rem;">Войти</button></a>
+    <a href="/register"><button class="btn-primary" style="padding:7px 16px;font-size:0.8rem;">Начать</button></a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    AI-репетитор нового поколения
+  </div>
+
+  <h1 class="hero-title">
+    <span class="line1">Учись проще</span><span class="accent-word">____не</span>
+    <span class="line2">Становись лучше</span>
+  </h1>
+
+  <p class="hero-sub">
+    Персональный AI-репетитор, который помнит твои ошибки,
+    адаптируется под тебя и объясняет любую тему так,
+    как ты понимаешь лучше всего.
+  </p>
+
+  <div class="hero-cta">
+    <a href="/register">
+      <button class="btn-hero btn-hero-primary">
+        <span class="material-icons" style="font-size:18px;">rocket_launch</span>
+        Начать бесплатно
+      </button>
+    </a>
+    <a href="#how">
+      <button class="btn-hero btn-hero-secondary">
+        Как это работает
+        <span class="material-icons" style="font-size:16px;">arrow_downward</span>
+      </button>
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num"><span id="cnt-students">0</span>+</div>
+      <div class="hero-stat-lbl">Учеников</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat">
+      <div class="hero-stat-num"><span id="cnt-questions">0</span>K+</div>
+      <div class="hero-stat-lbl">Вопросов решено</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat">
+      <div class="hero-stat-num"><span id="cnt-subjects">11</span></div>
+      <div class="hero-stat-lbl">Предметов</div>
+    </div>
+    <div class="hero-stat-divider"></div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">∞</div>
+      <div class="hero-stat-lbl">Терпения</div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-arrow"><div class="scroll-dot"></div></div>
+    листай вниз
+  </div>
+</section>
+
+<!-- TICKER: две идентичные группы → translateX(-50%) без рывков -->
+<div class="ticker-wrap" role="presentation" aria-hidden="true">
+  <div class="ticker-viewport">
+    <div class="ticker-track">
+      <div class="ticker-group">
+        <span class="ticker-item">📐 <b>Математика</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🔥 <b>ЕГЭ / ОГЭ</b> подготовка</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🧠 <b>Долгосрочная память</b> ошибок</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🎯 <b>Персонализация</b> под тебя</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">⚗️ <b>Химия</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🐉 <b>Файрик</b> — твой маскот</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🔬 <b>Физика</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">⭐ <b>XP</b> и уровни</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">📜 <b>История</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">💻 <b>Информатика</b></span><span class="ticker-sep">·</span>
+      </div>
+      <div class="ticker-group" aria-hidden="true">
+        <span class="ticker-item">📐 <b>Математика</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🔥 <b>ЕГЭ / ОГЭ</b> подготовка</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🧠 <b>Долгосрочная память</b> ошибок</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🎯 <b>Персонализация</b> под тебя</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">⚗️ <b>Химия</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🐉 <b>Файрик</b> — твой маскот</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">🔬 <b>Физика</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">⭐ <b>XP</b> и уровни</span><span class="ticker-sep">·</span>
+        <span class="ticker-item">📜 <b>История</b></span><span class="ticker-sep">·</span>
+        <span class="ticker-item">💻 <b>Информатика</b></span><span class="ticker-sep">·</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- THREE MODES -->
+<section class="modes-section" id="modes">
+  <div class="container">
+    <div class="modes-header reveal">
+      <div class="section-eyebrow" style="justify-content:center;">Три режима обучения</div>
+      <h2 class="section-title-large">
+        Под каждую задачу —<br>
+        <span class="grad">свой режим</span>
+      </h2>
+      <p class="section-desc" style="margin:0 auto;text-align:center;">
+        Один раз задал вопрос, готовишься к экзамену или изучаешь предмет с нуля — у нас есть режим именно для тебя.
+      </p>
+    </div>
+
+    <div class="modes-grid">
+
+      <!-- CASUAL -->
+      <div class="mode-feature-card mode-casual reveal reveal-delay-1">
+        <div class="mode-num">01 / 03</div>
+        <div class="mode-icon-wrap">⚡</div>
+        <div class="mode-card-title">Casual</div>
+        <div class="mode-card-en">Quick Question</div>
+        <p class="mode-card-desc">
+          Быстрый вопрос по домашке, непонятная тема с урока,
+          задача которую надо решить прямо сейчас.
+          Без регистрации цели, без долгосрочного плана — просто спроси.
+        </p>
+        <div class="mode-card-tags">
+          <span class="mode-tag">Объяснение темы</span>
+          <span class="mode-tag">Пошаговое решение</span>
+          <span class="mode-tag">Квиз</span>
+          <span class="mode-tag">ЕГЭ/ОГЭ задания</span>
+        </div>
+        <a href="/register" class="mode-card-cta">
+          Попробовать
+          <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+        </a>
+      </div>
+
+      <!-- SPRINT -->
+      <div class="mode-feature-card mode-sprint reveal reveal-delay-2">
+        <div class="mode-num">02 / 03</div>
+        <div class="mode-icon-wrap">🏃</div>
+        <div class="mode-card-title">Sprint</div>
+        <div class="mode-card-en">Intensive Prep</div>
+        <p class="mode-card-desc">
+          ЕГЭ через 2 недели? Контрольная в пятницу?
+          Sprint создаёт персональный интенсив с чётким планом,
+          дедлайном и ежедневными заданиями.
+        </p>
+        <div class="mode-card-tags">
+          <span class="mode-tag">Дедлайн</span>
+          <span class="mode-tag">План по дням</span>
+          <span class="mode-tag">Ежедневная цель</span>
+          <span class="mode-tag">Прогресс-трекер</span>
+        </div>
+        <a href="/register" class="mode-card-cta">
+          Создать спринт
+          <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+        </a>
+      </div>
+
+      <!-- JOURNEY -->
+      <div class="mode-feature-card mode-journey reveal reveal-delay-3">
+        <div class="mode-num">03 / 03</div>
+        <div class="mode-icon-wrap">🗺️</div>
+        <div class="mode-card-title">Journey</div>
+        <div class="mode-card-en">Deep Learning</div>
+        <p class="mode-card-desc">
+          Хочешь по-настоящему разобраться в предмете с нуля до мастерства.
+          Journey строит карту знаний и ведёт тебя по ней,
+          запоминая каждую ошибку и успех.
+        </p>
+        <div class="mode-card-tags">
+          <span class="mode-tag">Карта знаний</span>
+          <span class="mode-tag">SM-2 повторения</span>
+          <span class="mode-tag">Долгосрочная память</span>
+          <span class="mode-tag">Адаптация</span>
+        </div>
+        <a href="/register" class="mode-card-cta">
+          Начать путь
+          <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- SUBJECTS -->
+<section class="subjects-section" id="subjects">
+  <div class="container">
+    <div class="subjects-header">
+      <div>
+        <div class="section-eyebrow reveal">11 предметов</div>
+        <h2 class="section-title-large reveal reveal-delay-1">
+          Любой предмет,<br><span class="grad">любой класс</span>
+        </h2>
+      </div>
+      <p class="section-desc reveal reveal-delay-2">
+        От 1 до 11 класса. Объяснения адаптируются под твой уровень автоматически.
+      </p>
+    </div>
+
+    <div class="subjects-grid">
+      <div class="subject-lp-card reveal reveal-delay-1">
+        <span class="subj-emoji">📐</span>
+        <span class="subj-name">Математика</span>
+        <span class="subj-count">Алгебра · Геометрия</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-1">
+        <span class="subj-emoji">📝</span>
+        <span class="subj-name">Русский язык</span>
+        <span class="subj-count">Грамматика · Сочинение</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-2">
+        <span class="subj-emoji">🔬</span>
+        <span class="subj-name">Физика</span>
+        <span class="subj-count">Механика · Оптика</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-2">
+        <span class="subj-emoji">⚗️</span>
+        <span class="subj-name">Химия</span>
+        <span class="subj-count">Органика · Реакции</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-3">
+        <span class="subj-emoji">🧬</span>
+        <span class="subj-name">Биология</span>
+        <span class="subj-count">Клетка · Эволюция</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-3">
+        <span class="subj-emoji">💻</span>
+        <span class="subj-name">Информатика</span>
+        <span class="subj-count">Алгоритмы · Код</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-4">
+        <span class="subj-emoji">📜</span>
+        <span class="subj-name">История</span>
+        <span class="subj-count">Россия · Мир</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-4">
+        <span class="subj-emoji">⚖️</span>
+        <span class="subj-name">Обществознание</span>
+        <span class="subj-count">Право · Экономика</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-5">
+        <span class="subj-emoji">🌍</span>
+        <span class="subj-name">Английский</span>
+        <span class="subj-count">Grammar · Speaking</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-5">
+        <span class="subj-emoji">📖</span>
+        <span class="subj-name">Литература</span>
+        <span class="subj-count">Анализ · Сочинение</span>
+      </div>
+      <div class="subject-lp-card reveal reveal-delay-5">
+        <span class="subj-emoji">🌐</span>
+        <span class="subj-name">География</span>
+        <span class="subj-count">Физ. · Экон.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="container">
+    <div class="how-grid">
+      <div>
+        <div class="section-eyebrow reveal">Как работает</div>
+        <h2 class="section-title-large reveal reveal-delay-1" style="margin-bottom:40px;">
+          Просто начни<br><span class="grad">задавать вопросы</span>
+        </h2>
+
+        <div class="how-steps">
+          <div class="how-step active" onclick="setHowStep(0, this)">
+            <div class="how-step-num">01</div>
+            <div class="how-step-content">
+              <div class="how-step-title">Выбери предмет и режим</div>
+              <div class="how-step-desc">
+                Укажи предмет, класс и что ты хочешь: объяснение темы,
+                пошаговое решение задачи, проверку знаний или подготовку к ЕГЭ/ОГЭ.
+              </div>
+            </div>
+          </div>
+          <div class="how-step" onclick="setHowStep(1, this)">
+            <div class="how-step-num">02</div>
+            <div class="how-step-content">
+              <div class="how-step-title">AI подстраивается под тебя</div>
+              <div class="how-step-desc">
+                Файрик запоминает как ты учишься, какие темы сложные,
+                и меняет стиль объяснений. Чем больше занимаешься — тем точнее AI.
+              </div>
+            </div>
+          </div>
+          <div class="how-step" onclick="setHowStep(2, this)">
+            <div class="how-step-num">03</div>
+            <div class="how-step-content">
+              <div class="how-step-title">Получай XP и прогрессируй</div>
+              <div class="how-step-desc">
+                Каждый вопрос — это +10 XP, каждый день учёбы — стрик.
+                Соревнуйся в лидерборде, открывай скины для Файрика.
+              </div>
+            </div>
+          </div>
+          <div class="how-step" onclick="setHowStep(3, this)">
+            <div class="how-step-num">04</div>
+            <div class="how-step-content">
+              <div class="how-step-title">Система памяти не даёт забыть</div>
+              <div class="how-step-desc">
+                Алгоритм SM-2 (как в Anki) отслеживает слабые темы и
+                напоминает их повторить в нужный момент. Не зубрёжка — умное повторение.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual panel -->
+      <div class="how-visual reveal reveal-delay-2">
+
+        <!-- Panel 0: выбор -->
+        <div class="visual-panel active" id="vp0">
+          <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Новый чат</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <div style="padding:6px 12px;border-radius:20px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);font-size:0.78rem;color:#00ff88;font-weight:600;">📐 Математика</div>
+            <div style="padding:6px 12px;border-radius:20px;background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.2);font-size:0.78rem;color:#4fc3f7;">🔬 Физика</div>
+            <div style="padding:6px 12px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid var(--border);font-size:0.78rem;color:var(--text3);">⚗️ Химия</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+            <div style="padding:8px 14px;border-radius:12px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);font-size:0.78rem;color:#00ff88;">🧠 Объяснение</div>
+            <div style="padding:8px 14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);font-size:0.78rem;color:var(--text3);">🎯 Квиз</div>
+            <div style="padding:8px 14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);font-size:0.78rem;color:var(--text3);">📋 ЕГЭ</div>
+          </div>
+          <div style="background:rgba(0,255,136,1);border-radius:12px;padding:12px;text-align:center;font-weight:700;font-size:0.9rem;color:#080812;cursor:pointer;">
+            Начать обучение →
+          </div>
+        </div>
+
+        <!-- Panel 1: чат -->
+        <div class="visual-panel" id="vp1">
+          <div class="visual-chat-row">
+            <div class="visual-avatar">🎒</div>
+            <div class="visual-bubble">Объясни мне квадратные уравнения, 8 класс</div>
+          </div>
+          <div class="visual-chat-row">
+            <div class="virtual-avatar" style="font-size:1.4rem;">🐉</div>
+            <div class="visual-bubble" style="border-radius:4px 14px 14px 14px;">
+              Привет! Квадратное уравнение — это <b>ax² + bx + c = 0</b>.<br>
+              Представь: это парабола. Корни — точки где она пересекает ось X.<br>
+              <span style="color:var(--accent)">Дискриминант D = b² — 4ac</span> покажет сколько решений...
+            </div>
+          </div>
+          <div class="visual-chat-row" style="justify-content:flex-end;">
+            <div class="visual-bubble user">А если D отрицательный?</div>
+          </div>
+        </div>
+
+        <!-- Panel 2: XP -->
+        <div class="visual-panel" id="vp2">
+          <div class="visual-stat-row">
+            <div class="v-stat">
+              <div class="v-stat-num">247</div>
+              <div class="v-stat-lbl">XP всего</div>
+            </div>
+            <div class="v-stat">
+              <div class="v-stat-num" style="color:var(--warning);">7</div>
+              <div class="v-stat-lbl">Дней стрик</div>
+            </div>
+            <div class="v-stat">
+              <div class="v-stat-num" style="color:var(--purple);">3</div>
+              <div class="v-stat-lbl">Уровень</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:6px;">
+              <span style="color:var(--text2);font-weight:600;">Уровень 3 → 4</span>
+              <span style="color:var(--accent);font-family:var(--font-mono);">247/300 XP</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:82%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:3px;"></div>
+            </div>
+          </div>
+          <div style="font-size:0.78rem;color:var(--text3);text-align:center;font-family:var(--font-mono);">+10 XP за каждый вопрос 🎯</div>
+        </div>
+
+        <!-- Panel 3: память -->
+        <div class="visual-panel" id="vp3">
+          <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;">Слабые темы · SM-2</div>
+          <div class="visual-progress-item">
+            <div class="vp-emoji">📐</div>
+            <div class="vp-info">
+              <div class="vp-name">Квадратные уравнения</div>
+              <div class="vp-bar"><div class="vp-fill" style="width:30%;background:var(--danger);"></div></div>
+            </div>
+            <div class="vp-pct" style="color:var(--danger);">30%</div>
+          </div>
+          <div class="visual-progress-item">
+            <div class="vp-emoji">🔬</div>
+            <div class="vp-info">
+              <div class="vp-name">Закон Ома</div>
+              <div class="vp-bar"><div class="vp-fill" style="width:65%;background:var(--warning);"></div></div>
+            </div>
+            <div class="vp-pct" style="color:var(--warning);">65%</div>
+          </div>
+          <div class="visual-progress-item">
+            <div class="vp-emoji">⚗️</div>
+            <div class="vp-info">
+              <div class="vp-name">Органические реакции</div>
+              <div class="vp-bar"><div class="vp-fill" style="width:88%;background:var(--accent);"></div></div>
+            </div>
+            <div class="vp-pct" style="color:var(--accent);">88%</div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text3);text-align:center;font-family:var(--font-mono);margin-top:8px;">
+            🐉 Файрик напомнит о повторении в нужный момент
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:60px;">
+      <div class="section-eyebrow reveal" style="justify-content:center;">Возможности</div>
+      <h2 class="section-title-large reveal reveal-delay-1">
+        Всё что нужно<br><span class="grad">для настоящего обучения</span>
+      </h2>
+    </div>
+
+    <div class="features-grid">
+
+      <div class="feat-card large reveal reveal-delay-1">
+        <div class="feat-icon">🧠</div>
+        <div class="feat-title">Долгосрочная память ошибок</div>
+        <div class="feat-desc">
+          AI запоминает каждую твою ошибку и низкую оценку. Алгоритм SM-2 (как в Anki) строит
+          персональный график повторений так, чтобы ты не забыл сложные темы.
+        </div>
+        <div class="feat-memory-chart" id="memChart">
+          <div class="mem-bar" style="height:20%"></div>
+          <div class="mem-bar" style="height:35%"></div>
+          <div class="mem-bar" style="height:28%"></div>
+          <div class="mem-bar" style="height:55%"></div>
+          <div class="mem-bar" style="height:42%"></div>
+          <div class="mem-bar" style="height:70%"></div>
+          <div class="mem-bar" style="height:62%"></div>
+          <div class="mem-bar" style="height:85%"></div>
+          <div class="mem-bar" style="height:78%"></div>
+          <div class="mem-bar" style="height:95%"></div>
+        </div>
+        <span class="feat-tag">SM-2 · Интервальное повторение</span>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon">🐉</div>
+        <div class="feat-title">Файрик — живой маскот</div>
+        <div class="feat-desc">
+          Дракончик реагирует на твои успехи, летает по экрану, хвалит и поддерживает.
+          Открывай скины в магазине за XP.
+        </div>
+        <div class="feat-fairik-preview">
+          <span style="font-size:2.5rem;">🐉</span>
+          <div class="fairik-bubble-mini">Правильно! Ты молодец! ⭐</div>
+        </div>
+        <span class="feat-tag">8 скинов · Анимации · Физика</span>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-3">
+        <div class="feat-icon">🎮</div>
+        <div class="feat-title">Геймификация</div>
+        <div class="feat-desc">
+          XP за каждый вопрос, уровни, стрики, лидерборд.
+          Учёба становится игрой — но знания настоящие.
+        </div>
+        <div class="feat-xp-row">
+          <span style="font-family:var(--font-mono);font-size:0.8rem;color:var(--accent);">+10 XP</span>
+          <div class="xp-bar-track"><div class="xp-bar-fill"></div></div>
+          <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text3);">Ур. 3</span>
+        </div>
+        <span class="feat-tag">Лидерборд · Стрики · Скины</span>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-title">Персонализация</div>
+        <div class="feat-desc">
+          Онбординг узнаёт твои интересы, класс и стиль обучения.
+          Примеры из игр, спорта или музыки — как тебе понятнее.
+        </div>
+        <span class="feat-tag">Адаптивные объяснения</span>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon">📋</div>
+        <div class="feat-title">Подготовка к ЕГЭ/ОГЭ</div>
+        <div class="feat-desc">
+          Задания в точном формате экзамена, оценка по критериям, разбор ошибок.
+          Режимы: объяснение, тренировка, полный экзамен с таймером.
+        </div>
+        <span class="feat-tag">ЕГЭ · ОГЭ · Критерии</span>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-3">
+        <div class="feat-icon">🔊</div>
+        <div class="feat-title">Озвучка ответов</div>
+        <div class="feat-desc">
+          Слушай объяснения вслух пока едешь в школу.
+          Голосовой ввод для вопросов — просто говори.
+        </div>
+        <span class="feat-tag">TTS · Голосовой ввод</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="reviews-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px;">
+      <div class="section-eyebrow reveal" style="justify-content:center;">Отзывы</div>
+      <h2 class="section-title-large reveal reveal-delay-1">
+        Что говорят<br><span class="grad">ученики</span>
+      </h2>
+    </div>
+
+    <div class="reviews-grid">
+      <div class="review-card reveal reveal-delay-1">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">
+          «Готовился к ЕГЭ по математике и вообще не понимал задания второй части. SubjectHelper разобрал каждое задание пошагово и объяснил почему именно так. Сдал на 78!»
+        </p>
+        <div class="review-author">
+          <div class="review-avatar" style="background:linear-gradient(135deg,#00ff88,#4fc3f7);">А</div>
+          <div>
+            <div class="review-name">Артём, 11 класс</div>
+            <div class="review-sub">Математика · ЕГЭ подготовка</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card reveal reveal-delay-2">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">
+          «Не понимала органическую химию совсем. Но здесь объясняют через примеры из жизни — типа реакции горения это просто ржавчина быстрая 😄. Теперь 5 по химии!»
+        </p>
+        <div class="review-author">
+          <div class="review-avatar" style="background:linear-gradient(135deg,#f472b6,#a78bfa);">К</div>
+          <div>
+            <div class="review-name">Катя, 10 класс</div>
+            <div class="review-sub">Химия · Объяснение тем</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card reveal reveal-delay-3">
+        <div class="review-stars">★★★★★</div>
+        <p class="review-text">
+          «Файрик — это что-то. Прыгает, хвалит, летает по экрану. Раньше просто не хотелось открывать учебники, а теперь захожу каждый день чисто посмотреть что он скажет.»
+        </p>
+        <div class="review-author">
+          <div class="review-avatar" style="background:linear-gradient(135deg,#fbbf24,#f87171);">М</div>
+          <div>
+            <div class="review-name">Максим, 8 класс</div>
+            <div class="review-sub">Физика · Проверка знаний</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="cta-section">
+  <div class="container" style="position:relative;z-index:1;">
+    <span class="cta-emoji reveal">🐉</span>
+    <h2 class="cta-title reveal reveal-delay-1">
+      Готов учиться<br>
+      <span style="background:linear-gradient(135deg,var(--accent),var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">по-новому?</span>
+    </h2>
+    <p class="cta-sub reveal reveal-delay-2">
+      Зарегистрируйся бесплатно и начни уже сегодня.
+      Файрик ждёт тебя.
+    </p>
+    <div class="reveal reveal-delay-3">
+      <a href="/register">
+        <button class="btn-hero btn-hero-primary" style="margin:0 auto;display:flex;">
+          <span class="material-icons" style="font-size:18px;">rocket_launch</span>
+          Начать бесплатно
+        </button>
+      </a>
+      <p class="cta-note">Просто · Быстро · Понятно</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <span>🐉</span> SubjectHelper
+  </div>
+  <div class="footer-links">
+    <a href="/register">Регистрация</a>
+    <a href="/login">Войти</a>
+    <a href="#modes">Режимы</a>
+    <a href="#subjects">Предметы</a>
+    <a href="#features">Возможности</a>
+  </div>
+  <div class="footer-copy">© 2025 SubjectHelper · Все права защищены</div>
+</footer>
+
+{% endif %}
+
+<!-- ══ СКРИПТЫ ══ -->
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+
+<script>
+// ══════════════════════════════════════════════
+//  CANVAS BACKGROUND — landing-specific
+// ══════════════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('landing-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COLORS = ['rgba(0,255,136,', 'rgba(79,195,247,', 'rgba(167,139,250,'];
+  const TEXTS  = ['x²','∫f(x)','√n','∞','E=mc²','π','∑','DNA','F=ma','H₂O','01010','∀x'];
+
+  for (let i = 0; i < 50; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vy: -(0.1 + Math.random() * 0.25),
+      vx: (Math.random() - 0.5) * 0.1,
+      alpha: Math.random() * 0.15,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      text: Math.random() > 0.5 ? TEXTS[Math.floor(Math.random() * TEXTS.length)] : null,
+      r: 1 + Math.random() * 2,
+      size: 10 + Math.random() * 10,
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach((p, i) => {
+      p.y += p.vy; p.x += p.vx;
+      if (p.y < -40) { p.y = H + 10; p.x = Math.random() * W; }
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      if (p.text) {
+        ctx.font = `${p.size}px 'JetBrains Mono', monospace`;
+        ctx.fillStyle = p.color + '1)';
+        ctx.fillText(p.text, p.x, p.y);
+      } else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + '1)';
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ══════════════════════════════════════════════
+//  SCROLL REVEAL
+// ══════════════════════════════════════════════
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ══════════════════════════════════════════════
+//  COUNTER ANIMATION
+// ══════════════════════════════════════════════
+function animCount(el, target, duration=1800) {
+  let start = 0, startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    const progress = Math.min((ts - startTime) / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(ease * target);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+// Trigger counters when hero is visible
+const heroObserver = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    const s = document.getElementById('cnt-students');
+    const q = document.getElementById('cnt-questions');
+    if (s) animCount(s, 1200);
+    if (q) animCount(q, 48);
+    heroObserver.disconnect();
+  }
+}, { threshold: 0.3 });
+const heroEl = document.querySelector('.hero-stats');
+if (heroEl) heroObserver.observe(heroEl);
+
+// ══════════════════════════════════════════════
+//  HOW IT WORKS — STEP SWITCHER
+// ══════════════════════════════════════════════
+function setHowStep(idx, el) {
+  document.querySelectorAll('.how-step').forEach((s, i) => {
+    s.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.visual-panel').forEach((p, i) => {
+    p.classList.toggle('active', i === idx);
+  });
+}
+
+// Auto-rotate steps
+let howStepIdx = 0;
+const HOW_STEPS = document.querySelectorAll('.how-step');
+if (HOW_STEPS.length) {
+  setInterval(() => {
+    howStepIdx = (howStepIdx + 1) % HOW_STEPS.length;
+    setHowStep(howStepIdx, HOW_STEPS[howStepIdx]);
+  }, 3500);
+}
+
+// ══════════════════════════════════════════════
+//  SUBJECT CARDS — mouse glow effect
+// ══════════════════════════════════════════════
+document.querySelectorAll('.subject-lp-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', ((e.clientX-r.left)/r.width*100)+'%');
+    card.style.setProperty('--my', ((e.clientY-r.top)/r.height*100)+'%');
+  });
+});
+
+// ══════════════════════════════════════════════
+//  HEADER scroll opacity
+// ══════════════════════════════════════════════
+const lpHeader = document.getElementById('lpHeader');
+if (lpHeader) {
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY > 40;
+    lpHeader.style.background = scrolled
+      ? 'rgba(8,8,18,0.92)'
+      : 'rgba(8,8,18,0.7)';
+  });
+}
+
+// ══════════════════════════════════════════════
+//  LOGGED-IN USER CODE (if current_user)
+// ══════════════════════════════════════════════
+{% if current_user %}
+const USER_LOGGED_IN   = true;
+const USER_CLASS       = {{ current_user.class_number if current_user and current_user.class_number else 'null' }};
+const USER_INTERESTS   = {{ (current_user.interests or '') | tojson }};
+const USER_GOAL        = {{ user_goal | tojson if user_goal else 'null' }};
+
+let selectedSubject   = localStorage.getItem('subject') || null;
+let selectedMode      = localStorage.getItem('mode')    || null;
+let selectedClass     = USER_CLASS ? String(USER_CLASS) : (localStorage.getItem('user_class') || null);
+let selectedNum       = USER_CLASS ? String(USER_CLASS) : (localStorage.getItem('user_class_num') || null);
+let selectedInterests = USER_INTERESTS ? USER_INTERESTS.split(',').filter(Boolean) : JSON.parse(localStorage.getItem('interests') || '[]');
+
+const QUICK_BY_GOAL = {
+  ege: [
+    { subj:'Математика',  mode:'exam',    icon:'📐', label:'Математика ЕГЭ',   color:'var(--accent)' },
+    { subj:'Русский язык',mode:'exam',    icon:'📝', label:'Русский ЕГЭ',      color:'var(--blue)' },
+    { subj:'Физика',      mode:'exam',    icon:'🔬', label:'Физика ЕГЭ',       color:'var(--purple)' },
+    { subj:'История',     mode:'exam',    icon:'📜', label:'История ЕГЭ',      color:'var(--warning)' },
+  ],
+  oge: [
+    { subj:'Математика',  mode:'exam',    icon:'📐', label:'Математика ОГЭ',   color:'var(--accent)' },
+    { subj:'Русский язык',mode:'exam',    icon:'📝', label:'Русский ОГЭ',      color:'var(--blue)' },
+    { subj:'Физика',      mode:'quiz',    icon:'🔬', label:'Квиз по физике',   color:'var(--purple)' },
+    { subj:'Биология',    mode:'quiz',    icon:'🧬', label:'Квиз по биологии', color:'#22c55e' },
+  ],
+  grades: [
+    { subj:'Математика',  mode:'explain', icon:'📐', label:'Разбор темы',      color:'var(--accent)' },
+    { subj:'Физика',      mode:'step',    icon:'🔬', label:'Задача по шагам',  color:'var(--purple)' },
+    { subj:'Химия',       mode:'quiz',    icon:'⚗️', label:'Проверить знания', color:'var(--warning)' },
+    { subj:'История',     mode:'explain', icon:'📜', label:'Объяснение темы',  color:'var(--blue)' },
+  ],
+  homework: [
+    { subj:'Математика',  mode:'step',    icon:'📐', label:'Решить задачу',    color:'var(--accent)' },
+    { subj:'Русский язык',mode:'explain', icon:'📝', label:'Правила языка',    color:'var(--blue)' },
+    { subj:'Физика',      mode:'step',    icon:'🔬', label:'Физика по шагам',  color:'var(--purple)' },
+    { subj:'Английский язык',mode:'explain',icon:'🌍',label:'Английский',      color:'#f59e0b' },
+  ],
+  curious: [
+    { subj:'Физика',      mode:'explain', icon:'🔬', label:'Как устроен мир',  color:'var(--purple)' },
+    { subj:'Биология',    mode:'explain', icon:'🧬', label:'Жизнь и природа',  color:'#22c55e' },
+    { subj:'История',     mode:'explain', icon:'📜', label:'Великие события',  color:'var(--warning)' },
+    { subj:'Информатика', mode:'explain', icon:'💻', label:'Мир технологий',   color:'var(--blue)' },
+  ],
+};
+const MODE_LABELS = { explain:'Объяснение', step:'По шагам', quiz:'Квиз', exam:'ЕГЭ/ОГЭ' };
+
+function detectGoalKey() {
+  if (!USER_GOAL) return null;
+  if (USER_GOAL.includes('ЕГЭ')) return 'ege';
+  if (USER_GOAL.includes('ОГЭ')) return 'oge';
+  if (USER_GOAL.includes('оценк')) return 'grades';
+  if (USER_GOAL.includes('домашк')) return 'homework';
+  if (USER_GOAL.includes('интерес')) return 'curious';
+  return null;
+}
+
+function buildQuickGrid() {
+  const grid = document.getElementById('quickGrid');
+  if (!grid) return;
+  const key = detectGoalKey();
+  const cards = QUICK_BY_GOAL[key] || QUICK_BY_GOAL['grades'];
+  grid.innerHTML = '';
+  cards.forEach(c => {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      background:rgba(255,255,255,0.03);border:1px solid var(--border);
+      border-radius:14px;padding:14px 13px;cursor:pointer;transition:all 0.2s;
+      text-align:left;display:flex;flex-direction:column;gap:5px;
+      position:relative;overflow:hidden;
+    `;
+    div.innerHTML = `
+      <span style="font-size:1.3rem;">${c.icon}</span>
+      <span style="font-size:0.82rem;font-weight:700;color:var(--text);">${c.label}</span>
+      <span style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);">${MODE_LABELS[c.mode]||c.mode}</span>
+    `;
+    div.addEventListener('mouseenter', () => {
+      div.style.borderColor = 'rgba(0,255,136,0.3)';
+      div.style.transform = 'translateY(-2px)';
+    });
+    div.addEventListener('mouseleave', () => {
+      div.style.borderColor = 'var(--border)';
+      div.style.transform = 'translateY(0)';
+    });
+    div.addEventListener('click', () => {
+      selectedSubject = c.subj;
+      selectedMode    = c.mode;
+      localStorage.setItem('subject', c.subj);
+      localStorage.setItem('mode',    c.mode);
+      document.querySelectorAll('.subject-card').forEach(s => s.classList.toggle('selected', s.dataset.subject === c.subj));
+      document.querySelectorAll('.mode-card').forEach(m => m.classList.toggle('selected', m.dataset.mode === c.mode));
+      checkReady();
+      document.getElementById('start-button').scrollIntoView({ behavior:'smooth', block:'nearest' });
+      if (window.Fairik) Fairik.say('Отличный выбор! 🎯', 'nod');
+    });
+    grid.appendChild(div);
+  });
+}
+
+function setupCards() {
+  document.querySelectorAll('.subject-card').forEach(card => {
+    if (card.dataset.subject === selectedSubject) card.classList.add('selected');
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', ((e.clientX-r.left)/r.width*100).toFixed(1)+'%');
+      card.style.setProperty('--my', ((e.clientY-r.top)/r.height*100).toFixed(1)+'%');
+    });
+    card.addEventListener('mouseleave', () => { card.style.setProperty('--mx','50%'); card.style.setProperty('--my','50%'); });
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedSubject = card.dataset.subject;
+      localStorage.setItem('subject', selectedSubject);
+      checkReady();
+    });
+  });
+  document.querySelectorAll('.mode-card').forEach(card => {
+    if (card.dataset.mode === selectedMode) card.classList.add('selected');
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', ((e.clientX-r.left)/r.width*100).toFixed(1)+'%');
+      card.style.setProperty('--my', ((e.clientY-r.top)/r.height*100).toFixed(1)+'%');
+    });
+    card.addEventListener('mouseleave', () => { card.style.setProperty('--mx','50%'); card.style.setProperty('--my','50%'); });
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedMode = card.dataset.mode;
+      localStorage.setItem('mode', selectedMode);
+      checkReady();
+    });
+  });
+  document.querySelectorAll('.class-card').forEach(card => {
+    if (card.dataset.class === selectedClass || (USER_CLASS && card.dataset.num == USER_CLASS)) card.classList.add('selected');
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedClass = card.dataset.class;
+      selectedNum   = card.dataset.num;
+      localStorage.setItem('user_class',     selectedClass);
+      localStorage.setItem('user_class_num', selectedNum);
+      checkReady();
+    });
+  });
+}
+
+function checkReady() {
+  const needClass = !USER_CLASS;
+  const ready = !!(selectedSubject && selectedMode && (!needClass || selectedClass));
+  const btn = document.getElementById('start-button');
+  if (!btn) return;
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '0.5';
+}
+
+function doStart() {
+  const needClass = !USER_CLASS;
+  if (!selectedSubject || !selectedMode || (needClass && !selectedClass)) {
+    document.getElementById('validation-hint').style.display = 'block';
+    return;
+  }
+  document.getElementById('validation-hint').style.display = 'none';
+  document.getElementById('form-subject').value   = selectedSubject;
+  document.getElementById('form-class').value     = USER_CLASS || selectedNum || (selectedClass||'').split('-')[0];
+  document.getElementById('form-mode').value      = selectedMode;
+  document.getElementById('form-interests').value = selectedInterests.join(',');
+  if (window.Fairik) Fairik.say('Полетели! 🚀', 'bounce');
+  setTimeout(() => document.getElementById('new-chat-form').submit(), 350);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupCards();
+  buildQuickGrid();
+  checkReady();
+  if (window.Fairik) {
+    const goalPhrases = {
+      ege:'Готовимся к ЕГЭ! Я помогу 💪', oge:'ОГЭ — справимся! 🐉',
+      grades:'Подтянем оценки! ⭐', homework:'С домашкой разберёмся! 📚', curious:'Изучаем мир! 🔬',
+    };
+    const k = detectGoalKey();
+    if (k && goalPhrases[k]) setTimeout(() => Fairik.say(goalPhrases[k], 'nod'), 1500);
+  }
+});
+{% endif %}
+</script>
+
+<script src="{{ url_for('static', filename='formula-bg.js') }}"></script>
+</body>
+</html>
