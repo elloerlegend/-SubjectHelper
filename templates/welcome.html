@@ -96,7 +96,7 @@
   <div class="w-hero">
     <div class="w-hero-icon">🐉</div>
     <h1 class="w-hero-title">SubjectHelper</h1>
-    <p class="w-hero-sub">Твой личный AI‑репетитор.<br>Три режима под любую задачу.</p>
+    <p class="w-hero-sub">Твой личный AI‑репетитор.<br>Четыре режима под любую задачу.</p>
     <div class="w-auth-cta">
       <a href="/register" class="w-auth-btn w-auth-primary">
         <span class="material-icons">rocket_launch</span> Начать бесплатно
@@ -109,14 +109,14 @@
 {% endif %}
 
 <!-- ══════════════════════════════════════════
-     ТРИ РЕЖИМА — ЦЕНТРАЛЬНЫЙ ЭЛЕМЕНТ СТРАНИЦЫ
+     ЧЕТЫРЕ РЕЖИМА — ЦЕНТРАЛЬНЫЙ ЭЛЕМЕНТ СТРАНИЦЫ
 ══════════════════════════════════════════ -->
 <div class="w-modes-section">
   <h2 class="w-section-title">Выбери режим</h2>
 
   <div class="w-mode-grid">
 
-     <!-- ── CASUAL ── -->
+    <!-- ── CASUAL ── -->
     <div class="w-mode-card casual-mode" id="cardCasual" onclick="openCasual()">
       <div class="wmc-accent casual-accent"></div>
       <div class="wmc-header">
@@ -167,6 +167,23 @@
       <button class="wmc-btn journey-btn">Начать Journey →</button>
     </div>
 
+    <!-- ── EXAM ── -->
+    <div class="w-mode-card exam-mode" id="cardExam" onclick="openExam()">
+      <div class="wmc-accent exam-accent"></div>
+      <div class="wmc-header">
+        <span class="wmc-emoji">🎓</span>
+        <div class="wmc-badge exam-badge">Экзамен</div>
+      </div>
+      <h3 class="wmc-title">ЕГЭ / ОГЭ</h3>
+      <p class="wmc-desc">Типовые задания, симуляция полного экзамена или викторина. Подготовка точно в формате реального КИМ.</p>
+      <div class="wmc-examples">
+        <span>«Разобрать задания»</span>
+        <span>«Полный экзамен»</span>
+        <span>«Викторина»</span>
+      </div>
+      <button class="wmc-btn exam-btn">Подготовиться →</button>
+    </div>
+
   </div>
 </div>
 
@@ -195,7 +212,7 @@
       <div class="wm-chip" data-val="История">📜 История</div>
       <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
       <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
-      <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+      <div class="wm-chip" data-val="Обществознание">⚖️ Обществознание</div>
       <div class="wm-chip" data-val="Литература">📖 Литература</div>
       <div class="wm-chip" data-val="География">🌐 География</div>
     </div>
@@ -285,7 +302,7 @@
         <div class="wm-chip" data-val="История">📜 История</div>
         <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
         <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
-        <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+        <div class="wm-chip" data-val="Обществознание">⚖️ Обществознание</div>
         <div class="wm-chip" data-val="Литература">📖 Литература</div>
         <div class="wm-chip" data-val="География">🌐 География</div>
       </div>
@@ -415,7 +432,7 @@
         <div class="wm-chip" data-val="История">📜 История</div>
         <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
         <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
-        <div class="wm-chip" data-val="Обществознание">⚖️ Общество</div>
+        <div class="wm-chip" data-val="Обществознание">⚖️ Обществознание</div>
         <div class="wm-chip" data-val="Литература">📖 Литература</div>
         <div class="wm-chip" data-val="География">🌐 География</div>
       </div>
@@ -548,6 +565,129 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════
+     МОДАЛ: ЕГЭ / ОГЭ
+════════════════════════════════════════════════════ -->
+<div class="w-modal-overlay" id="examModal">
+  <div class="w-modal">
+    <div class="wm-header">
+      <div>
+        <div class="wm-title">🎓 ЕГЭ / ОГЭ</div>
+        <div class="wm-sub">Подготовка точно в формате реального экзамена</div>
+      </div>
+      <button class="wm-close" onclick="closeModal('examModal')">✕</button>
+    </div>
+
+    <!-- Шаг 1: Предмет -->
+    <div class="exam-step" id="estep1">
+      <div class="wm-section-label">Шаг 1/3 · По какому предмету?</div>
+      <div class="wm-chips" id="examSubjects">
+        <div class="wm-chip" data-val="Математика">📐 Математика</div>
+        <div class="wm-chip" data-val="Русский язык">📝 Русский язык</div>
+        <div class="wm-chip" data-val="Физика">🔬 Физика</div>
+        <div class="wm-chip" data-val="Химия">⚗️ Химия</div>
+        <div class="wm-chip" data-val="Биология">🧬 Биология</div>
+        <div class="wm-chip" data-val="История">📜 История</div>
+        <div class="wm-chip" data-val="Английский язык">🌍 Английский</div>
+        <div class="wm-chip" data-val="Обществознание">⚖️ Обществознание</div>
+        <div class="wm-chip" data-val="Литература">📖 Литература</div>
+        <div class="wm-chip" data-val="Информатика">💻 Информатика</div>
+        <div class="wm-chip" data-val="География">🌐 География</div>
+      </div>
+      <button class="wm-submit exam-submit" onclick="examNext(2)" disabled id="estep1btn">Дальше →</button>
+    </div>
+
+    <!-- Шаг 2: ОГЭ или ЕГЭ -->
+    <div class="exam-step" id="estep2" style="display:none;">
+      <div class="wm-section-label">Шаг 2/3 · Какой экзамен готовим?</div>
+      <div class="wm-chat-modes" id="examTypes">
+        <div class="wm-mode-item" data-exam="oge" data-class="9">
+          <span class="wm-mode-icon">📝</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">ОГЭ</div>
+            <div class="wm-mode-desc">9 класс · Основной государственный экзамен</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-exam="ege" data-class="11">
+          <span class="wm-mode-icon">🎓</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">ЕГЭ</div>
+            <div class="wm-mode-desc">11 класс · Единый государственный экзамен</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+      </div>
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="examNext(1)">← Назад</button>
+        <button class="wm-submit exam-submit" onclick="examNext(3)" disabled id="estep2btn">Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 3: Режим работы -->
+    <div class="exam-step" id="estep3" style="display:none;">
+      <div class="wm-section-label">Шаг 3/3 · Что хочешь сделать?</div>
+      <div class="wm-chat-modes" id="examModes">
+
+        <div class="wm-mode-item" data-submode="practice">
+          <span class="wm-mode-icon">📚</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Разобрать типовые задания</div>
+            <div class="wm-mode-desc">ИИ даёт задания по конкретным типам — решаешь, получаешь разбор и баллы</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+
+        <div class="wm-mode-item" data-submode="full">
+          <span class="wm-mode-icon">⏱</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Симуляция полного экзамена</div>
+            <div class="wm-mode-desc">Все задания по порядку как на реальном экзамене. Разбор — после финала</div>
+          </div>
+          <div class="wm-mode-check">
+            <span class="exam-soon-badge">🔒 прокторинг скоро</span>
+          </div>
+        </div>
+
+        <div class="wm-mode-item" data-submode="quiz">
+          <span class="wm-mode-icon">🎯</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Викторина по заданиям</div>
+            <div class="wm-mode-desc">Быстрые вопросы в формате теста — прокачка скорости и уверенности</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+
+      </div>
+
+      <!-- Превью перед запуском -->
+      <div class="wm-sprint-preview exam-preview" id="examPreview" style="display:none;">
+        <div class="sp-row"><span class="sp-lbl">📚 Предмет:</span><span id="epv-subject">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">🎓 Экзамен:</span><span id="epv-exam">—</span></div>
+        <div class="sp-row"><span class="sp-lbl">🎯 Режим:</span><span id="epv-mode">—</span></div>
+      </div>
+
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="examNext(2)">← Назад</button>
+        <button class="wm-submit exam-submit" id="examLaunchBtn" onclick="launchExam()" disabled>
+          🎓 Начать →
+        </button>
+      </div>
+    </div>
+
+    <!-- Скрытая форма запуска -->
+    <form method="POST" action="/new_chat" id="examForm">
+      <input type="hidden" name="subject"      id="e-subject"   value="">
+      <input type="hidden" name="mode"         id="e-mode"      value="exam">
+      <input type="hidden" name="submode"      id="e-submode"   value="">
+      <input type="hidden" name="class_number" id="e-class"     value="">
+      <input type="hidden" name="exam_type"    id="e-examtype"  value="">
+      <input type="hidden" name="interests"    id="e-interests" value="{{ current_user.interests if current_user else '' }}">
+    </form>
+
+  </div>
+</div>
+
 <!-- НУЖЕН ЛОГИН — подсказка для гостей -->
 <div class="w-modal-overlay" id="authNeedModal">
   <div class="w-modal" style="max-width:380px;">
@@ -654,7 +794,7 @@
 .w-continue-arrow { color: var(--accent); font-size: 13px; flex-shrink: 0; }
 
 /* ══════════════════════════════════
-   ТРИ РЕЖИМА — главный блок
+   РЕЖИМЫ — главный блок
 ══════════════════════════════════ */
 .w-modes-section { margin-top: 8px; }
 .w-section-title {
@@ -664,14 +804,17 @@
   opacity: 0.8; text-align: center;
 }
 
+/* Сетка: 1 колонка → 2 → 4 */
 .w-mode-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
 }
-
-@media (min-width: 640px) {
-  .w-mode-grid { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 480px) {
+  .w-mode-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 900px) {
+  .w-mode-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .w-mode-card {
@@ -686,11 +829,13 @@
 .w-mode-card:nth-child(1) { animation-delay: 0.05s; }
 .w-mode-card:nth-child(2) { animation-delay: 0.10s; }
 .w-mode-card:nth-child(3) { animation-delay: 0.15s; }
+.w-mode-card:nth-child(4) { animation-delay: 0.20s; }
 
 .w-mode-card:hover { transform: translateY(-4px); }
-.casual-mode:hover  { border-color: rgba(0,255,136,0.4); box-shadow: 0 12px 32px rgba(0,255,136,0.12); }
-.sprint-mode:hover  { border-color: rgba(255,107,53,0.4); box-shadow: 0 12px 32px rgba(255,107,53,0.12); }
-.journey-mode:hover { border-color: rgba(77,159,255,0.4); box-shadow: 0 12px 32px rgba(77,159,255,0.12); }
+.casual-mode:hover  { border-color: rgba(0,255,136,0.4);   box-shadow: 0 12px 32px rgba(0,255,136,0.12); }
+.sprint-mode:hover  { border-color: rgba(255,107,53,0.4);  box-shadow: 0 12px 32px rgba(255,107,53,0.12); }
+.journey-mode:hover { border-color: rgba(77,159,255,0.4);  box-shadow: 0 12px 32px rgba(77,159,255,0.12); }
+.exam-mode:hover    { border-color: rgba(139,92,246,0.45); box-shadow: 0 12px 32px rgba(139,92,246,0.14); }
 
 /* Цветная полоска снизу */
 .wmc-accent {
@@ -701,6 +846,7 @@
 .casual-accent  { background: var(--accent); }
 .sprint-accent  { background: #ff6b35; }
 .journey-accent { background: var(--blue); }
+.exam-accent    { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
 .w-mode-card:hover .wmc-accent { transform: scaleX(1); }
 
 .wmc-header { display: flex; align-items: center; justify-content: space-between; }
@@ -711,9 +857,10 @@
   letter-spacing: 0.08em; text-transform: uppercase;
   padding: 3px 9px; border-radius: 10px;
 }
-.casual-badge  { background: rgba(0,255,136,0.12);  color: var(--accent); }
-.sprint-badge  { background: rgba(255,107,53,0.12); color: #ff6b35; }
-.journey-badge { background: rgba(77,159,255,0.12); color: var(--blue); }
+.casual-badge  { background: rgba(0,255,136,0.12);   color: var(--accent); }
+.sprint-badge  { background: rgba(255,107,53,0.12);  color: #ff6b35; }
+.journey-badge { background: rgba(77,159,255,0.12);  color: var(--blue); }
+.exam-badge    { background: rgba(139,92,246,0.14);  color: #a78bfa; }
 
 .wmc-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin: 0; }
 .wmc-desc  { font-size: 0.8rem; color: var(--text2); line-height: 1.55; margin: 0; flex: 1; }
@@ -737,6 +884,7 @@
 .casual-btn  { background: var(--accent); color: var(--bg); box-shadow: 0 4px 14px rgba(0,255,136,0.3); }
 .sprint-btn  { background: #ff6b35; color: #fff; box-shadow: 0 4px 14px rgba(255,107,53,0.3); }
 .journey-btn { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(77,159,255,0.3); }
+.exam-btn    { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; box-shadow: 0 4px 14px rgba(139,92,246,0.35); }
 .wmc-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
 
 /* ══════════════════════════════════
@@ -803,6 +951,7 @@
 }
 .wm-chip.sel-sprint  { border-color: #ff6b35; background: rgba(255,107,53,0.09); color: #ff6b35; font-weight: 600; }
 .wm-chip.sel-journey { border-color: var(--blue); background: rgba(77,159,255,0.09); color: var(--blue); font-weight: 600; }
+.wm-chip.sel-exam    { border-color: #8b5cf6; background: rgba(139,92,246,0.1); color: #a78bfa; font-weight: 600; }
 .wm-deadline-grid, .wm-time-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
 
 /* Режимы чата */
@@ -814,9 +963,10 @@
   transition: all 0.16s;
 }
 .wm-mode-item:hover { background: var(--surface2); border-color: var(--border2); }
-.wm-mode-item.sel { border-color: var(--accent); background: rgba(0,255,136,0.06); }
+.wm-mode-item.sel         { border-color: var(--accent); background: rgba(0,255,136,0.06); }
 .wm-mode-item.sel-sprint  { border-color: #ff6b35; background: rgba(255,107,53,0.06); }
 .wm-mode-item.sel-journey { border-color: var(--blue); background: rgba(77,159,255,0.06); }
+.wm-mode-item.sel-exam    { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
 .wm-mode-icon { font-size: 1.4rem; flex-shrink: 0; }
 .wm-mode-body { flex: 1; }
 .wm-mode-title { font-size: 0.88rem; font-weight: 700; color: var(--text); }
@@ -838,6 +988,8 @@
 .wm-mode-item.sel-journey .wm-mode-check::after { content: '✓'; }
 .wm-mode-item.sel-sprint  .wm-mode-check { background: #ff6b35; border-color: #ff6b35; }
 .wm-mode-item.sel-journey .wm-mode-check { background: var(--blue); border-color: var(--blue); }
+.wm-mode-item.sel-exam    .wm-mode-check { background: #8b5cf6; border-color: #8b5cf6; color: #fff; font-size: 0.65rem; }
+.wm-mode-item.sel-exam    .wm-mode-check::after { content: '✓'; }
 
 /* Инпуты */
 .wm-input {
@@ -870,6 +1022,7 @@
 .casual-submit  { background: var(--accent); color: var(--bg); box-shadow: 0 4px 16px rgba(0,255,136,0.3); }
 .sprint-submit  { background: #ff6b35; color: #fff; box-shadow: 0 4px 16px rgba(255,107,53,0.3); }
 .journey-submit { background: var(--blue); color: #fff; box-shadow: 0 4px 16px rgba(77,159,255,0.3); }
+.exam-submit    { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: #fff; box-shadow: 0 4px 16px rgba(139,92,246,0.35); }
 .wm-btns-row { display: flex; gap: 10px; margin-top: 8px; }
 .wm-btns-row .wm-submit { flex: 1; margin-top: 0; }
 .wm-back-btn {
@@ -886,6 +1039,7 @@
   border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
   display: flex; flex-direction: column; gap: 8px;
 }
+.exam-preview { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.05); }
 .sp-row { display: flex; gap: 8px; align-items: baseline; font-size: 0.84rem; }
 .sp-lbl { color: var(--text3); font-family: var(--font-mono); font-size: 0.72rem; flex-shrink: 0; }
 
@@ -962,9 +1116,33 @@
   border: 3px solid rgba(77,159,255,0.2);
   border-top-color: var(--blue);
 }
+.exam-spinner {
+  border: 3px solid rgba(139,92,246,0.2);
+  border-top-color: #8b5cf6;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 .wm-loading-txt { font-size: 0.92rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 .wm-loading-sub { font-size: 0.78rem; color: var(--text3); font-family: var(--font-mono); }
+
+/* ══ Exam-step анимация ══ */
+.exam-step { animation: fadeUp 0.22s ease both; }
+
+/* Значок "прокторинг скоро" в чекбокс-ячейке */
+.wm-mode-item [data-submode="full"] .wm-mode-check,
+.exam-soon-badge {
+  font-size: 0.6rem;
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 8px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  width: auto; height: auto;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
@@ -986,6 +1164,7 @@ const USER_INTERESTS = {{ (current_user.interests or '') | tojson }};
 const casual  = { subject: null, mode: null, classNum: USER_CLASS_NUM ? String(USER_CLASS_NUM) : null };
 const sprint  = { step: 1, subject: null, goal: null, deadline: null, topics: [], confidence: null };
 const journey = { step: 1, subject: null, goal: null, level: null, minutes: null, probe_weak: [], probe_strong: [] };
+const exam    = { subject: null, examType: null, classNum: null, submode: null };
 let journeyProbeQuestions = [];
 
 // ════════════════════════════════
@@ -1010,7 +1189,7 @@ function chipGroup(containerId, onSelect, selClass = 'sel') {
   if (!container) return;
   container.querySelectorAll('.wm-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      container.querySelectorAll('.wm-chip').forEach(c => c.classList.remove('sel','sel-sprint','sel-journey'));
+      container.querySelectorAll('.wm-chip').forEach(c => c.classList.remove('sel','sel-sprint','sel-journey','sel-exam'));
       chip.classList.add(selClass);
       onSelect(chip.dataset.val || chip.dataset.days || chip.dataset.mins);
     });
@@ -1021,10 +1200,10 @@ function modeGroup(containerId, onSelect, selClass = 'sel') {
   document.querySelectorAll(`#${containerId} .wm-mode-item`).forEach(item => {
     item.addEventListener('click', () => {
       document.querySelectorAll(`#${containerId} .wm-mode-item`).forEach(i => {
-        i.classList.remove('sel','sel-sprint','sel-journey');
+        i.classList.remove('sel','sel-sprint','sel-journey','sel-exam');
       });
       item.classList.add(selClass);
-      onSelect(item.dataset.level || item.dataset.mode || item.dataset.confidence);
+      onSelect(item.dataset.level || item.dataset.mode || item.dataset.confidence || item.dataset.exam || item.dataset.submode);
     });
   });
 }
@@ -1082,7 +1261,6 @@ function openSprint() {
 
 function sprintNext(step) {
   if (step === 2) {
-    // Валидация шага 1
     if (!sprint.subject) return;
     chipGroup('sprintGoalChips', val => {
       sprint.goal = val;
@@ -1090,7 +1268,6 @@ function sprintNext(step) {
       checkSprintStep2();
     }, 'sel-sprint');
 
-    // Дедлайн по дням
     document.querySelectorAll('#sprintDeadlines .wm-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         document.querySelectorAll('#sprintDeadlines .wm-chip').forEach(c => c.classList.remove('sel-sprint'));
@@ -1190,7 +1367,6 @@ async function launchSprint() {
     });
     const data = await res.json();
     if (data.ok) {
-      // Создаём чат и переходим
       const form = document.createElement('form');
       form.method = 'POST'; form.action = '/new_chat';
       const fields = {
@@ -1436,10 +1612,100 @@ async function launchJourney() {
 }
 
 // ════════════════════════════════
+//  EXAM MODE — ЕГЭ / ОГЭ
+// ════════════════════════════════
+const EXAM_SUBMODE_LABELS = {
+  practice: 'Типовые задания',
+  full:     'Полный экзамен',
+  quiz:     'Викторина',
+};
+
+function openExam() {
+  requireLogin(() => {
+    // Сброс состояния
+    exam.subject = null; exam.examType = null; exam.classNum = null; exam.submode = null;
+
+    // Сброс UI
+    document.querySelectorAll('#examSubjects .wm-chip').forEach(c => c.classList.remove('sel','sel-exam'));
+    document.querySelectorAll('#examTypes .wm-mode-item').forEach(c => c.classList.remove('sel','sel-exam'));
+    document.querySelectorAll('#examModes .wm-mode-item').forEach(c => c.classList.remove('sel','sel-exam'));
+    document.getElementById('examPreview').style.display = 'none';
+    document.getElementById('examLaunchBtn').disabled = true;
+    document.getElementById('estep1btn').disabled = true;
+    document.getElementById('estep2btn').disabled = true;
+
+    showExamStep(1);
+    openModal('examModal');
+
+    // Привязка предметов
+    chipGroup('examSubjects', val => {
+      exam.subject = val;
+      document.getElementById('estep1btn').disabled = false;
+    }, 'sel-exam');
+
+    // Привязка типа экзамена
+    document.querySelectorAll('#examTypes .wm-mode-item').forEach(item => {
+      item.onclick = () => {
+        document.querySelectorAll('#examTypes .wm-mode-item').forEach(i => i.classList.remove('sel-exam'));
+        item.classList.add('sel-exam');
+        exam.examType = item.dataset.exam;
+        exam.classNum = item.dataset.class;
+        document.getElementById('estep2btn').disabled = false;
+      };
+    });
+
+    // Привязка режима работы
+    document.querySelectorAll('#examModes .wm-mode-item').forEach(item => {
+      item.onclick = () => {
+        document.querySelectorAll('#examModes .wm-mode-item').forEach(i => i.classList.remove('sel-exam'));
+        item.classList.add('sel-exam');
+        exam.submode = item.dataset.submode;
+        updateExamPreview();
+        document.getElementById('examLaunchBtn').disabled = false;
+      };
+    });
+  });
+}
+
+function showExamStep(n) {
+  document.querySelectorAll('.exam-step').forEach(s => s.style.display = 'none');
+  const el = document.getElementById(`estep${n}`);
+  if (el) el.style.display = '';
+}
+
+function examNext(n) {
+  if (n === 2 && !exam.subject) return;
+  if (n === 3 && !exam.examType) return;
+  showExamStep(n);
+}
+
+function updateExamPreview() {
+  const examLabel = exam.examType === 'oge' ? 'ОГЭ (9 класс)' : 'ЕГЭ (11 класс)';
+  document.getElementById('epv-subject').textContent = exam.subject || '—';
+  document.getElementById('epv-exam').textContent    = examLabel;
+  document.getElementById('epv-mode').textContent    = EXAM_SUBMODE_LABELS[exam.submode] || '—';
+  document.getElementById('examPreview').style.display = '';
+}
+
+function launchExam() {
+  if (!exam.subject || !exam.examType || !exam.submode) return;
+
+  // quiz → mode=quiz с exam_quiz submode; остальные → mode=exam
+  const chatMode    = exam.submode === 'quiz' ? 'quiz'      : 'exam';
+  const chatSubmode = exam.submode === 'quiz' ? 'exam_quiz' : exam.submode;
+
+  document.getElementById('e-subject').value  = exam.subject;
+  document.getElementById('e-mode').value     = chatMode;
+  document.getElementById('e-submode').value  = chatSubmode;
+  document.getElementById('e-class').value    = exam.classNum || (exam.examType === 'oge' ? '9' : '11');
+  document.getElementById('e-examtype').value = exam.examType;
+  document.getElementById('examForm').submit();
+}
+
+// ════════════════════════════════
 //  ПРОДОЛЖИТЬ АКТИВНЫЙ ПУТЬ
 // ════════════════════════════════
 function continuePath(subject, mode) {
-  // Просто открываем новый чат по предмету (путь уже активен)
   const form = document.createElement('form');
   form.method = 'POST'; form.action = '/new_chat';
   const fields = {

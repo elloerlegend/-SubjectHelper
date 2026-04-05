@@ -669,7 +669,7 @@ def inject_menu():
     if 'user_id' not in session:
         return dict(menu='''
             <header class="lp-header" id="mainHeader">
-              <a href="/" class="lp-logo">SubjectHelper<div class="lp-logo-dot"></div></a>
+              <a href="/" class="lp-logo">SubjectHelper<span class="lp-dragon">🐉</span></a>
               <nav class="lp-nav">
                 <a href="/#modes">Режимы</a>
                 <a href="/#subjects">Предметы</a>
@@ -698,7 +698,7 @@ def inject_menu():
     # --- ХЕДЕР + САЙДБАР ДЛЯ АВТОРИЗОВАННЫХ ---
     menu = f'''
     <header class="lp-header" id="mainHeader">
-      <a href="/" class="lp-logo">SubjectHelper<div class="lp-logo-dot"></div></a>
+      <a href="/" class="lp-logo">SubjectHelper<span class="lp-dragon">🐉</span></a>
       <button class="sidebar-toggle" id="sidebarToggle" aria-label="Меню">☰</button>
     </header>
 
@@ -1832,7 +1832,7 @@ def api_daily_reminder():
         return jsonify({'has_reminder': False})
 
     top  = due[0]
-    days = (datetime.now(datetime.UTC) - top.first_seen).days
+    days = (datetime.utcnow() - top.first_seen).days
 
     messages = [
         f"Помнишь, {days} дней назад ты разбирал «{top.topic}» по {top.subject}? Давай повторим за 2 минуты! 🧠",

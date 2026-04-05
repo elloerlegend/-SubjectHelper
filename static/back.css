@@ -441,15 +441,23 @@ header, .lp-header {
   color: var(--text);
   text-decoration: none;
 }
-.lp-logo-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-  animation: dotPulse 2s ease-in-out infinite;
+.lp-dragon {
+  font-size: 1.2rem;
+  line-height: 1;
+  display: inline-flex;
+  filter: drop-shadow(0 0 5px var(--accent));
+  transition: filter 0.5s ease;
+  animation: dragonPulse 3s ease-in-out infinite;
+  will-change: transform;
 }
-@keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.7; }
+.lp-dragon:hover {
+  filter: drop-shadow(0 0 14px var(--accent)) drop-shadow(0 0 28px var(--accent));
+}
+@keyframes dragonPulse {
+  0%, 100% { transform: scale(1)    rotate(0deg); }
+  25%       { transform: scale(1.08) rotate(-4deg); }
+  50%       { transform: scale(1.2)  rotate(0deg); filter: drop-shadow(0 0 12px var(--accent)); }
+  75%       { transform: scale(1.08) rotate(4deg); }
 }
 
 /* Навигация & CTA (только для гостей) */
