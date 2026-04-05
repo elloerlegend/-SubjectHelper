@@ -72,6 +72,10 @@ class Chat(db.Model):
     subject      = db.Column(db.String(100), nullable=False)
     class_number = db.Column(db.Integer, nullable=False)
     mode         = db.Column(db.String(50), nullable=False)
+    # Подрежим экзамена: explain_tasks | practice | full | ''
+    submode      = db.Column(db.String(50), nullable=True, default='')
+    # Уровень математики: basic | profile | ''
+    math_level   = db.Column(db.String(20), nullable=True, default='')
     title        = db.Column(db.String(200), nullable=True)
     created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

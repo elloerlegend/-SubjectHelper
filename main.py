@@ -49,10 +49,28 @@ def _migrate_learning_path_columns():
         logger.warning("DB migration learning_path: %s", e)
 
 
+def _migrate_chat_columns():
+    """Добавляет submode и math_level в таблицу chat если их нет."""
+    try:
+        from sqlalchemy import text
+        with db.engine.begin() as conn:
+            rows     = conn.execute(text("PRAGMA table_info(chat)")).fetchall()
+            colnames = {row[1] for row in rows}
+            if 'submode' not in colnames:
+                conn.execute(text("ALTER TABLE chat ADD COLUMN submode VARCHAR(50) DEFAULT ''"))
+                logger.info("DB: column submode added to chat")
+            if 'math_level' not in colnames:
+                conn.execute(text("ALTER TABLE chat ADD COLUMN math_level VARCHAR(20) DEFAULT ''"))
+                logger.info("DB: column math_level added to chat")
+    except Exception as e:
+        logger.warning("DB migration chat: %s", e)
+
+
 with app.app_context():
     db.init_app(app)
     db.create_all()
     _migrate_learning_path_columns()
+    _migrate_chat_columns()
 
 # ====================== GROQ ======================
 client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
@@ -425,7 +443,8 @@ def build_cluster_profile(class_number: int, subject: str, user_stats: dict,
     return persona + ("\n\n" + personal if personal else "") + memory_block + mode_block
 
 
-def build_system(mode: str, subject: str, class_number: int, submode: str = "") -> str:
+def build_system(mode: str, subject: str, class_number: int,
+                 submode: str = "", math_level: str = "") -> str:
     """Строит системный промпт под режим чата (explain/step/quiz/exam)."""
     if class_number <= 4:
         level = "младшеклассника (7–10 лет), объясняй очень просто"
@@ -436,9 +455,17 @@ def build_system(mode: str, subject: str, class_number: int, submode: str = "") 
     else:
         level = "ученика 10–11 класса (16–18 лет), готовящегося к ЕГЭ"
 
+    exam_label = "ОГЭ" if class_number <= 9 else "ЕГЭ"
+    math_suffix = ""
+    if subject == "Математика":
+        if math_level == "basic":
+            math_suffix = " (базовая математика)"
+        elif math_level == "profile":
+            math_suffix = " (профильная математика)"
+
     base = (
         f"Ты — репетитор SubjectHelper для {level}. "
-        f"Предмет: {subject}. Класс: {class_number}. "
+        f"Предмет: {subject}{math_suffix}. Класс: {class_number}. "
         "Отвечай ТОЛЬКО на русском языке. "
         "Будь дружелюбным и поддерживающим."
     )
@@ -481,30 +508,52 @@ def build_system(mode: str, subject: str, class_number: int, submode: str = "") 
             "Только JSON, никакого другого текста."
         )
     elif mode == "exam":
-        if submode == "practice":
+        if submode == "explain_tasks":
             return (
                 f"{base}\n\n"
-                "РЕЖИМ: ТРЕНИРОВКА ОТДЕЛЬНЫХ ЗАДАНИЙ ЕГЭ/ОГЭ.\n"
-                f"Давай задания в точном формате реального экзамена по {subject}.\n"
+                f"РЕЖИМ: РАЗБОР ЗАДАНИЙ {exam_label} ПО ПРЕДМЕТУ {subject}{math_suffix}.\n\n"
+                "Когда пользователь называет НОМЕР задания — отвечай строго по структуре:\n\n"
+                f"## 📌 Задание №[N] {exam_label} — [Тема задания]\n"
+                "[Что проверяется: тема, навык, формат ответа — 2 предложения]\n\n"
+                "## 📝 Типичное задание\n"
+                f"[Реальное задание из {exam_label} в точном формате как на sdamgia.ru. "
+                "Текст, условие, варианты если есть — всё как в КИМ]\n\n"
+                "## ✅ Разбор решения\n"
+                "[Пошаговое решение с объяснением каждого действия. Почему именно так]\n\n"
+                "## ⚠️ Частые ошибки\n"
+                "[2–3 типичных ошибки учеников именно на этом задании]\n\n"
+                "## 💡 Лайфхак\n"
+                "[Один конкретный совет — как решить быстрее или не потерять балл]\n\n"
+                "## 🎯 Попробуй сам\n"
+                "[Похожее задание для самостоятельного решения — с изменённым условием]\n\n"
+                f"ВАЖНО: Знай точную структуру {exam_label} {subject} текущего года. "
+                "Каждое задание соответствует реальному формату КИМ. "
+                f"Если пользователь пишет «Задание 1» — разбирай первый тип задания из {exam_label}."
+            )
+        elif submode == "practice":
+            return (
+                f"{base}\n\n"
+                f"РЕЖИМ: ТРЕНИРОВКА ОТДЕЛЬНЫХ ЗАДАНИЙ {exam_label}.\n"
+                f"Давай задания в точном формате реального экзамена по {subject}{math_suffix}.\n"
                 "Структура задания:\n"
                 "**Задание [номер типа]** (Часть [1/2], [X] баллов)\n"
-                "[Текст задания точно как в ЕГЭ/ОГЭ]\n\n"
+                "[Текст задания точно как в КИМ]\n\n"
                 "После ответа ученика: оцени по критериям, укажи баллы, разбери ошибки."
             )
         elif submode == "full":
             return (
                 f"{base}\n\n"
-                "РЕЖИМ: ПОЛНЫЙ ЭКЗАМЕН ЕГЭ/ОГЭ.\n"
-                f"Симулируй реальный экзамен по {subject}.\n"
-                "Давай задания строго по порядку как в настоящем экзамене.\n"
+                f"РЕЖИМ: ПОЛНЫЙ ЭКЗАМЕН {exam_label} по {subject}{math_suffix}.\n"
+                "Симулируй реальный экзамен: задания строго по порядку как в КИМ.\n"
                 "Не давай подсказок до конца экзамена.\n"
+                "На каждый ответ — только «Принято. Следующее задание:»\n"
                 "В конце — полный разбор всех ответов с баллами."
             )
         else:
             return (
                 f"{base}\n\n"
-                "РЕЖИМ: ПОДГОТОВКА К ЕГЭ/ОГЭ.\n"
-                f"Помогай ученику понять формат экзамена по {subject}.\n"
+                f"РЕЖИМ: ПОДГОТОВКА К {exam_label} ПО {subject}{math_suffix}.\n"
+                f"Помогай ученику понять формат {exam_label} по {subject}.\n"
                 "Объясняй типы заданий, критерии оценивания, типичные ошибки.\n"
                 "Давай советы по стратегии прохождения экзамена."
             )
@@ -769,11 +818,23 @@ def welcome():
     # Цель пользователя из онбординга
     user_goal = getattr(user, 'goal', None) or ''
 
+    # Метки режимов (используются в buildQuickGrid на welcome.html)
+    mode_labels = {
+        'explain':       'Объяснение темы',
+        'step':          'По шагам',
+        'quiz':          'Квиз',
+        'exam':          'ЕГЭ/ОГЭ',
+        'explain_tasks': 'Разбор заданий',
+        'practice':      'Тренировка',
+        'full':          'Полный экзамен',
+    }
+
     return render_template(
         "welcome.html",
         current_user=user,
         last_chat=last_chat,
         user_goal=user_goal,
+        mode_labels=mode_labels,
     )
 
 
@@ -875,21 +936,52 @@ def chats_list():
 @app.route("/new_chat", methods=["POST"])
 @login_required
 def new_chat():
-    subject      = request.form.get("subject", "Математика")
+    subject      = request.form.get("subject", "Математика").strip()
     class_number = int(request.form.get("class_number", 8))
-    mode         = request.form.get("mode", "explain")
+    mode         = request.form.get("mode", "explain").strip()
+    submode      = request.form.get("submode", "").strip()    # explain_tasks|practice|full|''
+    math_level   = request.form.get("math_level", "").strip() # basic|profile|''
 
-    title = f"{subject} — {class_number} класс ({mode})"
-    chat  = Chat(
-        user_id=session['user_id'],
-        subject=subject,
-        class_number=class_number,
-        mode=mode,
-        title=title,
+    exam_label = "ОГЭ" if class_number <= 9 else "ЕГЭ"
+
+    SUBMODE_LABELS = {
+        "explain_tasks": "Разбор заданий",
+        "practice":      "Тренировка",
+        "full":          "Полный экзамен",
+    }
+    MODE_NAMES = {
+        "explain": "Объяснение",
+        "step":    "По шагам",
+        "quiz":    "Квиз",
+    }
+    MATH_SUFFIX = {
+        "basic":   " (база)",
+        "profile": " (профиль)",
+    }
+    math_suffix = MATH_SUFFIX.get(math_level, "")
+
+    # Строим заголовок чата
+    if mode == "exam" and submode:
+        title = f"{exam_label} · {subject}{math_suffix} · {SUBMODE_LABELS.get(submode, 'Подготовка')}"
+    elif mode == "exam":
+        title = f"{exam_label} · {subject}{math_suffix}"
+    else:
+        title = f"{subject}{math_suffix} — {MODE_NAMES.get(mode, mode)}"
+    title = title[:200]
+
+    chat = Chat(
+        user_id      = session['user_id'],
+        subject      = subject,
+        class_number = class_number,
+        mode         = mode,
+        submode      = submode,
+        math_level   = math_level,
+        title        = title,
     )
     db.session.add(chat)
     db.session.commit()
 
+    # Если есть активный путь (Sprint/Journey) — перезаписываем заголовок
     active = get_active_path(session['user_id'], subject)
     if active:
         if active.mode == 'sprint':
@@ -995,7 +1087,9 @@ def ask():
     subject      = chat.subject
     mode         = chat.mode
     class_number = chat.class_number
-    submode      = request.form.get("submode", "")
+    # Берём submode из чата (фиксированный), но допускаем override из формы
+    submode      = request.form.get("submode", "") or getattr(chat, 'submode', '') or ""
+    math_level   = getattr(chat, 'math_level', '') or ""
 
     user = db.session.get(User, session['user_id'])
 
@@ -1032,7 +1126,7 @@ def ask():
         user_id=session['user_id'],
         learning_path=active_path,
     )
-    mode_prompt = build_system(mode, subject, class_number, submode)
+    mode_prompt = build_system(mode, subject, class_number, submode, math_level)
     system      = cluster + "\n\n" + mode_prompt
 
     # История чата из БД (последние 8 пар)
