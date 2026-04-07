@@ -128,7 +128,7 @@
       <div class="wmc-examples">
         <span>«Что такое синус?»</span>
         <span>«Помоги с задачей»</span>
-        <span>«Как решить этот пример?»</span>
+        <span>«Объясни правило»</span>
       </div>
       <button class="wmc-btn casual-btn">Начать →</button>
     </div>
@@ -140,14 +140,14 @@
         <span class="wmc-emoji">⚡</span>
         <div class="wmc-badge sprint-badge">Дедлайн</div>
       </div>
-      <h3 class="wmc-title">Интенсив</h3>
-      <p class="wmc-desc">Контрольная через 3 дня? Самостоятельная через неделю? Я построю план до дедлайна. Спросим, насколько ты уже в теме — подстроим глубину и темп.</p>
+      <h3 class="wmc-title">Sprint</h3>
+      <p class="wmc-desc">Контрольная через 3 дня? ОГЭ через неделю? ИИ строит план до дедлайна. Спросим, насколько ты уже в теме — подстроим глубину и темп.</p>
       <div class="wmc-examples">
         <span>«Контрольная завтра»</span>
-        <span>«ВПР через неделю»</span>
+        <span>«ОГЭ через неделю»</span>
         <span>«Разобрать тему»</span>
       </div>
-      <button class="wmc-btn sprint-btn">Начать Интенсив →</button>
+      <button class="wmc-btn sprint-btn">Создать Sprint →</button>
     </div>
 
     <!-- ── JOURNEY ── -->
@@ -157,14 +157,14 @@
         <span class="wmc-emoji">🗺</span>
         <div class="wmc-badge journey-badge">Системно</div>
       </div>
-      <h3 class="wmc-title">Роадмап</h3>
+      <h3 class="wmc-title">Journey</h3>
       <p class="wmc-desc">Хочешь знать предмет по-настоящему? Роадмап на недели вперёд. По желанию — короткая проверка уровня, чтобы точнее подобрать темы и сложность.</p>
       <div class="wmc-examples">
         <span>«Выучить английский»</span>
         <span>«ЕГЭ через 5 месяцев»</span>
-        <span>«Понять физику с нуля»</span>
+        <span>«Изучить физику»</span>
       </div>
-      <button class="wmc-btn journey-btn">Начать Путь →</button>
+      <button class="wmc-btn journey-btn">Начать Journey →</button>
     </div>
 
     <!-- ── EXAM ── -->
@@ -243,7 +243,14 @@
         </div>
         <div class="wm-mode-check"></div>
       </div>
-
+      <div class="wm-mode-item" data-mode="exam">
+        <span class="wm-mode-icon">📋</span>
+        <div class="wm-mode-body">
+          <div class="wm-mode-title">Формат ЕГЭ / ОГЭ</div>
+          <div class="wm-mode-desc">Задания как на экзамене</div>
+        </div>
+        <div class="wm-mode-check"></div>
+      </div>
     </div>
 
     {% if not current_user or not current_user.class_number %}
@@ -613,7 +620,34 @@
       </div>
       <div class="wm-btns-row">
         <button class="wm-back-btn" onclick="examNext(1)">← Назад</button>
-        <button class="wm-submit exam-submit" onclick="examNext(3)" disabled id="estep2btn">Дальше →</button>
+        <button class="wm-submit exam-submit" onclick="examGoStep2b()" disabled id="estep2btn">Дальше →</button>
+      </div>
+    </div>
+
+    <!-- Шаг 2b: Уровень математики (только Математика + ЕГЭ) -->
+    <div class="exam-step" id="estep2b" style="display:none;">
+      <div class="wm-section-label">Уровень математики</div>
+      <div class="wm-chat-modes" id="examMathLevels">
+        <div class="wm-mode-item" data-level="basic">
+          <span class="wm-mode-icon">📗</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Базовая математика</div>
+            <div class="wm-mode-desc">ЕГЭ база · 20 заданий · без части C</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+        <div class="wm-mode-item" data-level="profile">
+          <span class="wm-mode-icon">📘</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Профильная математика</div>
+            <div class="wm-mode-desc">ЕГЭ профиль · 27 заданий · часть C · вузы</div>
+          </div>
+          <div class="wm-mode-check"></div>
+        </div>
+      </div>
+      <div class="wm-btns-row">
+        <button class="wm-back-btn" onclick="showExamStep(2)">← Назад</button>
+        <button class="wm-submit exam-submit" onclick="showExamStep(3)" id="estep2bbtn" disabled>Дальше →</button>
       </div>
     </div>
 
@@ -622,10 +656,21 @@
       <div class="wm-section-label">Шаг 3/3 · Что хочешь сделать?</div>
       <div class="wm-chat-modes" id="examModes">
 
+        <div class="wm-mode-item" data-submode="explain_tasks">
+          <span class="wm-mode-icon">📖</span>
+          <div class="wm-mode-body">
+            <div class="wm-mode-title">Разобрать задания по номерам</div>
+            <div class="wm-mode-desc">Выбери номер задания — типичное задание, разбор, ошибки, лайфхак (как на sdamgia.ru)</div>
+          </div>
+          <div class="wm-mode-check">
+            <span class="exam-soon-badge" style="background:rgba(0,255,136,.15);color:var(--accent);border-color:rgba(0,255,136,.3);">⭐ Рекомендуем</span>
+          </div>
+        </div>
+
         <div class="wm-mode-item" data-submode="practice">
           <span class="wm-mode-icon">📚</span>
           <div class="wm-mode-body">
-            <div class="wm-mode-title">Разобрать типовые задания</div>
+            <div class="wm-mode-title">Тренировка типовых заданий</div>
             <div class="wm-mode-desc">ИИ даёт задания по конкретным типам — решаешь, получаешь разбор и баллы</div>
           </div>
           <div class="wm-mode-check"></div>
@@ -670,12 +715,13 @@
 
     <!-- Скрытая форма запуска -->
     <form method="POST" action="/new_chat" id="examForm">
-      <input type="hidden" name="subject"      id="e-subject"   value="">
-      <input type="hidden" name="mode"         id="e-mode"      value="exam">
-      <input type="hidden" name="submode"      id="e-submode"   value="">
-      <input type="hidden" name="class_number" id="e-class"     value="">
-      <input type="hidden" name="exam_type"    id="e-examtype"  value="">
-      <input type="hidden" name="interests"    id="e-interests" value="{{ current_user.interests if current_user else '' }}">
+      <input type="hidden" name="subject"      id="e-subject"    value="">
+      <input type="hidden" name="mode"         id="e-mode"       value="exam">
+      <input type="hidden" name="submode"      id="e-submode"    value="">
+      <input type="hidden" name="class_number" id="e-class"      value="">
+      <input type="hidden" name="exam_type"    id="e-examtype"   value="">
+      <input type="hidden" name="math_level"   id="e-math-level" value="">
+      <input type="hidden" name="interests"    id="e-interests"  value="{{ current_user.interests if current_user else '' }}">
     </form>
 
   </div>
@@ -1608,6 +1654,7 @@ async function launchJourney() {
 //  EXAM MODE — ЕГЭ / ОГЭ
 // ════════════════════════════════
 const EXAM_SUBMODE_LABELS = {
+  explain_tasks: 'Разбор заданий по номерам',
   practice: 'Типовые задания',
   full:     'Полный экзамен',
   quiz:     'Викторина',
@@ -1616,16 +1663,18 @@ const EXAM_SUBMODE_LABELS = {
 function openExam() {
   requireLogin(() => {
     // Сброс состояния
-    exam.subject = null; exam.examType = null; exam.classNum = null; exam.submode = null;
+    exam.subject = null; exam.examType = null; exam.classNum = null; exam.submode = null; exam.mathLevel = null;
 
     // Сброс UI
     document.querySelectorAll('#examSubjects .wm-chip').forEach(c => c.classList.remove('sel','sel-exam'));
     document.querySelectorAll('#examTypes .wm-mode-item').forEach(c => c.classList.remove('sel','sel-exam'));
+    document.querySelectorAll('#examMathLevels .wm-mode-item').forEach(c => c.classList.remove('sel','sel-exam'));
     document.querySelectorAll('#examModes .wm-mode-item').forEach(c => c.classList.remove('sel','sel-exam'));
     document.getElementById('examPreview').style.display = 'none';
     document.getElementById('examLaunchBtn').disabled = true;
     document.getElementById('estep1btn').disabled = true;
     document.getElementById('estep2btn').disabled = true;
+    document.getElementById('estep2bbtn').disabled = true;
 
     showExamStep(1);
     openModal('examModal');
@@ -1672,9 +1721,35 @@ function examNext(n) {
   showExamStep(n);
 }
 
+// После выбора ОГЭ/ЕГЭ: если Математика + ЕГЭ — показываем шаг уровня, иначе сразу режим
+function examGoStep2b() {
+  if (!exam.examType) return;
+  if (exam.subject === 'Математика' && exam.examType === 'ege') {
+    // Сброс и привязка уровня математики
+    document.querySelectorAll('#examMathLevels .wm-mode-item').forEach(item => {
+      item.classList.remove('sel-exam');
+      item.onclick = () => {
+        document.querySelectorAll('#examMathLevels .wm-mode-item').forEach(i => i.classList.remove('sel-exam'));
+        item.classList.add('sel-exam');
+        exam.mathLevel = item.dataset.level;
+        document.getElementById('estep2bbtn').disabled = false;
+      };
+    });
+    document.getElementById('estep2bbtn').disabled = true;
+    exam.mathLevel = null;
+    showExamStep('2b');
+  } else {
+    exam.mathLevel = '';
+    showExamStep(3);
+  }
+}
+
 function updateExamPreview() {
+  const mathSuffix = exam.mathLevel === 'basic'   ? ' (база)'
+                   : exam.mathLevel === 'profile' ? ' (профиль)'
+                   : '';
   const examLabel = exam.examType === 'oge' ? 'ОГЭ (9 класс)' : 'ЕГЭ (11 класс)';
-  document.getElementById('epv-subject').textContent = exam.subject || '—';
+  document.getElementById('epv-subject').textContent = (exam.subject || '—') + mathSuffix;
   document.getElementById('epv-exam').textContent    = examLabel;
   document.getElementById('epv-mode').textContent    = EXAM_SUBMODE_LABELS[exam.submode] || '—';
   document.getElementById('examPreview').style.display = '';
@@ -1687,11 +1762,12 @@ function launchExam() {
   const chatMode    = exam.submode === 'quiz' ? 'quiz'      : 'exam';
   const chatSubmode = exam.submode === 'quiz' ? 'exam_quiz' : exam.submode;
 
-  document.getElementById('e-subject').value  = exam.subject;
-  document.getElementById('e-mode').value     = chatMode;
-  document.getElementById('e-submode').value  = chatSubmode;
-  document.getElementById('e-class').value    = exam.classNum || (exam.examType === 'oge' ? '9' : '11');
-  document.getElementById('e-examtype').value = exam.examType;
+  document.getElementById('e-subject').value    = exam.subject;
+  document.getElementById('e-mode').value       = chatMode;
+  document.getElementById('e-submode').value    = chatSubmode;
+  document.getElementById('e-class').value      = exam.classNum || (exam.examType === 'oge' ? '9' : '11');
+  document.getElementById('e-examtype').value   = exam.examType;
+  document.getElementById('e-math-level').value = exam.mathLevel || '';
   document.getElementById('examForm').submit();
 }
 

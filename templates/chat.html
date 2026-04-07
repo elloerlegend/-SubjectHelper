@@ -52,21 +52,32 @@
         <span class="spb-task" id="spb-task"></span>
       </div>
 
-      <!-- EXAM суб-режимы -->
+      <!-- EXAM header — зависит от SUBMODE (фиксированного при создании чата) -->
       <div id="exam-header" style="display:none;">
-        <div id="exam-mode-selector" class="exam-mode-selector">
-          <button class="exam-mode-btn active" id="btn-explain"  onclick="setExamSubmode('explain')">📖 Объяснение формата</button>
-          <button class="exam-mode-btn"        id="btn-practice" onclick="setExamSubmode('practice')">🎯 Тренировка заданий</button>
-          <button class="exam-mode-btn"        id="btn-full"     onclick="setExamSubmode('full')">⏱ Полный экзамен</button>
+
+        <!-- explain_tasks: сетка номеров заданий -->
+        <div id="exam-explain-tasks-ui" style="display:none;">
+          <div class="etg-header" id="etgHeader"></div>
+          <div id="examTaskNumbers"></div>
         </div>
-        <div id="exam-progress-bar" class="exam-progress-bar" style="display:none;">
-          <span class="epb-label">Задание <b id="epb-num">1</b> из <b id="epb-total">27</b></span>
-          <div class="epb-dots" id="epb-dots"></div>
-          <div id="exam-timer" class="exam-timer" style="display:none;">
-            <span class="material-icons" style="font-size:14px">timer</span>
-            <span id="timer-val">3:55:00</span>
+
+        <!-- practice / full: переключатель и прогресс -->
+        <div id="exam-classic-ui" style="display:none;">
+          <div id="exam-mode-selector" class="exam-mode-selector">
+            <button class="exam-mode-btn active" id="btn-explain"  onclick="setExamSubmode('explain')">📖 Объяснение формата</button>
+            <button class="exam-mode-btn"        id="btn-practice" onclick="setExamSubmode('practice')">🎯 Тренировка заданий</button>
+            <button class="exam-mode-btn"        id="btn-full"     onclick="setExamSubmode('full')">⏱ Полный экзамен</button>
+          </div>
+          <div id="exam-progress-bar" class="exam-progress-bar" style="display:none;">
+            <span class="epb-label">Задание <b id="epb-num">1</b> из <b id="epb-total">27</b></span>
+            <div class="epb-dots" id="epb-dots"></div>
+            <div id="exam-timer" class="exam-timer" style="display:none;">
+              <span class="material-icons" style="font-size:14px">timer</span>
+              <span id="timer-val">3:55:00</span>
+            </div>
           </div>
         </div>
+
       </div>
 
       <div class="chat" id="chat"></div>
@@ -116,10 +127,14 @@
   const MODE    = {{ chat.mode    | tojson | safe }};
   const SUBJECT = {{ chat.subject | tojson | safe }};
   const CLASS   = {{ chat.class_number | tojson | safe }};
+  const SUBMODE = {{ (chat.submode    or '') | tojson | safe }};
+  const MATH_LEVEL = {{ (chat.math_level or '') | tojson | safe }};
   {% else %}
   const MODE    = localStorage.getItem("mode")       || "explain";
   const SUBJECT = localStorage.getItem("subject")    || "Математика";
   const CLASS   = parseInt(localStorage.getItem("user_class") || "8");
+  const SUBMODE = "";
+  const MATH_LEVEL = "";
   {% endif %}
   const SUBJECT_PO = {{ (subject_po if subject_po is defined else 'предмету') | tojson | safe }};
   const INITIAL_PATH = {{ (initial_path_json if initial_path_json is defined else 'null') | safe }};
@@ -709,7 +724,27 @@
 
     if (MODE==="quiz") document.getElementById("quiz-scoreboard").style.display="flex";
     if (MODE==="step") document.getElementById("step-progress-bar").style.display="flex";
-    if (MODE==="exam") document.getElementById("exam-header").style.display="block";
+    if (MODE==="exam") {
+      document.getElementById("exam-header").style.display="block";
+      if (SUBMODE === "explain_tasks") {
+        // Сетка заданий по номерам
+        document.getElementById("exam-explain-tasks-ui").style.display="block";
+        const mathSuffix = MATH_LEVEL==="basic" ? " (база)" : MATH_LEVEL==="profile" ? " (профиль)" : "";
+        const examLabel  = CLASS <= 9 ? "ОГЭ" : "ЕГЭ";
+        document.getElementById("etgHeader").innerHTML =
+          `<span style="font-size:.78rem;font-family:var(--font-mono);color:var(--warning);font-weight:600;">
+            📋 ${examLabel} · ${SUBJECT}${mathSuffix} — выбери номер задания для разбора:
+           </span>`;
+        buildTaskNumberGrid();
+      } else {
+        // Обычный переключатель practice/full
+        document.getElementById("exam-classic-ui").style.display="block";
+        // Предустановить активный submode если он пришёл из чата
+        if (SUBMODE === "practice" || SUBMODE === "full") {
+          setExamSubmode(SUBMODE);
+        }
+      }
+    }
 
     let hist = [];
     try {
@@ -857,7 +892,9 @@
     if (window.Fairik) Fairik.think();
     const fd=new FormData();
     fd.append("question", q||"[файл без текста]");
-    fd.append("submode",  submode||(MODE==="exam"?examSubmode:""));
+    // Передаём submode из чата (фиксированный), либо из аргумента, либо из examSubmode
+    const effectiveSubmode = submode || SUBMODE || (MODE==="exam"?examSubmode:"");
+    fd.append("submode", effectiveSubmode);
     if (hasFile) fd.append("file", attachedFile);
     clearAttach();
 
@@ -889,7 +926,10 @@
       if      (MODE==="explain") renderExplain(data);
       else if (MODE==="step")    renderStep(data);
       else if (MODE==="quiz")    renderQuiz(data, q);
-      else if (MODE==="exam")    renderExam(data, q);
+      else if (MODE==="exam") {
+        if (SUBMODE === "explain_tasks") renderExplainTask(data, null);
+        else                             renderExam(data, q);
+      }
       else                       addAiMsg(data.answer,data.question_id,true,true);
     } catch(err) {
       removeTyping(); sendBtn.disabled=false;
@@ -1299,6 +1339,227 @@
     }
   }
 
+  // ══════════════════════════════════════════════
+  //  РЕЖИМ: EXPLAIN_TASKS — сетка номеров заданий
+  // ══════════════════════════════════════════════
+
+  const EXAM_TASK_COUNTS = {
+    "Информатика":    { oge:16,  ege:27 },
+    "Математика":     { oge:26,  ege_basic:20, ege_profile:27 },
+    "Русский язык":   { oge:9,   ege:27 },
+    "Физика":         { oge:24,  ege:30 },
+    "Химия":          { oge:22,  ege:34 },
+    "Биология":       { oge:26,  ege:28 },
+    "История":        { oge:24,  ege:25 },
+    "Обществознание": { oge:25,  ege:25 },
+    "Английский язык":{ oge:11,  ege:36 },
+    "Литература":     { oge:5,   ege:12 },
+    "География":      { oge:30,  ege:34 },
+  };
+
+  // Граница часть1/часть2 (номер последнего задания части 1)
+  const EXAM_PART1_END = {
+    "Информатика":    { oge:12, ege:22 },
+    "Математика":     { oge:19, ege_basic:20, ege_profile:13 },
+    "Физика":         { oge:18, ege:24 },
+    "Химия":          { oge:19, ege:25 },
+    "Русский язык":   { oge:7,  ege:22 },
+    "Биология":       { oge:22, ege:21 },
+    "История":        { oge:19, ege:19 },
+    "Обществознание": { oge:20, ege:20 },
+    "Английский язык":{ oge:9,  ege:30 },
+    "Литература":     { oge:4,  ege:9  },
+    "География":      { oge:28, ege:28 },
+  };
+
+  function getExamTaskCount() {
+    const cfg = EXAM_TASK_COUNTS[SUBJECT] || { oge:20, ege:25 };
+    if (CLASS <= 9) return cfg.oge || 20;
+    if (SUBJECT === "Математика") {
+      return MATH_LEVEL === "basic" ? (cfg.ege_basic || 20) : (cfg.ege_profile || 27);
+    }
+    return cfg.ege || 25;
+  }
+
+  function getExamPart1End() {
+    const cfg = EXAM_PART1_END[SUBJECT];
+    if (!cfg) return Math.ceil(getExamTaskCount() * 0.65);
+    if (CLASS <= 9) return cfg.oge || 15;
+    if (SUBJECT === "Математика" && MATH_LEVEL === "basic") return cfg.ege_basic || 15;
+    return cfg.ege || Math.ceil(getExamTaskCount() * 0.65);
+  }
+
+  function buildTaskNumberGrid() {
+    const container = document.getElementById('examTaskNumbers');
+    if (!container) return;
+    const total  = getExamTaskCount();
+    const part1  = getExamPart1End();
+    container.innerHTML = '';
+
+    function makeSection(label, from, to, extraClass) {
+      const h = document.createElement('div');
+      h.className = 'etg-part-label' + (extraClass ? ' ' + extraClass : '');
+      h.textContent = label;
+      container.appendChild(h);
+      const grid = document.createElement('div');
+      grid.className = 'etg-grid';
+      for (let i = from; i <= to; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'etg-num-btn';
+        btn.textContent = i;
+        btn.title = `Задание ${i}`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.etg-num-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          sendExplainTaskRequest(i);
+        });
+        grid.appendChild(btn);
+      }
+      container.appendChild(grid);
+    }
+
+    makeSection('📝 Часть 1', 1, part1, '');
+    if (part1 < total) makeSection('📚 Часть 2', part1 + 1, total, 'etg-part2');
+  }
+
+  async function sendExplainTaskRequest(num) {
+    addUserMsg(`Задание ${num}`);
+    sendBtn.disabled = true; addTyping();
+    if (window.Fairik) Fairik.think();
+    const fd = new FormData();
+    fd.append('question', `Задание ${num}`);
+    fd.append('submode',  'explain_tasks');
+    try {
+      const res  = await fetch('/ask', { method:'POST', credentials:'include', body:fd });
+      const data = await res.json();
+      removeTyping(); sendBtn.disabled = false;
+      if (window.Fairik) Fairik.doneThinking();
+      if (data.error) { addAiMsg('⚠️ ' + esc(data.error), null, false, false); return; }
+      if (data.xp !== undefined) userSettings.xp = data.xp;
+      showXP(10);
+      if (window.Fairik) Fairik.addXP(10);
+      sessionQuestions++; updateDailyGoalBar();
+      renderExplainTask(data, num);
+    } catch(e) {
+      removeTyping(); sendBtn.disabled = false;
+      if (window.Fairik) Fairik.doneThinking();
+      addAiMsg('❌ Ошибка соединения. Попробуй ещё раз.', null, false, false);
+    }
+  }
+
+  function renderExplainTask(data, taskNum) {
+    const examLabel  = CLASS <= 9 ? 'ОГЭ' : 'ЕГЭ';
+    const mathSuffix = MATH_LEVEL === 'basic'   ? ' (база)'
+                     : MATH_LEVEL === 'profile' ? ' (профиль)' : '';
+
+    const wrap    = document.createElement('div'); wrap.className = 'message ai mode-exam';
+    const badge   = document.createElement('div'); badge.className = 'step-badge';
+    badge.style.cssText = 'background:rgba(255,179,71,.1);color:var(--warning);'
+      + 'border:1px solid rgba(255,179,71,.3);border-bottom:none;border-radius:8px 8px 0 0;'
+      + 'display:block;padding:6px 14px;font-size:.78rem;font-weight:700;width:100%;';
+    badge.textContent = taskNum
+      ? `📖 Задание №${taskNum} · ${examLabel} · ${SUBJECT}${mathSuffix}`
+      : `📖 ${examLabel} · ${SUBJECT}${mathSuffix}`;
+    wrap.appendChild(badge);
+
+    const textDiv = document.createElement('div'); textDiv.className = 'ai-text'; wrap.appendChild(textDiv);
+    const btns    = document.createElement('div'); btns.className = 'action-row'; btns.style.opacity = '0';
+
+    if (taskNum) {
+      // Кнопка «Другое задание этого типа»
+      const b1 = document.createElement('button'); b1.className = 'action-btn exam-btn';
+      b1.innerHTML = '🔄 <span>Другой вариант</span>';
+      b1.onclick = () => {
+        btns.remove();
+        addUserMsg('🔄 Дай другое задание этого типа');
+        sendBtn.disabled = true; addTyping();
+        const fd = new FormData();
+        fd.append('question', `Задание ${taskNum}, другой вариант условия. Только типичное задание, разбор, ошибки, лайфхак.`);
+        fd.append('submode', 'explain_tasks');
+        fetch('/ask', { method:'POST', credentials:'include', body:fd })
+          .then(r => r.json())
+          .then(d2 => { removeTyping(); sendBtn.disabled = false; renderExplainTask(d2, taskNum); });
+      };
+      btns.appendChild(b1);
+
+      // Кнопка «Попробовать самому»
+      const b2 = document.createElement('button'); b2.className = 'action-btn exam-btn';
+      b2.innerHTML = '✏️ <span>Попробовать самому</span>';
+      b2.onclick = () => {
+        btns.remove();
+        addUserMsg('✏️ Дай задание для самостоятельного решения');
+        sendBtn.disabled = true; addTyping();
+        const fd = new FormData();
+        fd.append('question', `Задание ${taskNum} ${examLabel} по ${SUBJECT}${mathSuffix}: дай только условие без ответа. Чуть другое условие.`);
+        fd.append('submode', 'practice');
+        fetch('/ask', { method:'POST', credentials:'include', body:fd })
+          .then(r => r.json())
+          .then(d2 => {
+            removeTyping(); sendBtn.disabled = false;
+            renderSelfPracticeTask(d2, taskNum);
+          });
+      };
+      btns.appendChild(b2);
+    }
+
+    btns.appendChild(TTS.makeBtn(data.answer, 'action-btn exam-btn'));
+    wrap.appendChild(btns);
+    if (data.question_id) wrap.appendChild(makeStars(data.question_id));
+    chatEl.appendChild(wrap); scrollDown();
+    animateText(textDiv, mdToHtml(data.answer), () => {
+      textDiv.innerHTML = mdToHtml(data.answer);
+      btns.style.opacity = '1'; btns.style.transition = 'opacity .4s'; scrollDown();
+    });
+  }
+
+  function renderSelfPracticeTask(data, taskNum) {
+    const examLabel  = CLASS <= 9 ? 'ОГЭ' : 'ЕГЭ';
+    const mathSuffix = MATH_LEVEL === 'basic' ? ' (база)' : MATH_LEVEL === 'profile' ? ' (профиль)' : '';
+
+    const wrap    = document.createElement('div'); wrap.className = 'message ai mode-exam';
+    const badge   = document.createElement('div'); badge.className = 'step-badge';
+    badge.style.cssText = 'background:rgba(77,159,255,.1);color:var(--blue);border:1px solid rgba(77,159,255,.3);'
+      + 'border-bottom:none;border-radius:8px 8px 0 0;display:block;padding:6px 14px;font-size:.78rem;font-weight:700;width:100%;';
+    badge.textContent = `✏️ Задание №${taskNum} — попробуй сам`;
+    wrap.appendChild(badge);
+
+    const taskDiv = document.createElement('div'); taskDiv.className = 'ai-text exam-task'; wrap.appendChild(taskDiv);
+    const ansBlock = document.createElement('div'); ansBlock.className = 'exam-ans-block';
+    const ans = document.createElement('textarea'); ans.className = 'exam-input'; ans.placeholder = 'Напиши своё решение...';
+    const checkBtn = document.createElement('button'); checkBtn.className = 'exam-check-btn'; checkBtn.innerHTML = '✅ Проверить';
+
+    checkBtn.onclick = () => {
+      const val = ans.value.trim(); if (!val) { ans.focus(); return; }
+      checkBtn.disabled = true; ans.disabled = true; checkBtn.textContent = 'Проверяю...';
+      const fd = new FormData();
+      fd.append('question', `Задание ${taskNum} ${examLabel} по ${SUBJECT}${mathSuffix}:\n${data.answer}\n\nОтвет ученика: ${val}\n\nПроверь по критериям, укажи ошибки и дай разбор.`);
+      fd.append('submode', 'explain_tasks');
+      fetch('/ask', { method:'POST', credentials:'include', body:fd }).then(r => r.json()).then(d2 => {
+        checkBtn.remove();
+        const good = d2.answer.toLowerCase().includes('правильно') || d2.answer.includes('✅');
+        if (window.Fairik) good ? Fairik.happy() : Fairik.sad();
+        const res = document.createElement('div'); res.className = `exam-result ${good ? 'good' : 'bad'}`;
+        const rDiv = document.createElement('div'); rDiv.className = 'er-text';
+        res.innerHTML = `<div class="er-icon">${good ? '✅' : '❌'}</div>`;
+        res.appendChild(rDiv); ansBlock.appendChild(res);
+        ansBlock.appendChild(TTS.makeBtn(d2.answer, 'action-btn exam-btn'));
+        animateText(rDiv, mdToHtml(d2.answer), () => { rDiv.innerHTML = mdToHtml(d2.answer); scrollDown(); });
+        if (!good && taskNum) fetch('/api/memory/add_error', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ subject:SUBJECT, topic:`Задание №${taskNum} ${examLabel}`, details:'Ошибка при самостоятельном решении' })
+        }).catch(() => {});
+      });
+    };
+
+    ansBlock.appendChild(ans); ansBlock.appendChild(checkBtn);
+    wrap.appendChild(ansBlock); chatEl.appendChild(wrap); scrollDown();
+    animateText(taskDiv, mdToHtml(data.answer), () => {
+      taskDiv.innerHTML = mdToHtml(data.answer);
+      setTimeout(() => ans.focus(), 50); scrollDown();
+    });
+  }
+
   // ── Голосовой ввод ──
   const voiceBtn=document.getElementById("voice-btn");
   if("webkitSpeechRecognition" in window||"SpeechRecognition" in window){
@@ -1312,8 +1573,40 @@
   </script>
 
   <style>
+  /* ══ СЕТКА ЗАДАНИЙ (explain_tasks) ══ */
+  #exam-explain-tasks-ui { padding: 0; }
+  .etg-header {
+    padding: 10px 16px 6px;
+    background: rgba(255,179,71,.05);
+    border-bottom: 1px solid rgba(255,179,71,.15);
+  }
+  .etg-part-label {
+    font-size: .68rem; font-family: var(--font-mono);
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text3); padding: 8px 16px 4px; display: block;
+  }
+  .etg-part2 { color: var(--blue); }
+  .etg-grid {
+    display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 16px 12px;
+  }
+  .etg-num-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text2); font-size: .85rem; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .15s; font-family: var(--font-main);
+  }
+  .etg-num-btn:hover {
+    border-color: var(--warning); color: var(--warning);
+    transform: scale(1.1); background: rgba(255,179,71,.08);
+  }
+  .etg-num-btn.active {
+    border-color: var(--warning); background: rgba(255,179,71,.15);
+    color: var(--warning); transform: scale(1.1);
+    box-shadow: 0 0 0 2px rgba(255,179,71,.25);
+  }
+
   /* ══ TTS ══ */
-  .tts-inline {
     margin-top: 8px;
     font-size: 0.75rem !important;
     padding: 4px 10px !important;

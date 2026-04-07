@@ -493,11 +493,19 @@
     }
 
     .modes-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 2000px;
+    padding: 0 24px;
+    box-sizing: border-box;
+    margin: 0 auto;
+  }
+    .modes-section .container {
+    padding-right: 24px !important; /* Убираем отступ сайдбара только для этой секции */
+    max-width: 100%; /* Позволяем контейнеру расширяться */
+  }
     .mode-feature-card {
       position: relative;
       background: var(--surface);
@@ -1125,10 +1133,7 @@
 </nav>
 
 <header class="lp-header">
-  <a href="/" class="lp-logo">
-    <img src="/static/img/logo.png" alt="logo">
-    <div class="lp-logo-dot"></div>
-  </a>
+  <a href="/" class="lp-logo">SubjectHelper<span class="dragon-emoji">🐉</span></a>
   <nav class="lp-nav">
     <a href="/chats">Мои чаты</a>
     <a href="/memory">Память</a>
@@ -1293,28 +1298,19 @@
      GUEST: полная лендинг-страница
 ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- HEADER -->
-<header class="lp-header" id="lpHeader">
-  <a href="/" class="lp-logo">
-
-    SubjectHelper
-    <div class="lp-logo-dot"></div>
-  </a>
+<header class="lp-header">
+  <a href="/" class="lp-logo">SubjectHelper<span class="dragon-emoji">🐉</span></a>
   <nav class="lp-nav">
-    <a href="#modes">Режимы</a>
-    <a href="#subjects">Предметы</a>
-    <a href="#how">Как работает</a>
-    <a href="#features">Возможности</a>
+    <a href="/chats">Мои чаты</a>
+    <a href="/memory">Память</a>
+    <a href="/leaderboard">Рейтинг</a>
+    <a href="/shop">Магазин</a>
   </nav>
   <div class="lp-nav-cta">
-    <a href="/login"><button class="btn-ghost">Войти</button></a>
-    <a href="/register"><button class="btn-primary">Начать бесплатно</button></a>
-  </div>
-  <div class="lp-mob-menu">
-    <a href="/login"><button class="btn-ghost" style="padding:7px 14px;font-size:0.8rem;">Войти</button></a>
-    <a href="/register"><button class="btn-primary" style="padding:7px 16px;font-size:0.8rem;">Начать</button></a>
+    {{ menu | safe }}
   </div>
 </header>
+{{ menu_js | safe }}
 
 <!-- HERO -->
 <section class="hero">
@@ -1431,18 +1427,18 @@
       <div class="mode-feature-card mode-casual reveal reveal-delay-1">
         <div class="mode-num">01 / 03</div>
         <div class="mode-icon-wrap">⚡</div>
-        <div class="mode-card-title">Casual</div>
-        <div class="mode-card-en">Quick Question</div>
+        <div class="mode-card-title">Быстрый вопрос 🛎️</div>
+        <div class="mode-card-en">Поехали💨</div>
         <p class="mode-card-desc">
           Быстрый вопрос по домашке, непонятная тема с урока,
           задача которую надо решить прямо сейчас.
-          Без регистрации цели, без долгосрочного плана — просто спроси.
+          Без поставленной цели, без долгосрочного плана — просто спроси чего не понимаешь.
         </p>
         <div class="mode-card-tags">
           <span class="mode-tag">Объяснение темы</span>
           <span class="mode-tag">Пошаговое решение</span>
           <span class="mode-tag">Квиз</span>
-          <span class="mode-tag">ЕГЭ/ОГЭ задания</span>
+
         </div>
         <a href="/register" class="mode-card-cta">
           Попробовать
@@ -1452,13 +1448,13 @@
 
       <!-- SPRINT -->
       <div class="mode-feature-card mode-sprint reveal reveal-delay-2">
-        <div class="mode-num">02 / 03</div>
+        <div class="mode-num">02 / 04</div>
         <div class="mode-icon-wrap">🏃</div>
-        <div class="mode-card-title">Sprint</div>
-        <div class="mode-card-en">Intensive Prep</div>
+        <div class="mode-card-title">Интенсив</div>
+        <div class="mode-card-en">Начать Интенсив</div>
         <p class="mode-card-desc">
-          ЕГЭ через 2 недели? Контрольная в пятницу?
-          Sprint создаёт персональный интенсив с чётким планом,
+          Самостоятельная через 2 недели? Контрольная в пятницу?
+          Создам персональный интенсив с чётким планом,
           дедлайном и ежедневными заданиями.
         </p>
         <div class="mode-card-tags">
@@ -1468,20 +1464,21 @@
           <span class="mode-tag">Прогресс-трекер</span>
         </div>
         <a href="/register" class="mode-card-cta">
-          Создать спринт
+          Создать интенсив
           <span class="material-icons" style="font-size:16px;">arrow_forward</span>
         </a>
       </div>
 
       <!-- JOURNEY -->
       <div class="mode-feature-card mode-journey reveal reveal-delay-3">
-        <div class="mode-num">03 / 03</div>
+        <div class="mode-num">03 / 04</div>
         <div class="mode-icon-wrap">🗺️</div>
-        <div class="mode-card-title">Journey</div>
-        <div class="mode-card-en">Deep Learning</div>
+        <div class="mode-card-title">Роадмап</div>
+        <div class="mode-card-en">Пройти путь</div>
         <p class="mode-card-desc">
-          Хочешь по-настоящему разобраться в предмете с нуля до мастерства.
-          Journey строит карту знаний и ведёт тебя по ней,
+          Хочешь по-настоящему разобраться в предмете с нуля?
+          Пропустил много тем по предметам и теперь плохие оценки?
+          Я построю персональную карту знаний и буду вести тебя по ней,
           запоминая каждую ошибку и успех.
         </p>
         <div class="mode-card-tags">
@@ -1495,6 +1492,27 @@
           <span class="material-icons" style="font-size:16px;">arrow_forward</span>
         </a>
       </div>
+
+      <div class="mode-feature-card mode-exam reveal reveal-delay-4">
+  <div class="mode-num">04 / 04</div>
+  <div class="mode-icon-wrap">🎓</div>
+  <div class="mode-card-title">Экзамен</div>
+  <div class="mode-card-en">ЕГЭ / ОГЭ</div>
+  <p class="mode-card-desc">
+    Разберем типовые задания, ошибки, лайфхаки
+    Будем изучать задания в виде викторины, и разных интерактивов
+    Подготовка точно в формате реального КИМ.
+  </p>
+  <div class="mode-card-tags">
+    <span class="mode-tag">Разобрать задания</span>
+    <span class="mode-tag">Полный экзамен</span>
+    <span class="mode-tag">Викторина</span>
+  </div>
+  <a href="/register" class="mode-card-cta">
+    Подготовиться
+    <span class="material-icons" style="font-size:16px;">arrow_forward</span>
+  </a>
+</div>
 
     </div>
   </div>
@@ -1913,16 +1931,7 @@
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">
-    <span>🐉</span> SubjectHelper
-  </div>
-  <div class="footer-links">
-    <a href="/register">Регистрация</a>
-    <a href="/login">Войти</a>
-    <a href="#modes">Режимы</a>
-    <a href="#subjects">Предметы</a>
-    <a href="#features">Возможности</a>
-  </div>
+
   <div class="footer-copy">© 2025 SubjectHelper · Все права защищены</div>
 </footer>
 
