@@ -384,51 +384,105 @@ def build_cluster_profile(class_number: int, subject: str, user_stats: dict,
         )
 
     personal_parts = []
-    avg_r     = user_stats.get('avg_rating', 0)
-    streak    = user_stats.get('streak', 0)
-    weak      = user_stats.get('weak_subjects', [])
-    total_all = user_stats.get('total_all', 0)
-    trend     = user_stats.get('rating_trend', 'stable')
-    interests = user_stats.get('interests', '')
+    avg_r          = user_stats.get('avg_rating', 0)
+    streak         = user_stats.get('streak', 0)
+    weak           = user_stats.get('weak_subjects', [])
+    total_all      = user_stats.get('total_all', 0)
+    total_subj     = user_stats.get('total_questions', 0)
+    trend          = user_stats.get('rating_trend', 'stable')
+    interests      = user_stats.get('interests', '')
+    learn_style    = user_stats.get('learning_style', '')   # ← ТЕПЕРЬ ИСПОЛЬЗУЕТСЯ
+    hard_subjects  = user_stats.get('hard_subjects', '')    # ← ТЕПЕРЬ ИСПОЛЬЗУЕТСЯ
+    goal           = user_stats.get('goal', '')             # ← ТЕПЕРЬ ИСПОЛЬЗУЕТСЯ
 
+    # ── Адаптация по рейтингу (все зоны покрыты) ──
     if 0 < avg_r < 2.5:
         personal_parts.append(
             f"КРИТИЧЕСКИ ВАЖНО: ученик оценивает ответы очень низко по {subject} (средняя {avg_r}/5). "
-            "Объясняй МАКСИМАЛЬНО просто, используй больше примеров и аналогий."
+            "Объясняй МАКСИМАЛЬНО просто, используй больше примеров и аналогий. "
+            "Проверяй понимание после каждого блока."
+        )
+    elif 2.5 <= avg_r < 3.5:
+        personal_parts.append(
+            f"Ученик оценивает ответы средне по {subject} (средняя {avg_r}/5). "
+            "Давай больше конкретных примеров, периодически проверяй понимание."
+        )
+    elif 3.5 <= avg_r < 4.5:
+        personal_parts.append(
+            f"Ученик хорошо усваивает материал по {subject} (оценка {avg_r}/5). "
+            "Постепенно повышай сложность и вводи нюансы."
         )
     elif avg_r >= 4.5:
         personal_parts.append(
-            f"Ученик хорошо понимает материал по {subject} (оценка {avg_r}/5). "
-            "Можно усложнять задания, давать нетривиальные задачи."
+            f"Ученик отлично понимает {subject} (оценка {avg_r}/5). "
+            "Можно давать нетривиальные задачи и сложные случаи."
         )
 
+    # ── Тренд ──
     if trend == 'falling':
         personal_parts.append(
-            "ВНИМАНИЕ: последние оценки снижаются. Возможно, темп слишком высокий. "
+            "ВНИМАНИЕ: последние оценки снижаются. Возможно, темп слишком высокий или материал сложный. "
             "Предложи вернуться к основам или объяснить иначе."
         )
     elif trend == 'rising':
         personal_parts.append("Последние оценки растут — ученик прогрессирует! Можно чуть повышать сложность.")
 
+    # ── Стрик (все диапазоны) ──
     if streak >= 14:
-        personal_parts.append(f"Ученик занимается {streak} дней подряд — высокая мотивация!")
+        personal_parts.append(f"Ученик занимается {streak} дней подряд — высокая мотивация! Давай сложнее.")
+    elif streak >= 7:
+        personal_parts.append(f"Ученик занимается {streak} дней подряд — хорошая привычка!")
+    elif 1 <= streak <= 6:
+        personal_parts.append(f"Ученик занимается {streak} дней подряд — поддержи привычку, похвали за регулярность.")
     elif streak == 0:
-        personal_parts.append("Ученик только начинает или давно не занимался. Будь особенно поддерживающим.")
+        personal_parts.append("Ученик только начинает или вернулся после паузы. Будь особенно тёплым и мотивирующим.")
 
+    # ── Слабый предмет ──
     if weak and subject in weak:
         personal_parts.append(
             f"ЭТОТ ПРЕДМЕТ ({subject}) является слабым для ученика. "
-            "Объясняй особенно тщательно, дроби на маленькие шаги."
+            "Объясняй особенно тщательно, дроби на маленькие шаги, часто проверяй понимание."
         )
 
-    if total_all > 200:
+    # ── Опыт пользователя ──
+    if total_all > 500:
         personal_parts.append(f"Очень опытный пользователь ({total_all} вопросов). Не объясняй очевидные вещи.")
+    elif total_all > 100:
+        personal_parts.append(f"Опытный пользователь ({total_all} вопросов всего).")
 
+    if total_subj > 0:
+        personal_parts.append(f"По предмету {subject} ученик задал {total_subj} вопросов — учитывай накопленный контекст.")
+
+    # ── Интересы ──
     if interests:
         personal_parts.append(
             f"ИНТЕРЕСЫ УЧЕНИКА: {interests}. "
-            "Используй эти темы для аналогий и примеров."
+            "Используй эти темы для аналогий и примеров — это сильно повышает понимание."
         )
+
+    # ── Стиль обучения (из memory analyze) ──  ← ИСПРАВЛЕН БАГ
+    if learn_style:
+        personal_parts.append(f"СТИЛЬ ОБУЧЕНИЯ УЧЕНИКА: {learn_style}. Адаптируй подачу материала под него.")
+
+    # ── Сложные предметы из онбординга ──  ← ИСПРАВЛЕН БАГ
+    if hard_subjects:
+        hard_list = [s.strip() for s in hard_subjects.split(',') if s.strip()]
+        if subject in hard_list:
+            personal_parts.append(
+                f"На онбординге ученик отметил {subject} как сложный предмет для себя. "
+                "Будь особенно терпелив, объясняй с самых основ."
+            )
+
+    # ── Глобальная цель ──
+    if goal:
+        goal_map = {
+            'exams':    'сдать ЕГЭ/ОГЭ',
+            'grades':   'улучшить оценки',
+            'homework': 'помощь с домашними заданиями',
+            'curious':  'изучить предмет из интереса',
+        }
+        goal_human = goal_map.get(goal, goal)
+        personal_parts.append(f"ГЛОБАЛЬНАЯ ЦЕЛЬ УЧЕНИКА: {goal_human}. Всё объяснение строй с учётом этой цели.")
 
     personal = ("\n— ".join(personal_parts))
     if personal:
@@ -592,11 +646,13 @@ def get_user_stats(user_id: int, subject: str) -> dict:
         'avg_rating':      avg_r,
         'streak':          user.streak or 0 if user else 0,
         'weak_subjects':   weak_subjects,
-        'total_questions': len(subject_history),
-        'total_all':       len(history_all),
+        'total_questions': len(subject_history),   # по этому предмету
+        'total_all':       len(history_all),        # всего вопросов
         'rating_trend':    trend,
         'interests':       (user.interests or '') if user else '',
         'learning_style':  (user.learning_style or '') if user else '',
+        'hard_subjects':   (user.hard_subjects or '') if user else '',  # ← ДОБАВЛЕНО
+        'goal':            (user.goal or '') if user else '',            # ← ДОБАВЛЕНО
     }
 
 
@@ -627,10 +683,14 @@ def maybe_run_memory_analyze(user_id: int):
 def _run_memory_analyze(user_id: int):
     user = db.session.get(User, user_id)
 
+    # ИСПРАВЛЕНО: берём только свежие плохие ответы (последние 30 дней)
+    # чтобы не переанализировать одни и те же старые ошибки каждые 10 вопросов
+    cutoff = datetime.utcnow() - timedelta(days=30)
     recent_bad = History.query.join(Chat).filter(
-        Chat.user_id == user_id,
+        Chat.user_id   == user_id,
         History.rating <= 2,
         History.rating != None,
+        History.timestamp >= cutoff,
     ).order_by(History.timestamp.desc()).limit(20).all()
 
     if not recent_bad:
@@ -707,8 +767,18 @@ def login_required(f):
 
 
 # ====================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ======================
-def get_user_history(user_id):
-    return History.query.join(Chat).filter(Chat.user_id == user_id).order_by(History.timestamp.desc()).all()
+def get_user_history(user_id, limit: int = 200):
+    """Возвращает последние N записей истории пользователя.
+    Лимит защищает от деградации производительности при большой истории.
+    """
+    return (
+        History.query
+        .join(Chat)
+        .filter(Chat.user_id == user_id)
+        .order_by(History.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 # ====================== МЕНЮ ======================
@@ -1093,13 +1163,15 @@ def ask():
 
     user = db.session.get(User, session['user_id'])
 
+    # Ограничиваем длину вопроса (защита от токен-флуда)
+    question = question[:2000]
+
     # Обновляем стрик при реальной учёбе
     update_streak(user)
 
-    # Начисляем XP за вопрос
+    # Начисляем XP — commit будет ПОСЛЕ успешного ответа Groq
     user.xp    = (user.xp or 0) + 10
     user.level = user.xp // 100 + 1
-    db.session.commit()
 
     # Статистика по предмету
     user_stats = get_user_stats(session['user_id'], subject)
@@ -1111,13 +1183,14 @@ def ask():
     if active_path:
         active_path.last_active = datetime.utcnow()
         if active_path.mode == 'journey':
+            # ИСПРАВЛЕНО: считаем вопросы только по этому предмету
             question_count = History.query.join(Chat).filter(
-                Chat.user_id == session['user_id']
+                Chat.user_id == session['user_id'],
+                Chat.subject == subject,
             ).count()
-            # Считаем сессию каждые 5 вопросов в Journey
             if question_count > 0 and question_count % 5 == 0:
                 active_path.sessions_done += 1
-                logger.info(f"Journey session #{active_path.sessions_done} for user={session['user_id']}")
+                logger.info(f"Journey session #{active_path.sessions_done} for user={session['user_id']} subject={subject}")
         db.session.commit()
 
     # Строим промпт: кластер персонализации + режим + тип чата
@@ -1136,7 +1209,17 @@ def ask():
         chat_history.append({"role": "user",      "content": h.question})
         chat_history.append({"role": "assistant",  "content": h.answer})
 
-    answer = ask_groq(question, system=system, max_tokens=800, chat_history=chat_history)
+    # Адаптируем max_tokens под режим
+    max_tokens = 1400 if submode == "explain_tasks" else (1000 if mode == "exam" else 800)
+
+    answer = ask_groq(question, system=system, max_tokens=max_tokens, chat_history=chat_history)
+
+    # Коммитим XP/streak ПОСЛЕ успешного ответа
+    try:
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"DB commit error after ask: {e}")
+        db.session.rollback()
 
     hid   = save_history(chat_id, subject, mode, question, answer)
     entry = db.session.get(History, hid)
@@ -1297,8 +1380,15 @@ def api_path_complete_topic():
         db.session.commit()
 
     # Проверяем завершён ли весь Sprint
-    all_topics = path.get_sprint_topics()
+    all_topics  = path.get_sprint_topics()
     is_complete = len(done) >= len(all_topics) if all_topics else False
+
+    # Автодеактивация Sprint если все темы закрыты
+    if is_complete:
+        path.is_active   = False
+        path.sprint_done = True
+        db.session.commit()
+        logger.info(f"Sprint auto-completed: all topics done for user={session['user_id']}")
 
     return jsonify({
         'ok':          True,
@@ -1988,13 +2078,15 @@ def settings_save():
 @login_required
 def api_save_settings():
     data = request.get_json() or {}
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])   # ИСПРАВЛЕНО: убран deprecated query.get()
+    if not user:
+        return jsonify({'ok': False}), 404
     if not user.settings:
         user.settings = {}
-
-    user.settings.update(data)  # обновляем только то, что пришло
+    merged = dict(user.settings)
+    merged.update(data)
+    user.settings = merged
     db.session.commit()
-
     return jsonify({'ok': True, 'settings': user.settings})
 
 @app.route('/api/settings/load')

@@ -140,14 +140,14 @@
         <span class="wmc-emoji">⚡</span>
         <div class="wmc-badge sprint-badge">Дедлайн</div>
       </div>
-      <h3 class="wmc-title">Sprint</h3>
+      <h3 class="wmc-title">Интенсив</h3>
       <p class="wmc-desc">Контрольная через 3 дня? ОГЭ через неделю? ИИ строит план до дедлайна. Спросим, насколько ты уже в теме — подстроим глубину и темп.</p>
       <div class="wmc-examples">
         <span>«Контрольная завтра»</span>
         <span>«ОГЭ через неделю»</span>
         <span>«Разобрать тему»</span>
       </div>
-      <button class="wmc-btn sprint-btn">Создать Sprint →</button>
+      <button class="wmc-btn sprint-btn">Поехали →</button>
     </div>
 
     <!-- ── JOURNEY ── -->
@@ -157,14 +157,14 @@
         <span class="wmc-emoji">🗺</span>
         <div class="wmc-badge journey-badge">Системно</div>
       </div>
-      <h3 class="wmc-title">Journey</h3>
+      <h3 class="wmc-title">Роадмап</h3>
       <p class="wmc-desc">Хочешь знать предмет по-настоящему? Роадмап на недели вперёд. По желанию — короткая проверка уровня, чтобы точнее подобрать темы и сложность.</p>
       <div class="wmc-examples">
         <span>«Выучить английский»</span>
         <span>«ЕГЭ через 5 месяцев»</span>
         <span>«Изучить физику»</span>
       </div>
-      <button class="wmc-btn journey-btn">Начать Journey →</button>
+      <button class="wmc-btn journey-btn">В путь →</button>
     </div>
 
     <!-- ── EXAM ── -->
@@ -243,14 +243,7 @@
         </div>
         <div class="wm-mode-check"></div>
       </div>
-      <div class="wm-mode-item" data-mode="exam">
-        <span class="wm-mode-icon">📋</span>
-        <div class="wm-mode-body">
-          <div class="wm-mode-title">Формат ЕГЭ / ОГЭ</div>
-          <div class="wm-mode-desc">Задания как на экзамене</div>
-        </div>
-        <div class="wm-mode-check"></div>
-      </div>
+
     </div>
 
     {% if not current_user or not current_user.class_number %}
@@ -284,7 +277,7 @@
   <div class="w-modal">
     <div class="wm-header">
       <div>
-        <div class="wm-title">⚡ Sprint</div>
+        <div class="wm-title">⚡ Интенсив</div>
         <div class="wm-sub">Интенсивная подготовка с дедлайном</div>
       </div>
       <button class="wm-close" onclick="closeModal('sprintModal')">✕</button>
@@ -414,7 +407,7 @@
   <div class="w-modal">
     <div class="wm-header">
       <div>
-        <div class="wm-title">🗺 Journey</div>
+        <div class="wm-title">🗺 Роадмап</div>
         <div class="wm-sub">Системное изучение с персональным роадмапом</div>
       </div>
       <button class="wm-close" onclick="closeModal('journeyModal')">✕</button>
@@ -660,7 +653,7 @@
           <span class="wm-mode-icon">📖</span>
           <div class="wm-mode-body">
             <div class="wm-mode-title">Разобрать задания по номерам</div>
-            <div class="wm-mode-desc">Выбери номер задания — типичное задание, разбор, ошибки, лайфхак (как на sdamgia.ru)</div>
+            <div class="wm-mode-desc">Выбери номер задания — типичное задание, разбор, ошибки, лайфхаки</div>
           </div>
           <div class="wm-mode-check">
             <span class="exam-soon-badge" style="background:rgba(0,255,136,.15);color:var(--accent);border-color:rgba(0,255,136,.3);">⭐ Рекомендуем</span>
@@ -671,7 +664,7 @@
           <span class="wm-mode-icon">📚</span>
           <div class="wm-mode-body">
             <div class="wm-mode-title">Тренировка типовых заданий</div>
-            <div class="wm-mode-desc">ИИ даёт задания по конкретным типам — решаешь, получаешь разбор и баллы</div>
+            <div class="wm-mode-desc">Я дам тебе задания по конкретным типам — решаешь, получаешь разбор и баллы</div>
           </div>
           <div class="wm-mode-check"></div>
         </div>
