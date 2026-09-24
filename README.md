@@ -6,7 +6,7 @@
 
 ---
 
-![SubjectHelper](https://github.com/USER/SubjectHelper/assets/99999999/00000000) <!-- Замени на свой логотип -->
+![SubjectHelper](logo.png)
 
 ## 🚀 Главная фича
 
